@@ -300,7 +300,7 @@ def wait_for_ai_server(
 
             response = requests.get(
                 status_url,
-                timeout=5
+                timeout=10
             )
 
             if response.ok:
