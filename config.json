@@ -1,0 +1,81 @@
+
+{
+  "video": {
+    "file": "video.mp4",
+    "output_dir": "output_edges",
+    "fps_override": null,
+    "fallback_fps": 30.0,
+    "frame_sample_interval_sec": 0.5
+  },
+
+  "scene_detection": {
+    "min_interval_sec": 15.0,
+    "similarity_threshold": 0.70,
+    "histogram_bins": [50, 50],
+    "histogram_ranges": [0, 180, 0, 256]
+  },
+
+  "yolo": {
+    "model": "yolov8n.pt",
+    "device": 0,
+    "verbose": false
+  },
+
+  "rembg": {
+    "model": "bria-rmbg",
+    "providers": [
+      "CUDAExecutionProvider"
+    ],
+    "alpha_threshold": 127
+  },
+
+  "outline": {
+    "gaussian_kernel": [5, 5],
+    "gaussian_sigma": 0,
+    "canny_low": 30,
+    "canny_high": 100,
+    "contour_thickness": 3,
+    "dilation_kernel": [2, 2],
+    "dilation_iterations": 1
+  },
+
+  "dotpad": {
+    "width": 60,
+    "height": 40,
+    "canny_low": 50,
+    "canny_high": 150,
+    "contour_thickness": 1
+  },
+
+  "directories": {
+    "outline": "outline",
+    "dot": "dot",
+    "analysis": "analysis"
+  },
+
+  "files": {
+    "audio": "audio.mp3",
+    "metadata": "scene_metadata.json",
+    "descriptions": "descriptions.txt"
+  },
+
+  "ffmpeg": {
+    "executable": "ffmpeg",
+    "audio_quality": "0"
+  },
+
+  "server": {
+    "script": "server.py",
+    "app": "server:app",
+    "host": "127.0.0.1",
+    "port": 8001,
+
+    "startup_timeout_sec": 180,
+    "status_request_timeout_sec": 10,
+    "status_retry_interval_sec": 2,
+
+    "vision_timeout_sec": 180,
+    "switch_to_llm_timeout_sec": 300,
+    "summarize_timeout_sec": 120
+  }
+}

@@ -159,7 +159,7 @@ echo [7/8] llama-cpp-python CUDA 설치
 REM CPU 버전이 먼저 설치되어 있을 가능성이 있으므로 제거
 pip uninstall llama-cpp-python -y > nul 2>&1
 
-pip install llama-cpp-python ^
+pip install llama-cpp-python==0.3.34 ^
     --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 ^
     --only-binary llama-cpp-python
 

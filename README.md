@@ -6,7 +6,7 @@ if hasattr(mask, 'seq_lengths'):
     mask.seq_lengths = (1, mask.seq_lengths[1])로.
 
 
-실행시 비디오 이름 video.mp4(    video_file = "video.mp4")
+실행시 비디오 이름 video.mp4(    video_file = "video.mp4") -> config에서 수정가능
 
 필요ai - models폴더밑에 gemma-4-E4B-it-Q6_K.gguf등 gguf 위치하기
 

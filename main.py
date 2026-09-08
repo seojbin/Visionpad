@@ -14,11 +14,51 @@ import torch
 from ultralytics import YOLO
 from rembg import remove, new_session
 
+
+CONFIG_PATH = os.path.join(
+    os.path.dirname(
+        os.path.abspath(__file__)
+    ),
+    "config.json"
+)
+
+
+def load_config():
+
+    if not os.path.exists(CONFIG_PATH):
+
+        raise FileNotFoundError(
+            f"config.json 파일을 찾을 수 없습니다:\n"
+            f"{CONFIG_PATH}"
+        )
+
+    try:
+
+        with open(
+            CONFIG_PATH,
+            "r",
+            encoding="utf-8"
+        ) as f:
+
+            return json.load(f)
+
+    except json.JSONDecodeError as e:
+
+        raise RuntimeError(
+            f"config.json 문법 오류: "
+            f"line {e.lineno}, column {e.colno} - "
+            f"{e.msg}"
+        )
+
+
+CONFIG = load_config()
+
+
 # 오디오 추출
 def extract_audio(video_path, output_dir):
     audio_path = os.path.join(
         output_dir,
-        "audio.mp3"
+        CONFIG["files"]["audio"]
     )
 
     print(
@@ -28,11 +68,13 @@ def extract_audio(video_path, output_dir):
 
     try:
         command = [
-            "ffmpeg",
+            CONFIG["ffmpeg"]["executable"],
             "-i",
             video_path,
             "-q:a",
-            "0",
+            str(
+                CONFIG["ffmpeg"]["audio_quality"]
+            ),
             "-map",
             "a",
             audio_path,
@@ -64,7 +106,7 @@ def save_scene_metadata(
 ):
     json_path = os.path.join(
         output_dir,
-        "scene_metadata.json"
+        CONFIG["files"]["metadata"]
     )
 
     try:
@@ -81,7 +123,7 @@ def save_scene_metadata(
             )
 
         print(
-            f"[저장] scene_metadata.json "
+            f"[저장] {CONFIG['files']['metadata']} "
             f"({len(scene_metadata)}개 Scene)"
         )
 
@@ -90,7 +132,7 @@ def save_scene_metadata(
     except Exception as e:
 
         print(
-            f"[오류] scene_metadata.json 저장 실패: {e}"
+            f"[오류] {CONFIG['files']['metadata']} 저장 실패: {e}"
         )
 
         return False
@@ -128,6 +170,7 @@ def print_gpu_memory(label=""):
         print(
             f"[GPU] 메모리 확인 실패: {e}"
         )
+
 
 # YOLO / rembg GPU 해제
 
@@ -224,13 +267,13 @@ def start_ai_server():
         os.path.dirname(
             os.path.abspath(__file__)
         ),
-        "server.py"
+        CONFIG["server"]["script"]
     )
 
     if not os.path.exists(server_path):
 
         print(
-            f"[오류] server.py를 찾을 수 없습니다:\n"
+            f"[오류] {CONFIG['server']['script']}를 찾을 수 없습니다:\n"
             f"{server_path}"
         )
 
@@ -248,11 +291,15 @@ def start_ai_server():
                 sys.executable,
                 "-m",
                 "uvicorn",
-                "server:app",
+                CONFIG["server"]["app"],
                 "--host",
-                "127.0.0.1",
+                str(
+                    CONFIG["server"]["host"]
+                ),
                 "--port",
-                "8001"
+                str(
+                    CONFIG["server"]["port"]
+                )
             ],
             cwd=os.path.dirname(
                 os.path.abspath(__file__)
@@ -279,7 +326,7 @@ def start_ai_server():
 
 def wait_for_ai_server(
     api_base_url,
-    timeout_sec=180
+    timeout_sec
 ):
 
     print("\nAI 서버 준비 상태 확인 중...")
@@ -300,7 +347,9 @@ def wait_for_ai_server(
 
             response = requests.get(
                 status_url,
-                timeout=10
+                timeout=CONFIG["server"][
+                    "status_request_timeout_sec"
+                ]
             )
 
             if response.ok:
@@ -319,7 +368,11 @@ def wait_for_ai_server(
             pass
 
 
-        time.sleep(2)
+        time.sleep(
+            CONFIG["server"][
+                "status_retry_interval_sec"
+            ]
+        )
 
 
     print(
@@ -411,9 +464,9 @@ def analyze_scenes_with_moondream(
                 "and identify the main visible "
                 "place, people, objects, actions, "
                 "time or important text. "
-    "Describe only what is visibly present in the image. "
-    "Do not guess, infer, interpret, translate, or explain. "
-    "Use one short factual English description."
+                "Describe only what is visibly present in the image. "
+                "Do not guess, infer, interpret, translate, or explain. "
+                "Use one short factual English description."
                 f"Key objects detected by YOLO: "
                 f"{detected_classes}."
             )
@@ -427,7 +480,9 @@ def analyze_scenes_with_moondream(
                     "prompt": md_prompt
                 },
 
-                timeout=180
+                timeout=CONFIG["server"][
+                    "vision_timeout_sec"
+                ]
             )
 
 
@@ -505,7 +560,9 @@ def switch_ai_server_to_llm(
 
         response = requests.post(
             f"{api_base_url}/switch-to-llm",
-            timeout=300
+            timeout=CONFIG["server"][
+                "switch_to_llm_timeout_sec"
+            ]
         )
 
         response.raise_for_status()
@@ -551,7 +608,9 @@ def summarize_scene(
                 "english_desc": english_desc
             },
 
-            timeout=120
+            timeout=CONFIG["server"][
+                "summarize_timeout_sec"
+            ]
         )
 
 
@@ -614,25 +673,25 @@ def summarize_scene(
 
 def process_video_to_tactile_edges(
     video_path,
-    output_dir="output_edges",
-    min_interval_sec=10
+    output_dir,
+    min_interval_sec
 ):
 
     # 디렉터리 생성
 
     outline_dir = os.path.join(
         output_dir,
-        "outline"
+        CONFIG["directories"]["outline"]
     )
 
     dot_dir = os.path.join(
         output_dir,
-        "dot"
+        CONFIG["directories"]["dot"]
     )
 
     analysis_dir = os.path.join(
         output_dir,
-        "analysis"
+        CONFIG["directories"]["analysis"]
     )
 
 
@@ -687,7 +746,7 @@ def process_video_to_tactile_edges(
     print("\nYOLO 모델 로드...")
 
     model = YOLO(
-        "yolov8n.pt"
+        CONFIG["yolo"]["model"]
     )
 
     print(
@@ -695,10 +754,9 @@ def process_video_to_tactile_edges(
     )
 
     rembg_session = new_session(
-        "bria-rmbg",
-        providers=[
-            "CUDAExecutionProvider"
-        ]
+        CONFIG["rembg"]["model"],
+        providers=
+            CONFIG["rembg"]["providers"]
     )
 
 
@@ -726,14 +784,30 @@ def process_video_to_tactile_edges(
         return []
 
 
-    fps = cap.get(
+    detected_fps = cap.get(
         cv2.CAP_PROP_FPS
     )
 
 
+    if (
+        CONFIG["video"]["fps_override"]
+        is not None
+    ):
+
+        fps = float(
+            CONFIG["video"]["fps_override"]
+        )
+
+    else:
+
+        fps = detected_fps
+
+
     if fps <= 0:
 
-        fps = 30.0
+        fps = float(
+            CONFIG["video"]["fallback_fps"]
+        )
 
 
     min_frames_between_scenes = int(
@@ -756,7 +830,12 @@ def process_video_to_tactile_edges(
     # 0.5초 간격
     skip_frames = max(
         1,
-        int(fps / 2)
+        int(
+            fps
+            * CONFIG["video"][
+                "frame_sample_interval_sec"
+            ]
+        )
     )
 
 
@@ -806,8 +885,12 @@ def process_video_to_tactile_edges(
             [hsv_frame],
             [0, 1],
             None,
-            [50, 50],
-            [0, 180, 0, 256]
+            CONFIG["scene_detection"][
+                "histogram_bins"
+            ],
+            CONFIG["scene_detection"][
+                "histogram_ranges"
+            ]
         )
 
 
@@ -840,7 +923,14 @@ def process_video_to_tactile_edges(
             )
 
 
-            if similarity < 0.85:
+            if (
+                similarity
+                < CONFIG[
+                    "scene_detection"
+                ][
+                    "similarity_threshold"
+                ]
+            ):
 
                 is_new_scene = True
 
@@ -872,8 +962,14 @@ def process_video_to_tactile_edges(
 
             results = model(
                 frame,
-                device=0,
-                verbose=False
+                device=
+                    CONFIG["yolo"][
+                        "device"
+                    ],
+                verbose=
+                    CONFIG["yolo"][
+                        "verbose"
+                    ]
             )[0]
 
 
@@ -943,7 +1039,9 @@ def process_video_to_tactile_edges(
 
             _, fg_mask = cv2.threshold(
                 alpha_channel,
-                127,
+                CONFIG["rembg"][
+                    "alpha_threshold"
+                ],
                 255,
                 cv2.THRESH_BINARY
             )
@@ -959,15 +1057,25 @@ def process_video_to_tactile_edges(
 
             blurred = cv2.GaussianBlur(
                 gray,
-                (5, 5),
-                0
+                tuple(
+                    CONFIG["outline"][
+                        "gaussian_kernel"
+                    ]
+                ),
+                CONFIG["outline"][
+                    "gaussian_sigma"
+                ]
             )
 
 
             fg_edges_raw = cv2.Canny(
                 blurred,
-                30,
-                100
+                CONFIG["outline"][
+                    "canny_low"
+                ],
+                CONFIG["outline"][
+                    "canny_high"
+                ]
             )
 
 
@@ -996,7 +1104,9 @@ def process_video_to_tactile_edges(
                 contours,
                 -1,
                 255,
-                3
+                CONFIG["outline"][
+                    "contour_thickness"
+                ]
             )
 
 
@@ -1011,17 +1121,29 @@ def process_video_to_tactile_edges(
             final_outline = cv2.dilate(
                 combined_edges,
                 np.ones(
-                    (2, 2),
+                    tuple(
+                        CONFIG["outline"][
+                            "dilation_kernel"
+                        ]
+                    ),
                     np.uint8
                 ),
-                iterations=1
+                iterations=
+                    CONFIG["outline"][
+                        "dilation_iterations"
+                    ]
             )
 
 
             # E. DotPad 60 x 40
 
-            target_width = 60
-            target_height = 40
+            target_width = (
+                CONFIG["dotpad"]["width"]
+            )
+
+            target_height = (
+                CONFIG["dotpad"]["height"]
+            )
 
 
             small_gray = cv2.resize(
@@ -1046,8 +1168,12 @@ def process_video_to_tactile_edges(
 
             small_edges = cv2.Canny(
                 small_gray,
-                50,
-                150
+                CONFIG["dotpad"][
+                    "canny_low"
+                ],
+                CONFIG["dotpad"][
+                    "canny_high"
+                ]
             )
 
 
@@ -1069,7 +1195,9 @@ def process_video_to_tactile_edges(
                 small_contours,
                 -1,
                 255,
-                1
+                CONFIG["dotpad"][
+                    "contour_thickness"
+                ]
             )
 
 
@@ -1213,14 +1341,19 @@ def process_video_to_tactile_edges(
 
 
     API_BASE_URL = (
-        "http://127.0.0.1:8001/api"
+        f"http://"
+        f"{CONFIG['server']['host']}:"
+        f"{CONFIG['server']['port']}/api"
     )
 
 
 
     if not wait_for_ai_server(
         API_BASE_URL,
-        timeout_sec=180
+        timeout_sec=
+            CONFIG["server"][
+                "startup_timeout_sec"
+            ]
     ):
 
         print(
@@ -1322,7 +1455,9 @@ def process_video_to_tactile_edges(
 
     txt_path = os.path.join(
         output_dir,
-        "descriptions.txt"
+        CONFIG["files"][
+            "descriptions"
+        ]
     )
 
 
@@ -1381,7 +1516,7 @@ def process_video_to_tactile_edges(
 
     print(
         f"메타데이터: "
-        f"{os.path.join(output_dir, 'scene_metadata.json')}"
+        f"{os.path.join(output_dir, CONFIG['files']['metadata'])}"
     )
 
     print(
@@ -1397,13 +1532,27 @@ def process_video_to_tactile_edges(
 
 if __name__ == "__main__":
 
-    video_file = "video.mp4"
+    video_file = (
+        CONFIG["video"]["file"]
+    )
+
+    output_dir = (
+        CONFIG["video"]["output_dir"]
+    )
+
+    min_interval_sec = (
+        CONFIG["scene_detection"][
+            "min_interval_sec"
+        ]
+    )
 
     if os.path.exists(video_file):
 
         process_video_to_tactile_edges(
             video_file,
-            min_interval_sec=5
+            output_dir=output_dir,
+            min_interval_sec=
+                min_interval_sec
         )
 
     else:
