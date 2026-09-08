@@ -1,0 +1,253 @@
+==================================================
+VideoBraille
+==================================================
+
+Python:
+Python 3.11.5
+
+==================================================
+VideoBraille 메인 프로그램 시작
+==================================================
+
+============================================================
+VideoBraille 시작
+입력 영상: 아이돌.mp4
+출력 폴더: output_edges
+CUDA 사용 가능: True
+[GPU] 프로그램 시작 | 사용 1.22 GB / 전체 11.99 GB | 가용 10.78 GB
+============================================================
+
+
+============================================================
+PHASE 1 : 영상 전체 Scene 처리
+YOLO GPU + rembg GPU
+Moondream / Gemma는 아직 실행하지 않음
+============================================================
+
+YOLO 모델 로드...
+rembg GPU 세션 초기화...
+[GPU] YOLO + rembg 준비 후 | 사용 2.27 GB / 전체 11.99 GB | 가용 9.72 GB
+[저장] scene_metadata.json (0개 Scene)
+
+
+[Scene 0] 탐지 (0.47초)
+  YOLO 분석 중...
+  YOLO 객체: ['person']
+  Scene 이미지 저장: output_edges\analysis\scene_000_0.5s.jpg
+[저장] scene_metadata.json (1개 Scene)
+
+
+[Scene 1] 탐지 (5.97초)
+  YOLO 분석 중...
+  YOLO 객체: ['person']
+  Scene 이미지 저장: output_edges\analysis\scene_001_6.0s.jpg
+[저장] scene_metadata.json (2개 Scene)
+
+
+[Scene 2] 탐지 (12.97초)
+  YOLO 분석 중...
+  YOLO 객체: ['person']
+  Scene 이미지 저장: output_edges\analysis\scene_002_13.0s.jpg
+[저장] scene_metadata.json (3개 Scene)
+
+
+[Scene 3] 탐지 (18.47초)
+  YOLO 분석 중...
+  YOLO 객체: ['cell phone', 'person', 'dining table']
+  Scene 이미지 저장: output_edges\analysis\scene_003_18.5s.jpg
+[저장] scene_metadata.json (4개 Scene)
+
+
+[Scene 4] 탐지 (23.97초)
+  YOLO 분석 중...
+  YOLO 객체: ['person']
+  Scene 이미지 저장: output_edges\analysis\scene_004_24.0s.jpg
+[저장] scene_metadata.json (5개 Scene)
+
+
+[Scene 5] 탐지 (29.47초)
+  YOLO 분석 중...
+  YOLO 객체: ['person']
+  Scene 이미지 저장: output_edges\analysis\scene_005_29.5s.jpg
+[저장] scene_metadata.json (6개 Scene)
+
+
+[Scene 6] 탐지 (34.97초)
+  YOLO 분석 중...
+  YOLO 객체: ['person', 'dining table']
+  Scene 이미지 저장: output_edges\analysis\scene_006_35.0s.jpg
+[저장] scene_metadata.json (7개 Scene)
+
+
+[Scene 7] 탐지 (40.47초)
+  YOLO 분석 중...
+  YOLO 객체: ['person']
+  Scene 이미지 저장: output_edges\analysis\scene_007_40.5s.jpg
+[저장] scene_metadata.json (8개 Scene)
+
+
+============================================================
+PHASE 1 완료 - 8개 Scene
+============================================================
+
+오디오 추출을 시작합니다: output_edges\audio.mp3
+오디오 추출 성공!
+[저장] scene_metadata.json (8개 Scene)
+
+
+============================================================
+YOLO / rembg GPU 메모리 해제 시작
+============================================================
+[GPU] YOLO / rembg 해제 후 | 사용 11.99 GB / 전체 11.99 GB | 가용 0.00 GB
+YOLO / rembg GPU 메모리 해제 완료
+
+
+============================================================
+AI Relay Server 시작
+============================================================
+AI Relay Server PID: 5980
+
+AI 서버 준비 상태 확인 중...
+AI 서버 연결 성공 (mode=vision)
+
+
+============================================================
+PHASE 2 : 저장된 Scene 전체 Moondream 분석
+============================================================
+
+
+[Scene 0] Moondream 분석 시작
+  Moondream(Eng): A young woman with dark hair and glasses sits at a table with her hands near her face. She wears a black short-sleeved shirt. The background is a plain off-white wall.
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 1] Moondream 분석 시작
+  Moondream(Eng): A person with dark hair and glasses wears a light gray sweater over a white shirt, sits against a plain off-white wall, and looks slightly to the left. A vertical gray column is visible to their left.
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 2] Moondream 분석 시작
+  Moondream(Eng): A person with dark hair and glasses sits at a table with their hands clasped in front of them. They are wearing a dark shirt. The image is from a television show or video recording.
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 3] Moondream 분석 시작
+  Moondream(Eng): A person wearing glasses and a light gray sweater sits at a wooden table. A cell phone rests on the table beside them. A light-colored wall forms the backdrop. The scene is split down the middle, showing two perspectives.
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 4] Moondream 분석 시작
+  Moondream(Eng): A person wearing glasses, looking to the right, wearing a light-colored jacket, against a textured background. The image shows a close-up, profile view, focusing on the person's face and upper body. The visible text is "ODG" in the top right corner.
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 5] Moondream 분석 시작
+  Moondream(Eng): A young woman with dark hair and round glasses sits at a table, hands clasped near her mouth. She wears a black top. The number '10...' is visible in the bottom right corner.
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 6] Moondream 분석 시작
+  Moondream(Eng): Two people are seated at separate light wood dining tables against a plain white wall. The woman on the left has dark hair and glasses and is wearing a dark top; the man on the right has dark hair and glasses and is wearing a light gray zip-up jacket. The bottom left corner contains Korean text.
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 7] Moondream 분석 시작
+  Moondream(Eng): A person wearing glasses and a light gray sweater is pictured in a studio setting, smiling at the camera. Korean text is visible at the bottom.
+[저장] scene_metadata.json (8개 Scene)
+
+
+============================================================
+PHASE 2 Moondream 분석 완료
+============================================================
+[저장] scene_metadata.json (8개 Scene)
+
+
+============================================================
+PHASE 3 : Moondream → Gemma 전환
+============================================================
+
+
+============================================================
+AI 서버 VISION → LLM 전환 요청
+============================================================
+AI 서버 LLM 전환 성공: {'status': 'ok', 'mode': 'llm'}
+
+
+============================================================
+Gemma 한국어 초단문 요약 시작
+============================================================
+
+
+[Scene 0] 한국어 요약 중...
+  Eng: A young woman with dark hair and glasses sits at a table with her hands near her face. She wears a black short-sleeved shirt. The background is a plain off-white wall.
+  Kor: 실내 테이블 여자1
+  문자 수: 10
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 1] 한국어 요약 중...
+  Eng: A person with dark hair and glasses wears a light gray sweater over a white shirt, sits against a plain off-white wall, and looks slightly to the left. A vertical gray column is visible to their left.
+  Kor: 실내 벽 앞 사람1
+  문자 수: 10
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 2] 한국어 요약 중...
+  Eng: A person with dark hair and glasses sits at a table with their hands clasped in front of them. They are wearing a dark shirt. The image is from a television show or video recording.
+  Kor: 실내 테이블 사람1
+  문자 수: 10
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 3] 한국어 요약 중...
+  Eng: A person wearing glasses and a light gray sweater sits at a wooden table. A cell phone rests on the table beside them. A light-colored wall forms the backdrop. The scene is split down the middle, showing two perspectives.
+  Kor: 실내 테이블 사람1
+  문자 수: 10
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 4] 한국어 요약 중...
+  Eng: A person wearing glasses, looking to the right, wearing a light-colored jacket, against a textured background. The image shows a close-up, profile view, focusing on the person's face and upper body. The visible text is "ODG" in the top right corner.
+  Kor: 인물1 안경 오른쪽
+  문자 수: 10
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 5] 한국어 요약 중...
+  Eng: A young woman with dark hair and round glasses sits at a table, hands clasped near her mouth. She wears a black top. The number '10...' is visible in the bottom right corner.
+  Kor: 실내 여자1 테이블
+  문자 수: 10
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 6] 한국어 요약 중...
+  Eng: Two people are seated at separate light wood dining tables against a plain white wall. The woman on the left has dark hair and glasses and is wearing a dark top; the man on the right has dark hair and glasses and is wearing a light gray zip-up jacket. The bottom left corner contains Korean text.
+  Kor: 실내 식탁 사람2
+  문자 수: 9
+[저장] scene_metadata.json (8개 Scene)
+
+
+[Scene 7] 한국어 요약 중...
+  Eng: A person wearing glasses and a light gray sweater is pictured in a studio setting, smiling at the camera. Korean text is visible at the bottom.
+  Kor: 스튜디오 사람1 웃
+  문자 수: 10
+[저장] scene_metadata.json (8개 Scene)
+
+텍스트 결과 저장 완료: output_edges\descriptions.txt
+[저장] scene_metadata.json (8개 Scene)
+
+
+============================================================
+VideoBraille 작업 완료!
+============================================================
+총 Scene 수: 8
+결과 폴더: output_edges
+메타데이터: output_edges\scene_metadata.json
+텍스트: output_edges\descriptions.txt
+============================================================
+
+==================================================
+VideoBraille 작업 종료
+==================================================
+
+Press any key to continue . . .
