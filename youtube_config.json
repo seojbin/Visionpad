@@ -1,0 +1,55 @@
+{
+  "capture": {
+    "scene_interval_sec": 0.3,
+    "ocr_interval_sec": 0.8,
+    "send_width": 640,
+    "send_height": 360,
+    "jpeg_quality": 0.8
+  },
+
+  "processor": {
+    "scene_detection": {
+      "min_interval_sec": 1.0,
+      "similarity_threshold": 0.94,
+      "pixel_difference_threshold": 14.0,
+
+      "histogram_bins": [50, 50],
+      "histogram_ranges": [0, 180, 0, 256],
+
+      "resize_width": 192,
+      "resize_height": 108,
+
+      "crop_top_ratio": 0.03,
+      "crop_bottom_ratio": 0.18,
+      "crop_side_ratio": 0.03
+    },
+
+    "ocr": {
+      "enabled": true,
+      "languages": ["ko", "en"],
+      "gpu": true,
+      "confidence_threshold": 0.3,
+      "duplicate_similarity": 0.9
+    },
+
+    "rembg": {
+      "model": "bria-rmbg",
+      "providers": [
+        "CUDAExecutionProvider"
+      ],
+      "alpha_threshold": 127
+    },
+
+    "dotpad": {
+      "width": 60,
+      "height": 40,
+      "canny_low": 50,
+      "canny_high": 150,
+      "contour_thickness": 1
+    }
+  },
+
+  "youtube": {
+    "max_results": 5
+  }
+}
