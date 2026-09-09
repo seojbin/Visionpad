@@ -10,7 +10,17 @@ import re
 import cv2
 import numpy as np
 import requests
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Request,
+    WebSocket,
+    WebSocketDisconnect
+)
+
+from youtube_audio import (
+    YouTubeAudioOutput
+)
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -60,15 +70,39 @@ async def lifespan(
         )
     )
 
+    audio_config = CONFIG.get(
+        "audio",
+        {}
+    )
+
+    app.state.audio_output = (
+        YouTubeAudioOutput(
+            output_device=
+                audio_config.get(
+                    "output_device"
+                ),
+
+            queue_max_chunks=
+                audio_config.get(
+                    "queue_max_chunks",
+                    512
+                )
+        )
+    )
+
     print(
         "YouTube processor ready"
     )
 
-    yield
+    try:
+        yield
+
+    finally:
+        app.state.audio_output.stop()
 
 
 app = FastAPI(
-    title="VideoBraille YouTube Viewer",
+    title="YouTube Viewer",
     lifespan=lifespan
 )
 
@@ -553,3 +587,146 @@ async def resolve_youtube(
                 max_results
             )
     }
+@app.websocket(
+    "/ws/audio"
+)
+async def audio_websocket(
+    websocket: WebSocket
+):
+    await websocket.accept()
+
+    audio_output = (
+        websocket.app.state
+        .audio_output
+    )
+
+    print(
+        "[Audio] WebSocket 연결"
+    )
+
+    try:
+
+        while True:
+
+            message = (
+                await websocket.receive()
+            )
+
+
+            if (
+                message["type"]
+                == "websocket.disconnect"
+            ):
+                break
+
+
+            text_data = (
+                message.get(
+                    "text"
+                )
+            )
+
+            binary_data = (
+                message.get(
+                    "bytes"
+                )
+            )
+
+
+            if text_data is not None:
+
+                try:
+                    data = json.loads(
+                        text_data
+                    )
+
+                except json.JSONDecodeError:
+                    continue
+
+
+                command = data.get(
+                    "type"
+                )
+
+
+                if command == "start":
+
+                    sample_rate = int(
+                        data.get(
+                            "sample_rate",
+                            48000
+                        )
+                    )
+
+                    delay_sec = float(
+                        data.get(
+                            "delay_sec",
+                            10.0
+                        )
+                    )
+
+                    await asyncio.to_thread(
+                        audio_output.start,
+                        sample_rate,
+                        delay_sec
+                    )
+
+                    await websocket.send_json(
+                        {
+                            "type":
+                                "started",
+
+                            "sample_rate":
+                                sample_rate,
+
+                            "delay_sec":
+                                delay_sec
+                        }
+                    )
+
+
+                elif command == "stop":
+
+                    await asyncio.to_thread(
+                        audio_output.stop
+                    )
+
+
+            elif binary_data is not None:
+
+                audio_output.push_pcm(
+                    binary_data
+                )
+
+
+    except WebSocketDisconnect:
+
+        pass
+
+
+    except Exception as e:
+
+        print(
+            f"[Audio] WebSocket 오류: {e}"
+        )
+
+
+    finally:
+
+        await asyncio.to_thread(
+            audio_output.stop
+        )
+
+        print(
+            "[Audio] WebSocket 종료"
+        )
+@app.get(
+    "/api/audio/status"
+)
+async def audio_status(
+    request: Request
+):
+    return (
+        request.app.state
+        .audio_output.status()
+    )

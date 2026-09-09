@@ -51,5 +51,11 @@
 
   "youtube": {
     "max_results": 5
+  },
+
+  "audio": {
+    "output_device": null,
+    "queue_max_chunks": 512
   }
+
 }

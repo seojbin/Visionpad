@@ -184,7 +184,7 @@
 
 <div class="container">
 
-    <h1>VideoBraille YouTube Viewer</h1>
+    <h1>YouTube Viewer</h1>
 
     <div class="search-box">
 
@@ -288,13 +288,12 @@ Capture: -
     id="capture-canvas"
 ></canvas>
 
-<script src="https://www.youtube.com/iframe_api"></script>
-
 <script>
 
 let player = null;
 let youtubeReady = false;
 let currentVideoId = null;
+let pendingVideoId = null;
 
 let captureStream = null;
 let captureReady = false;
@@ -307,8 +306,15 @@ let ocrRequestBusy = false;
 
 let regionCropActive = false;
 
-let audioOutputWindow = null;
+let audioContext = null;
+let audioSource = null;
+let audioAnalyserNode = null;
+let audioProcessorNode = null;
+let audioMuteGainNode = null;
 let audioTrack = null;
+let audioSocket = null;
+let audioMeterTimer = null;
+let audioRms = 0;
 
 let syncAnchorVideoTime = null;
 let syncAnchorAudioTime = null;
@@ -471,7 +477,9 @@ function clearViewer() {
                         : "-"
                 ),
         audioStatus:
-            getAudioOutputStatus()
+            audioContext
+                ? audioContext.state
+                : "-"
     };
 
     renderDebug();
@@ -517,6 +525,10 @@ async function loadClientConfig() {
 window.onYouTubeIframeAPIReady =
     function () {
 
+        if (youtubeReady) {
+            return;
+        }
+
         player = new YT.Player(
             "youtube-player",
             {
@@ -524,43 +536,123 @@ window.onYouTubeIframeAPIReady =
                 height: "100%",
 
                 playerVars: {
-                controls: 0,
-                disablekb: 1,
-                fs: 0,
-                iv_load_policy: 3,
-                rel: 0,
-                playsinline: 1
+                    controls: 0,
+                    disablekb: 1,
+                    fs: 0,
+                    iv_load_policy: 3,
+                    rel: 0,
+                    playsinline: 1,
+            
+                    cc_load_policy: 0
                 },
 
                 events: {
 
-                    onReady: function () {
+    onReady: function () {
 
-                        youtubeReady = true;
+        youtubeReady = true;
 
-                        player.mute();
+        player.mute();
 
-                        setStatus(
-                            "YouTube 준비 완료"
-                        );
-                    },
+        disableYoutubeCaptions();
 
-                    onStateChange:
-                        function () {
-                        },
+        setStatus(
+            "YouTube 준비 완료"
+        );
+    },
 
-                    onError:
-                        function (event) {
+    onStateChange: function () {
 
-                            setStatus(
-                                "YouTube 재생 오류: "
-                                + event.data
-                            );
-                        }
-                }
+        disableYoutubeCaptions();
+    },
+
+    onApiChange: function () {
+
+        disableYoutubeCaptions();
+    },
+
+    onError: function (event) {
+
+        setStatus(
+            "YouTube 재생 오류: "
+            + event.data
+        );
+    }
+}
+
             }
         );
     };
+
+function disableYoutubeCaptions() {
+
+    if (!player) {
+        return;
+    }
+
+    try {
+
+        if (
+            typeof player.unloadModule
+            === "function"
+        ) {
+
+            player.unloadModule(
+                "captions"
+            );
+
+            player.unloadModule(
+                "cc"
+            );
+        }
+
+    } catch (error) {
+
+        console.warn(
+            "자막 비활성화 실패",
+            error
+        );
+    }
+}
+function loadYouTubeIframeApi() {
+
+    if (
+        window.YT
+        && typeof window.YT.Player
+        === "function"
+    ) {
+
+        window.onYouTubeIframeAPIReady();
+        return;
+    }
+
+    const existing =
+        document.querySelector(
+            'script[data-videobraille-youtube-api="1"]'
+        );
+
+    if (existing) {
+        return;
+    }
+
+    const script =
+        document.createElement(
+            "script"
+        );
+
+    script.src =
+        "https://www.youtube.com/iframe_api";
+
+    script.async = true;
+
+    script.dataset
+        .videobrailleYoutubeApi =
+        "1";
+
+    document.head.appendChild(
+        script
+    );
+}
 
 
 async function resolveYouTube() {
@@ -792,11 +884,9 @@ function scheduleAccessibleOutput(
 
     let remainingSec;
 
-    const audioNow =
-        getAudioOutputCurrentTime();
-
     if (
-        audioNow !== null
+        audioContext
+        && audioContext.state === "running"
         && syncAnchorVideoTime !== null
         && syncAnchorAudioTime !== null
     ) {
@@ -813,7 +903,7 @@ function scheduleAccessibleOutput(
             Math.max(
                 0,
                 targetAudioTime
-                - audioNow
+                - audioContext.currentTime
             );
 
     } else {
@@ -850,121 +940,269 @@ function scheduleAccessibleOutput(
 }
 
 
-async function stopDelayedAudio() {
+function stopAudioMeter() {
+
+    if (audioMeterTimer) {
+        clearInterval(
+            audioMeterTimer
+        );
+
+        audioMeterTimer =
+            null;
+    }
+
+    audioRms = 0;
+}
+
+
+function updateAudioDebug() {
+
+    if (!audioContext) {
+        debugState.audioStatus =
+            "not-started";
+
+        renderDebug();
+        return;
+    }
+
+    if (!audioTrack) {
+        debugState.audioStatus =
+            audioContext.state
+            + " / disconnected";
+
+        renderDebug();
+        return;
+    }
+
+    const settings =
+        audioTrack.getSettings();
+
+    let wsState =
+        "closed";
+
+    if (audioSocket) {
+        if (
+            audioSocket.readyState
+            === WebSocket.OPEN
+        ) {
+            wsState = "open";
+        } else if (
+            audioSocket.readyState
+            === WebSocket.CONNECTING
+        ) {
+            wsState = "connecting";
+        }
+    }
+
+    debugState.audioStatus =
+        audioContext.state
+        + " / track="
+        + audioTrack.readyState
+        + " / own="
+        + String(
+            settings.restrictOwnAudio
+        )
+        + " / local="
+        + String(
+            settings.suppressLocalAudioPlayback
+        )
+        + " / ws="
+        + wsState
+        + " / rms="
+        + audioRms.toFixed(4);
+
+    renderDebug();
+}
+
+function startAudioMeter() {
+
+    stopAudioMeter();
+
+    if (!audioAnalyserNode) {
+        return;
+    }
+
+    const values =
+        new Float32Array(
+            audioAnalyserNode.fftSize
+        );
+
+    audioMeterTimer =
+        setInterval(
+            function () {
+
+                if (
+                    !audioAnalyserNode
+                    || !audioTrack
+                ) {
+                    return;
+                }
+
+                audioAnalyserNode
+                    .getFloatTimeDomainData(
+                        values
+                    );
+
+                let sum = 0;
+
+                for (
+                    let i = 0;
+                    i < values.length;
+                    i++
+                ) {
+                    sum +=
+                        values[i]
+                        * values[i];
+                }
+
+                audioRms =
+                    Math.sqrt(
+                        sum / values.length
+                    );
+
+                updateAudioDebug();
+
+            },
+            300
+        );
+}
+
+
+function disconnectDelayedAudio() {
 
     syncAnchorVideoTime = null;
     syncAnchorAudioTime = null;
-    audioTrack = null;
 
-    if (
-        audioOutputWindow
-        && !audioOutputWindow.closed
-    ) {
+    stopAudioMeter();
+
+    if (audioProcessorNode) {
+        audioProcessorNode.onaudioprocess = null;
 
         try {
-            await audioOutputWindow
-                .stopDelayedAudio();
+            audioProcessorNode.disconnect();
         } catch (_) {
         }
 
+        audioProcessorNode = null;
+    }
+
+    if (audioMuteGainNode) {
         try {
-            audioOutputWindow.close();
+            audioMuteGainNode.disconnect();
         } catch (_) {
         }
+
+        audioMuteGainNode = null;
     }
 
-    audioOutputWindow = null;
-}
+    if (audioSource) {
+        try {
+            audioSource.disconnect();
+        } catch (_) {
+        }
 
-
-function getAudioOutputCurrentTime() {
-
-    if (
-        !audioOutputWindow
-        || audioOutputWindow.closed
-    ) {
-        return null;
+        audioSource = null;
     }
 
-    try {
-        const value =
-            audioOutputWindow
-                .getAudioCurrentTime();
+    if (audioAnalyserNode) {
+        try {
+            audioAnalyserNode.disconnect();
+        } catch (_) {
+        }
 
-        return Number.isFinite(value)
-            ? value
-            : null;
-
-    } catch (_) {
-        return null;
-    }
-}
-
-
-function getAudioOutputStatus() {
-
-    if (
-        !audioOutputWindow
-        || audioOutputWindow.closed
-    ) {
-        return "-";
+        audioAnalyserNode = null;
     }
 
-    try {
-        return audioOutputWindow
-            .getAudioStatus();
-    } catch (_) {
-        return "popup 연결 중";
-    }
-}
-
-
-async function openAudioOutputWindow() {
-
-    audioOutputWindow =
-        window.open(
-            "/static/audio_output.html",
-            "VideoBrailleAudioOutput",
-            "width=380,height=230"
-        );
-
-    if (!audioOutputWindow) {
-        throw new Error(
-            "오디오 출력 창이 차단되었습니다. 팝업을 허용해주세요."
-        );
-    }
-
-    const started =
-        performance.now();
-
-    while (true) {
-
+    if (audioSocket) {
         try {
             if (
-                audioOutputWindow
-                .audioOutputReady
+                audioSocket.readyState
+                === WebSocket.OPEN
             ) {
-                return;
+                audioSocket.send(
+                    JSON.stringify({
+                        type: "stop"
+                    })
+                );
             }
+
+            audioSocket.close();
         } catch (_) {
         }
 
+        audioSocket = null;
+    }
+
+    audioTrack = null;
+
+    updateAudioDebug();
+}
+
+function primeAudioContext() {
+
+    const AudioContextClass =
+        window.AudioContext
+        || window.webkitAudioContext;
+
+    if (!AudioContextClass) {
+        throw new Error(
+            "이 브라우저는 Web Audio API를 지원하지 않습니다."
+        );
+    }
+
+    if (!audioContext) {
+        audioContext =
+            new AudioContextClass();
+    }
+
+    if (
+        audioContext.state
+        === "suspended"
+    ) {
+
+        const resumePromise =
+            audioContext.resume();
+
         if (
-            performance.now()
-            - started
-            > 5000
+            resumePromise
+            && typeof resumePromise.catch
+            === "function"
         ) {
-            throw new Error(
-                "오디오 출력 창 준비 시간이 초과되었습니다."
+            resumePromise.catch(
+                function (error) {
+                    console.warn(
+                        "AudioContext resume failed",
+                        error
+                    );
+                }
             );
         }
+    }
 
-        await new Promise(
-            resolve =>
-                setTimeout(
-                    resolve,
-                    50
-                )
+    updateAudioDebug();
+}
+
+
+async function ensureAudioContextRunning() {
+
+    if (!audioContext) {
+        primeAudioContext();
+    }
+
+    if (
+        audioContext.state
+        === "suspended"
+    ) {
+        await audioContext.resume();
+    }
+
+    if (
+        audioContext.state
+        !== "running"
+    ) {
+        throw new Error(
+            "AudioContext가 실행 상태가 아닙니다: "
+            + audioContext.state
         );
     }
 }
@@ -987,14 +1225,9 @@ async function startDelayedAudio(
         );
     }
 
-    if (
-        !audioOutputWindow
-        || audioOutputWindow.closed
-    ) {
-        throw new Error(
-            "오디오 출력 창이 닫혀 있습니다."
-        );
-    }
+    await ensureAudioContextRunning();
+
+    disconnectDelayedAudio();
 
     audioTrack =
         audioTracks[0];
@@ -1005,19 +1238,33 @@ async function startDelayedAudio(
 
     const constraints = {};
 
-    if (supportedConstraints.restrictOwnAudio) {
-        constraints.restrictOwnAudio = false;
+    if (
+        supportedConstraints
+            .restrictOwnAudio
+    ) {
+        constraints.restrictOwnAudio =
+            false;
     }
 
-    if (supportedConstraints.suppressLocalAudioPlayback) {
-        constraints.suppressLocalAudioPlayback = true;
+    if (
+        supportedConstraints
+            .suppressLocalAudioPlayback
+    ) {
+        constraints
+            .suppressLocalAudioPlayback =
+            true;
     }
 
-    if (Object.keys(constraints).length > 0) {
+    if (
+        Object.keys(
+            constraints
+        ).length > 0
+    ) {
         try {
-            await audioTrack.applyConstraints(
-                constraints
-            );
+            await audioTrack
+                .applyConstraints(
+                    constraints
+                );
         } catch (error) {
             console.warn(
                 "Audio constraints apply failed",
@@ -1026,42 +1273,245 @@ async function startDelayedAudio(
         }
     }
 
+    const audioOnlyStream =
+        new MediaStream(
+            [audioTrack]
+        );
+
+    audioSource =
+        audioContext
+            .createMediaStreamSource(
+                audioOnlyStream
+            );
+
+    audioAnalyserNode =
+        audioContext.createAnalyser();
+
+    audioAnalyserNode.fftSize =
+        2048;
+
+    audioProcessorNode =
+        audioContext
+            .createScriptProcessor(
+                4096,
+                2,
+                1
+            );
+
+    audioMuteGainNode =
+        audioContext.createGain();
+
+    audioMuteGainNode.gain.value =
+        0.0;
+
+    audioSource.connect(
+        audioAnalyserNode
+    );
+
+    audioAnalyserNode.connect(
+        audioProcessorNode
+    );
+
+    audioProcessorNode.connect(
+        audioMuteGainNode
+    );
+
+    audioMuteGainNode.connect(
+        audioContext.destination
+    );
+
+    const wsProtocol =
+        location.protocol === "https:"
+            ? "wss:"
+            : "ws:";
+
+    audioSocket =
+        new WebSocket(
+            wsProtocol
+            + "//"
+            + location.host
+            + "/ws/audio"
+        );
+
+    audioSocket.binaryType =
+        "arraybuffer";
+
+    await new Promise(
+        function (resolve, reject) {
+
+            const timeout =
+                setTimeout(
+                    function () {
+                        reject(
+                            new Error(
+                                "오디오 WebSocket 연결 시간 초과"
+                            )
+                        );
+                    },
+                    5000
+                );
+
+            audioSocket.onopen =
+                function () {
+                    clearTimeout(
+                        timeout
+                    );
+
+                    resolve();
+                };
+
+            audioSocket.onerror =
+                function () {
+                    clearTimeout(
+                        timeout
+                    );
+
+                    reject(
+                        new Error(
+                            "오디오 WebSocket 연결 실패"
+                        )
+                    );
+                };
+        }
+    );
+
     const delaySec =
         Number(
             captureConfig.access_delay_sec
         ) || 0;
 
-    const result =
-        await audioOutputWindow
-            .startDelayedAudio(
-                stream,
+    audioSocket.send(
+        JSON.stringify({
+            type: "start",
+            sample_rate:
+                audioContext.sampleRate,
+            delay_sec:
                 delaySec
-            );
-
-    debugState.audioStatus =
-        result.status;
-
-    renderDebug();
-
-    console.log(
-        "Delayed audio popup started",
-        result
+        })
     );
 
-    return result;
-}
+    let firstChunkSent =
+        false;
 
+    let firstChunkResolve =
+        null;
 
-async function loadVideo(videoId) {
+    let firstChunkReject =
+        null;
 
-    if (!youtubeReady) {
-
-        setStatus(
-            "YouTube API가 아직 준비되지 않았습니다"
+    const firstChunkPromise =
+        new Promise(
+            function (resolve, reject) {
+                firstChunkResolve = resolve;
+                firstChunkReject = reject;
+            }
         );
 
-        return;
-    }
+    const firstChunkTimeout =
+        setTimeout(
+            function () {
+                if (
+                    !firstChunkSent
+                    && firstChunkReject
+                ) {
+                    firstChunkReject(
+                        new Error(
+                            "오디오 PCM 입력을 받지 못했습니다"
+                        )
+                    );
+                }
+            },
+            3000
+        );
+
+    audioProcessorNode.onaudioprocess =
+        function (event) {
+
+            if (
+                !audioSocket
+                || audioSocket.readyState
+                    !== WebSocket.OPEN
+            ) {
+                return;
+            }
+
+            const input =
+                event.inputBuffer;
+
+            const frameCount =
+                input.length;
+
+            const channelCount =
+                Math.max(
+                    1,
+                    input.numberOfChannels
+                );
+
+            const mono =
+                new Float32Array(
+                    frameCount
+                );
+
+            for (
+                let channel = 0;
+                channel < channelCount;
+                channel++
+            ) {
+                const samples =
+                    input.getChannelData(
+                        channel
+                    );
+
+                for (
+                    let i = 0;
+                    i < frameCount;
+                    i++
+                ) {
+                    mono[i] +=
+                        samples[i]
+                        / channelCount;
+                }
+            }
+
+            try {
+                audioSocket.send(
+                    mono.buffer
+                );
+            } catch (_) {
+                return;
+            }
+
+            if (!firstChunkSent) {
+                firstChunkSent =
+                    true;
+
+                clearTimeout(
+                    firstChunkTimeout
+                );
+
+                firstChunkResolve({
+                    currentTime:
+                        audioContext.currentTime,
+                    videoTime:
+                        getVideoTime()
+                });
+            }
+        };
+
+    startAudioMeter();
+    updateAudioDebug();
+
+    console.log(
+        "Python audio streaming started",
+        delaySec,
+        audioContext.sampleRate,
+        audioTrack.getSettings()
+    );
+
+    return await firstChunkPromise;
+}
+
+async function loadVideo(videoId) {
 
     if (!videoId) {
 
@@ -1072,6 +1522,17 @@ async function loadVideo(videoId) {
         return;
     }
 
+    if (!youtubeReady) {
+
+        pendingVideoId =
+            videoId;
+
+        setStatus(
+            "YouTube API 준비 후 자동으로 영상을 불러옵니다"
+        );
+
+        return;
+    }
 
     clearAccessibleOutputTimers();
 
@@ -1089,12 +1550,19 @@ async function loadVideo(videoId) {
     try {
 
         player.loadVideoById({
-            videoId:
-                videoId,
+    videoId: videoId,
+    startSeconds: 0
+});
 
-            startSeconds:
-                0
-        });
+setTimeout(
+    disableYoutubeCaptions,
+    300
+);
+
+setTimeout(
+    disableYoutubeCaptions,
+    1000
+);
 
 
         if (
@@ -1102,14 +1570,31 @@ async function loadVideo(videoId) {
             && captureStream
         ) {
 
-            await startDelayedAudio(
-                captureStream
-            );
+            disconnectDelayedAudio();
 
             player.unMute();
             player.setVolume(
                 100
             );
+
+            player.playVideo();
+
+            await waitForPlayerPlaying();
+
+            const audioStart =
+                await startDelayedAudio(
+                    captureStream
+                );
+
+            syncAnchorVideoTime =
+                Number(
+                    audioStart.videoTime
+                );
+
+            syncAnchorAudioTime =
+                Number(
+                    audioStart.currentTime
+                );
 
         } else {
 
@@ -1293,13 +1778,13 @@ async function startCapture() {
     player.pauseVideo();
 
     setStatus(
-        "현재 VideoBraille 브라우저 탭을 선택하고 탭 오디오 공유를 켜주세요"
+        "현재 브라우저 탭을 선택하고 탭 오디오 공유를 켜주세요"
     );
 
 
     try {
 
-        await openAudioOutputWindow();
+        await ensureAudioContextRunning();
 
         const supportedConstraints =
             navigator.mediaDevices
@@ -1479,15 +1964,17 @@ async function startCapture() {
 
         player.playVideo();
 
+        await waitForPlayerPlaying();
 
         const audioStart =
             await startDelayedAudio(
                 captureStream
             );
 
-
         syncAnchorVideoTime =
-            getVideoTime();
+            Number(
+                audioStart.videoTime
+            );
 
         syncAnchorAudioTime =
             Number(
@@ -1575,7 +2062,15 @@ function stopCapture() {
         false;
 
 
-    stopDelayedAudio();
+    if (player) {
+        try {
+            player.mute();
+        } catch (_) {
+        }
+    }
+
+
+    disconnectDelayedAudio();
 
 
     if (captureStream) {
@@ -1595,15 +2090,6 @@ function stopCapture() {
 
     captureVideo.srcObject =
         null;
-
-
-    if (player) {
-
-        try {
-            player.mute();
-        } catch (_) {
-        }
-    }
 
 
     debugState.captureMode =
@@ -1812,6 +2298,41 @@ function getVideoTime() {
 
 
     return time;
+}
+
+
+async function waitForPlayerPlaying(
+    timeoutMs = 3000
+) {
+
+    const started =
+        performance.now();
+
+    while (
+        performance.now()
+        - started
+        < timeoutMs
+    ) {
+
+        if (
+            typeof YT !== "undefined"
+            && player
+            && player.getPlayerState()
+            === YT.PlayerState.PLAYING
+        ) {
+            return true;
+        }
+
+        await new Promise(
+            resolve =>
+                setTimeout(
+                    resolve,
+                    25
+                )
+        );
+    }
+
+    return false;
 }
 
 
@@ -2198,7 +2719,19 @@ pauseButton.addEventListener(
 
 startCaptureButton.addEventListener(
     "click",
-    startCapture
+    function () {
+
+        try {
+            primeAudioContext();
+        } catch (error) {
+            setStatus(
+                error.message
+            );
+            return;
+        }
+
+        startCapture();
+    }
 );
 
 
@@ -2220,10 +2753,18 @@ window.addEventListener(
     function () {
 
         stopCapture();
+
+        if (audioContext) {
+            try {
+                audioContext.close();
+            } catch (_) {
+            }
+        }
     }
 );
 
 
+loadYouTubeIframeApi();
 loadClientConfig();
 renderDebug();
 
