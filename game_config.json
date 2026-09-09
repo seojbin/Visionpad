@@ -1,0 +1,99 @@
+{
+  "dotpad": {
+    "width": 60,
+    "height": 40,
+    "refresh_interval_ms": 1000
+  },
+
+  "interaction": {
+    "hover_dwell_ms": 500,
+    "pointer_interval_ms": 100
+  },
+
+  "resources": {
+    "wood": 0,
+    "stone": 0,
+    "seed": 3,
+    "coin": 0
+  },
+
+  "main_map": [
+    {
+      "id": "mine",
+      "type": "arrow",
+      "x": 30,
+      "y": 6,
+      "direction": "up",
+      "size": 4,
+      "hit_width": 10,
+      "hit_height": 8,
+      "label": "광산",
+      "tts": "위쪽 광산",
+      "action": "go:mine"
+    },
+
+    {
+      "id": "farm",
+      "type": "arrow",
+      "x": 51,
+      "y": 20,
+      "direction": "right",
+      "size": 4,
+      "hit_width": 10,
+      "hit_height": 10,
+      "label": "농장",
+      "tts": "오른쪽 농장",
+      "action": "go:farm"
+    },
+
+    {
+      "id": "home",
+      "type": "arrow",
+      "x": 9,
+      "y": 20,
+      "direction": "left",
+      "size": 4,
+      "hit_width": 10,
+      "hit_height": 10,
+      "label": "집",
+      "tts": "왼쪽 집",
+      "action": "go:home"
+    },
+
+    {
+      "id": "games",
+      "type": "arrow",
+      "x": 30,
+      "y": 34,
+      "direction": "down",
+      "size": 4,
+      "hit_width": 10,
+      "hit_height": 8,
+      "label": "미니게임",
+      "tts": "아래쪽 미니게임",
+      "action": "go:games"
+    },
+
+    {
+      "id": "resources",
+      "type": "box",
+      "x": 30,
+      "y": 20,
+      "width": 8,
+      "height": 6,
+      "hit_width": 10,
+      "hit_height": 8,
+      "label": "자원 상자",
+      "tts": "가운데 상자",
+      "action": "read_resources"
+    }
+  ],
+
+  "pages": {
+    "main_map": "메인 맵",
+    "farm": "농장",
+    "mine": "광산",
+    "home": "집",
+    "games": "미니게임"
+  }
+}

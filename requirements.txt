@@ -1,24 +1,5 @@
-opencv-python
-numpy
-Pillow
-requests
-
-ultralytics
-rembg
-
-transformers
-accelerate
-einops
-sentencepiece
-tiktoken
-
 fastapi
-uvicorn
-pydantic
-python-multipart
-easyocr
-sounddevice
-websockets
-#pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-#pip install "rembg[gpu]"
-#pip install llama-cpp-python==0.2.90 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 --only-binary llama-cpp-python
+uvicorn[standard]
+opencv-python
+mediapipe
+numpy

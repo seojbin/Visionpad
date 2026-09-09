@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>VisionPad Game</title>
+
+<style>
+
+body {
+    margin: 0;
+    padding: 24px;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    background:
+        #f4f4f4;
+
+    color:
+        #111;
+}
+
+
+.container {
+    max-width:
+        1100px;
+
+    margin:
+        0 auto;
+}
+
+
+h1 {
+    margin-top:
+        0;
+}
+
+
+.info {
+    display:
+        flex;
+
+    gap:
+        24px;
+
+    margin-bottom:
+        16px;
+
+    font-size:
+        18px;
+}
+
+
+.pad-panel {
+    background:
+        white;
+
+    border:
+        1px solid #bbb;
+
+    padding:
+        20px;
+
+    border-radius:
+        8px;
+}
+
+
+#dotpad {
+    display:
+        block;
+
+    width:
+        100%;
+
+    max-width:
+        900px;
+
+    aspect-ratio:
+        60 / 40;
+
+    background:
+        #111;
+
+    cursor:
+        crosshair;
+
+    touch-action:
+        none;
+}
+
+
+.controls {
+    margin-top:
+        16px;
+}
+
+
+button {
+    padding:
+        10px 16px;
+
+    font-size:
+        16px;
+
+    cursor:
+        pointer;
+}
+
+
+#status {
+    margin-top:
+        16px;
+
+    padding:
+        12px;
+
+    background:
+        #fff;
+
+    border:
+        1px solid #ccc;
+
+    white-space:
+        pre-line;
+
+    font-family:
+        monospace;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+<h1>
+    VisionPad Game
+</h1>
+
+
+<div class="info">
+
+    <div>
+        페이지:
+        <strong id="page-name">
+            메인 맵
+        </strong>
+    </div>
+
+    <div>
+        현재 오브젝트:
+        <strong id="hover-object">
+            없음
+        </strong>
+    </div>
+
+</div>
+
+
+<div class="pad-panel">
+
+    <canvas
+        id="dotpad"
+        width="900"
+        height="600"
+    ></canvas>
+
+
+    <div class="controls">
+
+        <button id="reset-button">
+            메인 맵 초기화
+        </button>
+
+    </div>
+
+
+    <div id="status">
+        Pointer: -
+    </div>
+
+</div>
+
+</div>
+
+
+<script>
+
+const canvas =
+    document.getElementById(
+        "dotpad"
+    );
+
+const ctx =
+    canvas.getContext(
+        "2d"
+    );
+
+
+const pageName =
+    document.getElementById(
+        "page-name"
+    );
+
+
+const hoverObject =
+    document.getElementById(
+        "hover-object"
+    );
+
+
+const status =
+    document.getElementById(
+        "status"
+    );
+
+
+const resetButton =
+    document.getElementById(
+        "reset-button"
+    );
+
+
+let logicalWidth =
+    60;
+
+let logicalHeight =
+    40;
+
+
+let pointerX =
+    0;
+
+let pointerY =
+    0;
+
+let pointerInside =
+    false;
+
+let pointerPressed =
+    false;
+
+
+let currentState =
+    null;
+
+
+function speak(text) {
+
+    if (!text) {
+        return;
+    }
+
+
+    window.speechSynthesis.cancel();
+
+
+    const utterance =
+        new SpeechSynthesisUtterance(
+            text
+        );
+
+
+    utterance.lang =
+        "ko-KR";
+
+
+    utterance.rate =
+        1.0;
+
+
+    window.speechSynthesis.speak(
+        utterance
+    );
+}
+
+
+function eventToLogical(
+    event
+) {
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+
+    let x =
+        (
+            event.clientX
+            - rect.left
+        )
+        / rect.width
+        * logicalWidth;
+
+
+    let y =
+        (
+            event.clientY
+            - rect.top
+        )
+        / rect.height
+        * logicalHeight;
+
+
+    x = Math.max(
+        0,
+        Math.min(
+            logicalWidth - 1,
+            x
+        )
+    );
+
+
+    y = Math.max(
+        0,
+        Math.min(
+            logicalHeight - 1,
+            y
+        )
+    );
+
+
+    pointerX =
+        x;
+
+    pointerY =
+        y;
+
+
+    updateStatus();
+}
+
+
+function updateStatus() {
+
+    status.textContent =
+        "Pointer: "
+        + pointerX.toFixed(1)
+        + ", "
+        + pointerY.toFixed(1)
+        + "\nPressed: "
+        + pointerPressed;
+}
+
+
+function drawState(
+    state
+) {
+
+    currentState =
+        state;
+
+
+    logicalWidth =
+        state.width;
+
+    logicalHeight =
+        state.height;
+
+
+    pageName.textContent =
+        state.page_name;
+
+
+    hoverObject.textContent =
+        state.hover_object
+        || "없음";
+
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    ctx.fillStyle =
+        "#111";
+
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    const cellWidth =
+        canvas.width
+        / logicalWidth;
+
+
+    const cellHeight =
+        canvas.height
+        / logicalHeight;
+
+
+    ctx.fillStyle =
+        "#fff";
+
+
+    for (
+        let y = 0;
+        y < logicalHeight;
+        y++
+    ) {
+
+        for (
+            let x = 0;
+            x < logicalWidth;
+            x++
+        ) {
+
+            if (
+                state.dots[y][x]
+                === 0
+            ) {
+                continue;
+            }
+
+
+            const centerX =
+                x * cellWidth
+                + cellWidth / 2;
+
+
+            const centerY =
+                y * cellHeight
+                + cellHeight / 2;
+
+
+            const radius =
+                Math.min(
+                    cellWidth,
+                    cellHeight
+                ) * 0.38;
+
+
+            ctx.beginPath();
+
+
+            ctx.arc(
+                centerX,
+                centerY,
+                radius,
+                0,
+                Math.PI * 2
+            );
+
+
+            ctx.fill();
+        }
+    }
+}
+
+
+async function sendPointer(
+    endpoint
+) {
+
+    try {
+
+        const response =
+            await fetch(
+                endpoint,
+                {
+                    method:
+                        "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            x:
+                                pointerX,
+
+                            y:
+                                pointerY
+                        })
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (data.state) {
+
+            drawState(
+                data.state
+            );
+        }
+
+
+        if (data.tts) {
+
+            speak(
+                data.tts
+            );
+        }
+
+    } catch (error) {
+
+        console.error(
+            error
+        );
+    }
+}
+
+
+async function loadState() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/state"
+            );
+
+
+        const state =
+            await response.json();
+
+
+        drawState(
+            state
+        );
+
+    } catch (error) {
+
+        console.error(
+            error
+        );
+    }
+}
+
+
+canvas.addEventListener(
+    "mouseenter",
+    function () {
+
+        pointerInside =
+            true;
+    }
+);
+
+
+canvas.addEventListener(
+    "mouseleave",
+    function () {
+
+        pointerInside =
+            false;
+    }
+);
+
+
+canvas.addEventListener(
+    "mousemove",
+    function (event) {
+
+        eventToLogical(
+            event
+        );
+    }
+);
+
+
+canvas.addEventListener(
+    "mousedown",
+    function (event) {
+
+        eventToLogical(
+            event
+        );
+
+
+        pointerPressed =
+            true;
+
+
+        updateStatus();
+
+
+        sendPointer(
+            "/api/pointer/down"
+        );
+    }
+);
+
+
+window.addEventListener(
+    "mouseup",
+    function () {
+
+        if (!pointerPressed) {
+            return;
+        }
+
+
+        pointerPressed =
+            false;
+
+
+        updateStatus();
+
+
+        sendPointer(
+            "/api/pointer/up"
+        );
+    }
+);
+
+
+setInterval(
+    function () {
+
+        if (!pointerInside) {
+            return;
+        }
+
+
+        sendPointer(
+            "/api/pointer/move"
+        );
+
+    },
+    100
+);
+
+
+setInterval(
+    loadState,
+    1000
+);
+
+
+resetButton.addEventListener(
+    "click",
+    async function () {
+
+        const response =
+            await fetch(
+                "/api/reset",
+                {
+                    method:
+                        "POST"
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (data.state) {
+
+            drawState(
+                data.state
+            );
+        }
+
+
+        speak(
+            "메인 맵입니다"
+        );
+    }
+);
+
+
+loadState();
+
+</script>
+
+</body>
+
+</html>
