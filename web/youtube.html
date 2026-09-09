@@ -2590,11 +2590,27 @@ async function sendOcrFrame() {
         }
 
 
-        if (
-            data.ocr_updated
-            && data.ocr_text
-            && data.ocr_text.trim()
-        ) {
+        if (data.ocr_updated) {
+
+    const textData =
+        data.ocr_text
+        && data.ocr_text.trim()
+            ? data.ocr_text
+            : "인식된 글자 없음";
+
+    const ocrTimestamp =
+        Number(
+            data.timestamp
+        );
+
+    scheduleAccessibleOutput(
+        ocrTimestamp,
+        function () {
+            ocrText.textContent =
+                textData;
+        }
+    );
+}
 
             const textData =
                 data.ocr_text;
