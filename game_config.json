@@ -4,96 +4,576 @@
     "height": 40,
     "refresh_interval_ms": 1000
   },
-
   "interaction": {
-    "hover_dwell_ms": 500,
-    "pointer_interval_ms": 100
+    "hover_dwell_ms": 0,
+    "pointer_interval_ms": 80
   },
-
+  "game": {
+    "start_day": 1
+  },
+  "pages": {
+    "home": "집",
+    "farm": "농장",
+    "town": "마을",
+    "minimap": "미니맵",
+    "seed_select": "씨앗 선택",
+    "inventory": "인벤토리",
+    "research": "연구 상자",
+    "harvest": "수확 미니게임",
+    "recipe_select": "요리 레시피",
+    "ingredient_select": "요리 재료 선택",
+    "cooking": "요리 미니게임",
+    "shop_choice": "상점 거래 선택",
+    "shop_buy": "상점 구매",
+    "shop_sell": "상점 판매",
+    "plot_detail": "상세 밭 관리",
+    "water_minigame": "물 주기 미니게임",
+    "fertilizer_minigame": "비료 주기 미니게임"
+  },
   "resources": {
+    "coin": 60,
     "wood": 0,
     "stone": 0,
-    "seed": 3,
-    "coin": 0
-  },
-
-  "main_map": [
-    {
-      "id": "mine",
-      "type": "arrow",
-      "x": 30,
-      "y": 6,
-      "direction": "up",
-      "size": 4,
-      "hit_width": 10,
-      "hit_height": 8,
-      "label": "광산",
-      "tts": "위쪽 광산",
-      "action": "go:mine"
+    "fertilizer": 3,
+    "seeds": {
+      "tomato": 2,
+      "carrot": 2,
+      "potato": 1
     },
-
-    {
-      "id": "farm",
-      "type": "arrow",
-      "x": 51,
-      "y": 20,
-      "direction": "right",
-      "size": 4,
-      "hit_width": 10,
-      "hit_height": 10,
-      "label": "농장",
-      "tts": "오른쪽 농장",
-      "action": "go:farm"
+    "crops": {
+      "tomato": 0,
+      "carrot": 0,
+      "potato": 0
     },
-
-    {
-      "id": "home",
-      "type": "arrow",
-      "x": 9,
-      "y": 20,
-      "direction": "left",
-      "size": 4,
-      "hit_width": 10,
-      "hit_height": 10,
-      "label": "집",
-      "tts": "왼쪽 집",
-      "action": "go:home"
-    },
-
-    {
-      "id": "games",
-      "type": "arrow",
-      "x": 30,
-      "y": 34,
-      "direction": "down",
-      "size": 4,
-      "hit_width": 10,
-      "hit_height": 8,
-      "label": "미니게임",
-      "tts": "아래쪽 미니게임",
-      "action": "go:games"
-    },
-
-    {
-      "id": "resources",
-      "type": "box",
-      "x": 30,
-      "y": 20,
-      "width": 8,
-      "height": 6,
-      "hit_width": 10,
-      "hit_height": 8,
-      "label": "자원 상자",
-      "tts": "가운데 상자",
-      "action": "read_resources"
+    "foods": {
+      "tomato_carrot_stew": 0,
+      "potato_tomato_soup": 0,
+      "garden_stew": 0
     }
-  ],
-
-  "pages": {
-    "main_map": "메인 맵",
-    "farm": "농장",
-    "mine": "광산",
-    "home": "집",
-    "games": "미니게임"
+  },
+  "seeds": {
+    "tomato": {
+      "label": "토마토",
+      "yield": 2,
+      "growth_days": 3,
+      "seed_return_chance": 0.4,
+      "crop_price": 12,
+      "seed_price": 10
+    },
+    "carrot": {
+      "label": "당근",
+      "yield": 1,
+      "growth_days": 2,
+      "seed_return_chance": 0.5,
+      "crop_price": 10,
+      "seed_price": 8
+    },
+    "potato": {
+      "label": "감자",
+      "yield": 3,
+      "growth_days": 4,
+      "seed_return_chance": 0.3,
+      "crop_price": 15,
+      "seed_price": 12
+    }
+  },
+  "fertilizer": {
+    "growth_day_bonus": 1,
+    "shop_price": 12
+  },
+  "research": {
+    "seed_return": {
+      "label": "씨앗 회수 연구",
+      "bonus_per_level": 0.1,
+      "max_level": 3,
+      "costs": [
+        20,
+        35,
+        50
+      ]
+    },
+    "field_expansion": {
+      "label": "밭 확장 연구",
+      "initial_plot_count": 2,
+      "costs": [
+        30,
+        50
+      ]
+    }
+  },
+  "recipes": {
+    "tomato_carrot_stew": {
+      "label": "토마토 당근 스튜",
+      "ingredients": {
+        "tomato": 1,
+        "carrot": 1
+      },
+      "buff_ticks": 6,
+      "harvest_multiplier": 1.25,
+      "gesture": {
+        "tolerance": 4.5,
+        "path": [
+          [
+            12,
+            28
+          ],
+          [
+            20,
+            12
+          ],
+          [
+            30,
+            28
+          ],
+          [
+            40,
+            12
+          ],
+          [
+            48,
+            28
+          ]
+        ]
+      }
+    },
+    "potato_tomato_soup": {
+      "label": "감자 토마토 수프",
+      "ingredients": {
+        "potato": 1,
+        "tomato": 1
+      },
+      "buff_ticks": 7,
+      "harvest_multiplier": 1.25,
+      "gesture": {
+        "tolerance": 4.5,
+        "path": [
+          [
+            16,
+            12
+          ],
+          [
+            44,
+            12
+          ],
+          [
+            44,
+            28
+          ],
+          [
+            16,
+            28
+          ],
+          [
+            16,
+            18
+          ],
+          [
+            36,
+            18
+          ],
+          [
+            36,
+            23
+          ],
+          [
+            24,
+            23
+          ]
+        ]
+      }
+    },
+    "garden_stew": {
+      "label": "정원 채소 스튜",
+      "ingredients": {
+        "tomato": 1,
+        "carrot": 1,
+        "potato": 1
+      },
+      "buff_ticks": 9,
+      "harvest_multiplier": 1.25,
+      "gesture": {
+        "tolerance": 4.5,
+        "path": [
+          [
+            12,
+            28
+          ],
+          [
+            12,
+            12
+          ],
+          [
+            30,
+            28
+          ],
+          [
+            48,
+            12
+          ],
+          [
+            48,
+            28
+          ]
+        ]
+      }
+    }
+  },
+  "harvest_minigame": {
+    "target_count": 6,
+    "excellent_ratio": 0.85,
+    "good_ratio": 0.5,
+    "excellent_multiplier": 1.5,
+    "good_multiplier": 1.0,
+    "poor_multiplier": 0.5,
+    "field": {
+      "x": 30,
+      "y": 20,
+      "width": 46,
+      "height": 30
+    },
+    "target_positions": [
+      [
+        15,
+        11
+      ],
+      [
+        24,
+        10
+      ],
+      [
+        35,
+        11
+      ],
+      [
+        45,
+        12
+      ],
+      [
+        18,
+        19
+      ],
+      [
+        29,
+        18
+      ],
+      [
+        40,
+        20
+      ],
+      [
+        14,
+        27
+      ],
+      [
+        25,
+        29
+      ],
+      [
+        36,
+        27
+      ],
+      [
+        47,
+        28
+      ]
+    ]
+  },
+  "home": {
+    "objects": [
+      {
+        "id": "home_bed",
+        "type": "bed",
+        "x": 12,
+        "y": 10,
+        "width": 10,
+        "height": 6,
+        "hit_width": 12,
+        "hit_height": 9,
+        "label": "침대",
+        "tts": "침대입니다. 선택하면 잠을 자고 다음 날로 넘어갑니다",
+        "action": "rest",
+        "hover_sfx": "hover_bed"
+      },
+      {
+        "id": "home_chest",
+        "type": "chest",
+        "x": 12,
+        "y": 28,
+        "width": 8,
+        "height": 6,
+        "hit_width": 11,
+        "hit_height": 9,
+        "label": "연구 상자",
+        "tts": "연구 상자입니다. 돈을 사용해 씨앗 회수 확률을 높이거나 밭을 확장할 수 있습니다",
+        "action": "open_research",
+        "hover_sfx": "hover_chest"
+      },
+      {
+        "id": "home_stove",
+        "type": "stove",
+        "x": 34,
+        "y": 28,
+        "width": 10,
+        "height": 7,
+        "hit_width": 13,
+        "hit_height": 10,
+        "label": "주방",
+        "tts": "주방입니다. 선택하면 현재 재료로 만들 수 있는 요리를 확인합니다",
+        "action": "open_recipes",
+        "hover_sfx": "hover_stove"
+      },
+      {
+        "id": "home_to_farm",
+        "type": "arrow",
+        "x": 53,
+        "y": 12,
+        "direction": "right",
+        "size": 2,
+        "hit_width": 10,
+        "hit_height": 10,
+        "label": "농장",
+        "tts": "농장입니다. 오른쪽 출구입니다",
+        "action": "travel:farm"
+      },
+      {
+        "id": "home_to_town",
+        "type": "arrow",
+        "x": 48,
+        "y": 34,
+        "direction": "down",
+        "size": 2,
+        "hit_width": 11,
+        "hit_height": 9,
+        "label": "마을",
+        "tts": "마을입니다. 아래쪽 출구입니다",
+        "action": "travel:town"
+      }
+    ]
+  },
+  "farm": {
+    "tools": [],
+    "plots": [
+      {
+        "id": "plot_1",
+        "x": 20,
+        "y": 12,
+        "width": 10,
+        "height": 8,
+        "hit_width": 13,
+        "hit_height": 11,
+        "label": "1번 밭"
+      },
+      {
+        "id": "plot_2",
+        "x": 40,
+        "y": 12,
+        "width": 10,
+        "height": 8,
+        "hit_width": 13,
+        "hit_height": 11,
+        "label": "2번 밭"
+      },
+      {
+        "id": "plot_3",
+        "x": 20,
+        "y": 26,
+        "width": 10,
+        "height": 8,
+        "hit_width": 13,
+        "hit_height": 11,
+        "label": "3번 밭"
+      },
+      {
+        "id": "plot_4",
+        "x": 40,
+        "y": 26,
+        "width": 10,
+        "height": 8,
+        "hit_width": 13,
+        "hit_height": 11,
+        "label": "4번 밭"
+      }
+    ],
+    "objects": [
+      {
+        "id": "farm_to_home",
+        "type": "arrow",
+        "x": 6,
+        "y": 35,
+        "direction": "left",
+        "size": 2,
+        "hit_width": 11,
+        "hit_height": 9,
+        "label": "집",
+        "tts": "집입니다. 왼쪽 아래 출구입니다",
+        "action": "travel:home"
+      }
+    ]
+  },
+  "town": {
+    "objects": [
+      {
+        "id": "town_shop",
+        "type": "shop_npc",
+        "x": 30,
+        "y": 18,
+        "width": 16,
+        "height": 12,
+        "hit_width": 20,
+        "hit_height": 16,
+        "label": "마을 상점",
+        "tts": "마을 상점입니다. 선택하면 상점 주인이 구매할지 판매할지 물어봅니다",
+        "action": "open_shop",
+        "hover_sfx": "hover_shop"
+      },
+      {
+        "id": "town_to_home",
+        "type": "arrow",
+        "x": 7,
+        "y": 34,
+        "direction": "left",
+        "size": 2,
+        "hit_width": 11,
+        "hit_height": 9,
+        "label": "집",
+        "tts": "집입니다. 왼쪽 출구입니다",
+        "action": "travel:home"
+      }
+    ]
+  },
+  "minimap": {
+    "routes": [
+      {
+        "id": "route_home_farm",
+        "x1": 34,
+        "y1": 15,
+        "x2": 44,
+        "y2": 15,
+        "label": "집과 농장을 연결하는 길",
+        "tts": "집과 농장을 연결하는 길입니다. 집의 오른쪽에 농장이 있습니다",
+        "hit_radius": 2.5
+      },
+      {
+        "id": "route_home_town",
+        "x1": 30,
+        "y1": 19,
+        "x2": 30,
+        "y2": 27,
+        "label": "집과 마을을 연결하는 길",
+        "tts": "집과 마을을 연결하는 길입니다. 집의 아래쪽에 마을이 있습니다",
+        "hit_radius": 2.5
+      }
+    ],
+    "locations": [
+      {
+        "id": "map_home",
+        "location": "home",
+        "x": 30,
+        "y": 15,
+        "hit_width": 10,
+        "hit_height": 10,
+        "label": "집"
+      },
+      {
+        "id": "map_farm",
+        "location": "farm",
+        "x": 48,
+        "y": 15,
+        "hit_width": 10,
+        "hit_height": 10,
+        "label": "농장"
+      },
+      {
+        "id": "map_town",
+        "location": "town",
+        "x": 30,
+        "y": 31,
+        "hit_width": 10,
+        "hit_height": 10,
+        "label": "마을"
+      }
+    ]
+  },
+  "shop": {
+    "choice": {
+      "sell_label": "판매",
+      "buy_label": "구매"
+    }
+  },
+  "time": {
+    "mode": "action",
+    "total_cells": 20,
+    "action_costs": {
+      "travel": 1,
+      "plant": 1,
+      "water": 1,
+      "fertilize": 1,
+      "harvest": 1,
+      "research": 1,
+      "cook": 2
+    },
+    "bar": {
+      "panel_width": 40,
+      "panel_height": 4,
+      "cell_width": 2,
+      "cell_height": 4
+    }
+  },
+  "care_minigame": {
+    "target_count": 8,
+    "success_ratio": 0.65,
+    "tolerance": 4.0,
+    "field": {
+      "x": 30,
+      "y": 20,
+      "width": 46,
+      "height": 30
+    },
+    "target_positions": [
+      [
+        14,
+        10
+      ],
+      [
+        24,
+        10
+      ],
+      [
+        36,
+        10
+      ],
+      [
+        46,
+        11
+      ],
+      [
+        18,
+        18
+      ],
+      [
+        30,
+        18
+      ],
+      [
+        42,
+        19
+      ],
+      [
+        14,
+        27
+      ],
+      [
+        25,
+        28
+      ],
+      [
+        36,
+        27
+      ],
+      [
+        47,
+        28
+      ]
+    ]
   }
 }

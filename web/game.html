@@ -1,695 +1,677 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-
-<title>VisionPad Game</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>닷듀밸리</title>
 <style>
-
 body {
     margin: 0;
     padding: 24px;
-
-    font-family:
-        Arial,
-        sans-serif;
-
-    background:
-        #f4f4f4;
-
-    color:
-        #111;
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    color: #111;
 }
-
 
 .container {
-    max-width:
-        1100px;
-
-    margin:
-        0 auto;
+    max-width: 1120px;
+    margin: 0 auto;
 }
-
 
 h1 {
-    margin-top:
-        0;
+    margin-top: 0;
 }
 
-
-.info {
-    display:
-        flex;
-
-    gap:
-        24px;
-
-    margin-bottom:
-        16px;
-
-    font-size:
-        18px;
+.top-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
 }
 
+.info-box {
+    min-width: 135px;
+    padding: 9px 11px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
 
 .pad-panel {
-    background:
-        white;
-
-    border:
-        1px solid #bbb;
-
-    padding:
-        20px;
-
-    border-radius:
-        8px;
+    background: white;
+    border: 1px solid #bbb;
+    padding: 18px;
+    border-radius: 8px;
 }
 
+.hardware-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.panel-label {
+    width: 100%;
+    max-width: 900px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #666;
+}
 
 #dotpad {
-    display:
-        block;
-
-    width:
-        100%;
-
-    max-width:
-        900px;
-
-    aspect-ratio:
-        60 / 40;
-
-    background:
-        #111;
-
-    cursor:
-        crosshair;
-
-    touch-action:
-        none;
+    display: block;
+    width: 100%;
+    max-width: 900px;
+    aspect-ratio: 60 / 40;
+    background: #111;
+    cursor: crosshair;
+    touch-action: none;
 }
 
+.physical-gap {
+    width: 100%;
+    height: 32px;
+}
+
+.time-label {
+    width: 66.6667%;
+    max-width: 600px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #666;
+}
+
+#timepad {
+    display: block;
+    width: 66.6667%;
+    max-width: 600px;
+    aspect-ratio: 40 / 4;
+    background: #111;
+}
 
 .controls {
-    margin-top:
-        16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
 }
-
 
 button {
-    padding:
-        10px 16px;
-
-    font-size:
-        16px;
-
-    cursor:
-        pointer;
+    padding: 10px 14px;
+    font-size: 15px;
+    cursor: pointer;
 }
-
 
 #status {
-    margin-top:
-        16px;
-
-    padding:
-        12px;
-
-    background:
-        #fff;
-
-    border:
-        1px solid #ccc;
-
-    white-space:
-        pre-line;
-
-    font-family:
-        monospace;
+    margin-top: 14px;
+    padding: 12px;
+    background: #fafafa;
+    border: 1px solid #ddd;
+    white-space: pre-line;
+    font-family: monospace;
+    line-height: 1.5;
 }
 
+.guide {
+    margin-top: 14px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #ddd;
+    line-height: 1.65;
+}
+
+.paused {
+    opacity: 0.45;
+}
 </style>
-
 </head>
-
-
 <body>
-
 <div class="container">
+    <h1>닷듀밸리</h1>
 
-<h1>
-    VisionPad Game
-</h1>
-
-
-<div class="info">
-
-    <div>
-        페이지:
-        <strong id="page-name">
-            메인 맵
-        </strong>
+    <div class="top-info">
+        <div class="info-box">날짜: <strong id="day-text">1일차</strong></div>
+        <div class="info-box">현재 장소: <strong id="location-text">집</strong></div>
+        <div class="info-box">현재 화면: <strong id="page-text">집</strong></div>
+        <div class="info-box">골드: <strong id="coin-text">0</strong></div>
+        <div class="info-box">비료: <strong id="fertilizer-text">0</strong></div>
+        <div class="info-box">밭: <strong id="plot-text">2</strong></div>
+        <div class="info-box">씨앗 연구: <strong id="research-text">0단계</strong></div>
+        <div class="info-box">시간: <strong id="time-text">0 / 20</strong></div>
+        <div class="info-box">버프: <strong id="buff-text">없음</strong></div>
+        <div class="info-box">TTS: <strong id="tts-text">준비 중</strong></div>
     </div>
 
-    <div>
-        현재 오브젝트:
-        <strong id="hover-object">
-            없음
-        </strong>
-    </div>
+    <div class="pad-panel" id="pad-panel">
+        <div class="hardware-layout">
+            <div class="panel-label">그래픽 패널 60×40</div>
+            <canvas id="dotpad" width="900" height="600"></canvas>
 
+            <div class="physical-gap"></div>
+
+            <div class="time-label">행동 시간 패널 40×4 · 20칸</div>
+            <canvas id="timepad" width="600" height="60"></canvas>
+        </div>
+
+        <div class="controls">
+            <button data-command="minimap">F1 미니맵</button>
+            <button data-command="scene">F2 현재 씬</button>
+            <button data-command="resources">F3 인벤토리</button>
+            <button data-command="pause">F4 일시정지</button>
+            <button id="tts-test-button">음성 테스트</button>
+            <button id="reset-button">초기화</button>
+        </div>
+
+        <div id="status">Pointer: -</div>
+
+        <div class="guide">
+            오브젝트 영역에 포인터가 들어오면 오브젝트별 효과음과 TTS 설명이 한 번 재생됩니다.<br>
+            F1은 미니맵, F3은 인벤토리를 버튼으로만 엽니다. 미니맵에는 집·농장·마을이 표시됩니다.<br>
+            집의 주방에서는 현재 보유 작물로 만들 수 있는 레시피만 표시합니다. 재료를 선택한 뒤 점자로 표시된 조리 선의 시작점부터 끝까지 누른 채 따라가면 요리가 완성됩니다. 제한시간은 없습니다.<br>
+            완성한 요리는 인벤토리에서 선택해 먹을 수 있으며, 일정 시간틱 동안 수확량 증가 버프가 적용됩니다.<br>
+            마을 상점을 선택하면 화면 왼쪽은 판매, 오른쪽은 구매입니다. 구매/판매 목록의 돌아가기 삼각형은 거래 선택이 아니라 마을로 바로 돌아갑니다.<br>
+            농장은 처음 2개 밭만 열립니다. 작물이 심어진 밭을 선택하면 상세 밭 관리 화면으로 들어가며 물·비료 상태와 성장 게이지를 확인할 수 있습니다.<br>
+            상세 밭 관리의 물 주기와 비료 주기는 각각 확대 밭에서 누른 채 여러 지점을 지나가는 뿌리기 미니게임입니다. 작물 성장은 잠을 자서 다음 날이 되어야 진행됩니다.<br>
+            다 자란 작물은 상세 밭 관리 화면에서 수확을 선택하고 확대 밭에서 드래그로 직접 채집합니다.<br>
+            시간은 주요 행동에서만 흐르며, 20칸이 차면 자동으로 방으로 이동합니다.
+        </div>
+    </div>
 </div>
-
-
-<div class="pad-panel">
-
-    <canvas
-        id="dotpad"
-        width="900"
-        height="600"
-    ></canvas>
-
-
-    <div class="controls">
-
-        <button id="reset-button">
-            메인 맵 초기화
-        </button>
-
-    </div>
-
-
-    <div id="status">
-        Pointer: -
-    </div>
-
-</div>
-
-</div>
-
 
 <script>
+const canvas = document.getElementById("dotpad");
+const ctx = canvas.getContext("2d");
+const timeCanvas = document.getElementById("timepad");
+const timeCtx = timeCanvas.getContext("2d");
 
-const canvas =
-    document.getElementById(
-        "dotpad"
-    );
+const dayText = document.getElementById("day-text");
+const locationText = document.getElementById("location-text");
+const pageText = document.getElementById("page-text");
+const coinText = document.getElementById("coin-text");
+const fertilizerText = document.getElementById("fertilizer-text");
+const plotText = document.getElementById("plot-text");
+const researchText = document.getElementById("research-text");
+const timeText = document.getElementById("time-text");
+const buffText = document.getElementById("buff-text");
+const ttsText = document.getElementById("tts-text");
+const statusElement = document.getElementById("status");
+const padPanel = document.getElementById("pad-panel");
+const resetButton = document.getElementById("reset-button");
+const ttsTestButton = document.getElementById("tts-test-button");
 
-const ctx =
-    canvas.getContext(
-        "2d"
-    );
+let logicalWidth = 60;
+let logicalHeight = 40;
+let pointerX = 0;
+let pointerY = 0;
+let pointerInside = false;
+let pointerPressed = false;
+let currentState = null;
+let audioContext = null;
+let koreanVoice = null;
+let lastSpokenText = "";
+let lastSpokenAt = 0;
+let speechSequence = 0;
+let lastPointerSendAt = 0;
+let requestQueue = Promise.resolve();
 
-
-const pageName =
-    document.getElementById(
-        "page-name"
-    );
-
-
-const hoverObject =
-    document.getElementById(
-        "hover-object"
-    );
-
-
-const status =
-    document.getElementById(
-        "status"
-    );
-
-
-const resetButton =
-    document.getElementById(
-        "reset-button"
-    );
-
-
-let logicalWidth =
-    60;
-
-let logicalHeight =
-    40;
-
-
-let pointerX =
-    0;
-
-let pointerY =
-    0;
-
-let pointerInside =
-    false;
-
-let pointerPressed =
-    false;
-
-
-let currentState =
-    null;
-
-
-function speak(text) {
-
-    if (!text) {
+function refreshVoices() {
+    if (!("speechSynthesis" in window)) {
+        ttsText.textContent = "지원 안 됨";
         return;
     }
 
+    const voices = window.speechSynthesis.getVoices();
+    koreanVoice = voices.find(
+        voice => voice.lang?.toLowerCase() === "ko-kr"
+    ) || voices.find(
+        voice => voice.lang?.toLowerCase().startsWith("ko")
+    ) || null;
 
-    window.speechSynthesis.cancel();
-
-
-    const utterance =
-        new SpeechSynthesisUtterance(
-            text
-        );
-
-
-    utterance.lang =
-        "ko-KR";
-
-
-    utterance.rate =
-        1.0;
-
-
-    window.speechSynthesis.speak(
-        utterance
-    );
+    ttsText.textContent = koreanVoice ? "준비됨" : "기본 음성";
 }
 
+if ("speechSynthesis" in window) {
+    window.speechSynthesis.onvoiceschanged = refreshVoices;
+    refreshVoices();
+}
 
-function eventToLogical(
-    event
-) {
+function unlockSpeech() {
+    if (!("speechSynthesis" in window)) {
+        return;
+    }
+    window.speechSynthesis.resume();
+    refreshVoices();
+}
 
-    const rect =
-        canvas.getBoundingClientRect();
+function speak(text) {
+    if (!text || !("speechSynthesis" in window)) {
+        return;
+    }
 
+    const normalized = String(text).trim();
+    if (!normalized) {
+        return;
+    }
 
-    let x =
-        (
-            event.clientX
-            - rect.left
-        )
-        / rect.width
-        * logicalWidth;
+    const now = Date.now();
+    if (normalized === lastSpokenText && now - lastSpokenAt < 500) {
+        return;
+    }
 
+    lastSpokenText = normalized;
+    lastSpokenAt = now;
+    speechSequence += 1;
+    const sequence = speechSequence;
 
-    let y =
-        (
-            event.clientY
-            - rect.top
-        )
-        / rect.height
-        * logicalHeight;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
 
+    const utterance = new SpeechSynthesisUtterance(normalized);
+    utterance.lang = "ko-KR";
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
 
-    x = Math.max(
-        0,
-        Math.min(
-            logicalWidth - 1,
-            x
-        )
+    if (koreanVoice) {
+        utterance.voice = koreanVoice;
+    }
+
+    utterance.onstart = () => {
+        ttsText.textContent = "재생 중";
+    };
+
+    utterance.onend = () => {
+        if (sequence === speechSequence) {
+            ttsText.textContent = "준비됨";
+        }
+    };
+
+    utterance.onerror = event => {
+        if (event.error !== "canceled") {
+            console.error("TTS error:", event.error);
+            ttsText.textContent = "오류";
+        }
+    };
+
+    setTimeout(() => {
+        if (sequence !== speechSequence) {
+            return;
+        }
+        window.speechSynthesis.resume();
+        window.speechSynthesis.speak(utterance);
+    }, 25);
+}
+
+function ensureAudioContext() {
+    if (!audioContext) {
+        audioContext = new (
+            window.AudioContext || window.webkitAudioContext
+        )();
+    }
+
+    if (audioContext.state === "suspended") {
+        audioContext.resume();
+    }
+}
+
+function playTone(frequency, duration=0.09, volume=0.06) {
+    ensureAudioContext();
+
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(volume, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        audioContext.currentTime + duration
     );
 
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + duration);
+}
 
-    y = Math.max(
-        0,
-        Math.min(
-            logicalHeight - 1,
-            y
-        )
+function playSfx(name) {
+    if (!name) {
+        return;
+    }
+
+    const profiles = {
+        hover_bed: [300, 0.10],
+        hover_chest: [680, 0.08],
+        hover_plot: [440, 0.07],
+        hover_node: [560, 0.07],
+        hover_route: [400, 0.06],
+        hover_water_tool: [620, 0.08],
+        hover_fertilizer: [760, 0.08],
+        hover_seed: [840, 0.07],
+        hover_resource: [720, 0.06],
+        hover_research: [790, 0.08],
+        hover_harvest_crop: [870, 0.06],
+        hover_navigation: [520, 0.06],
+        hover_object: [500, 0.06],
+        hover_stove: [610, 0.08],
+        hover_recipe: [760, 0.07],
+        hover_ingredient: [690, 0.07],
+        hover_cooking: [820, 0.07],
+        hover_shop: [550, 0.08],
+        hover_shop_item: [720, 0.07],
+        open_page: [640, 0.10],
+        travel: [460, 0.12],
+        tool_pickup: [700, 0.10],
+        plant: [580, 0.12],
+        water: [520, 0.16],
+        fertilize: [780, 0.14],
+        research: [740, 0.16],
+        harvest_start: [820, 0.12],
+        harvest_collect: [980, 0.06],
+        harvest: [900, 0.16],
+        morning: [660, 0.18],
+        day_end: [240, 0.24],
+        cooking_start: [700, 0.12],
+        cooking_trace: [930, 0.04],
+        cooking_success: [980, 0.18],
+        ingredient_select: [780, 0.08],
+        eat_food: [640, 0.16],
+        shop_open: [520, 0.14],
+        shop_buy: [860, 0.12],
+        shop_sell: [740, 0.12],
+        care_start: [690, 0.12],
+        care_spray: [910, 0.05],
+        hover_tool: [730, 0.07],
+        error: [180, 0.12]
+    };
+
+    const profile = profiles[name] || [700, 0.08];
+    playTone(profile[0], profile[1], name.startsWith("hover_") ? 0.045 : 0.08);
+}
+
+function eventToLogical(event) {
+    const rect = canvas.getBoundingClientRect();
+
+    let x = (
+        (event.clientX - rect.left) / rect.width * logicalWidth
+    );
+    let y = (
+        (event.clientY - rect.top) / rect.height * logicalHeight
     );
 
+    x = Math.max(0, Math.min(logicalWidth - 0.001, x));
+    y = Math.max(0, Math.min(logicalHeight - 0.001, y));
 
-    pointerX =
-        x;
+    pointerX = x;
+    pointerY = y;
+    updateStatus();
+}
 
-    pointerY =
-        y;
+function updateStatus() {
+    const hover = currentState?.hover_object || "없음";
+    const paused = currentState?.paused ? "예" : "아니오";
+    const usedTime = currentState?.time?.used_cells ?? 0;
+    const totalTime = currentState?.time?.total_cells ?? 20;
+    const dayEnded = currentState?.day_ended ? "예" : "아니오";
+    const dragTool = currentState?.drag_tool || "없음";
+    const care = currentState?.care || {};
+    const harvest = currentState?.harvest || {};
+    const cooking = currentState?.cooking || {};
+    const buff = currentState?.active_buff || {};
 
+    statusElement.textContent =
+        "Pointer: " + pointerX.toFixed(2) + ", " + pointerY.toFixed(2)
+        + "\nPressed: " + pointerPressed
+        + "\nHover Object: " + hover
+        + "\nDrag Tool: " + dragTool
+        + "\nField Care: " + (care.mode || "없음") + " " + (care.collected_targets ?? 0) + " / " + (care.total_targets ?? 0)
+        + "\nHarvest: " + (harvest.collected_targets ?? 0) + " / " + (harvest.total_targets ?? 0)
+        + "\nCooking: " + (cooking.progress ?? 0) + " / " + (cooking.total ?? 0)
+        + "\nBuff ticks: " + (buff.remaining_ticks ?? 0)
+        + "\nPaused: " + paused
+        + "\nTime: " + usedTime + " / " + totalTime
+        + "\nNight: " + dayEnded;
+}
+
+function drawDotMatrix(targetCanvas, targetCtx, dots, width, height) {
+    targetCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+    targetCtx.fillStyle = "#111";
+    targetCtx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+
+    if (!dots || !width || !height) {
+        return;
+    }
+
+    const cellWidth = targetCanvas.width / width;
+    const cellHeight = targetCanvas.height / height;
+    targetCtx.fillStyle = "#fff";
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            if (!dots[y]?.[x]) {
+                continue;
+            }
+
+            const centerX = x * cellWidth + cellWidth / 2;
+            const centerY = y * cellHeight + cellHeight / 2;
+            const radius = Math.min(cellWidth, cellHeight) * 0.37;
+
+            targetCtx.beginPath();
+            targetCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            targetCtx.fill();
+        }
+    }
+}
+
+function drawState(state) {
+    currentState = state;
+    logicalWidth = state.width;
+    logicalHeight = state.height;
+
+    dayText.textContent = state.day + "일차";
+    locationText.textContent = state.current_location_name;
+    pageText.textContent = state.page_name;
+    coinText.textContent = state.resources?.coin ?? 0;
+    fertilizerText.textContent = state.resources?.fertilizer ?? 0;
+    plotText.textContent = state.unlocked_plot_count ?? 2;
+    researchText.textContent = (state.research_levels?.seed_return ?? 0) + "단계";
+
+    const used = state.time?.used_cells ?? 0;
+    const total = state.time?.total_cells ?? 20;
+    timeText.textContent = state.day_ended
+        ? "밤 " + used + " / " + total
+        : used + " / " + total;
+
+    const buff = state.active_buff || {};
+    if ((buff.remaining_ticks ?? 0) > 0 && (buff.multiplier ?? 1) > 1) {
+        const percent = Math.round(((buff.multiplier ?? 1) - 1) * 100);
+        buffText.textContent = `수확 +${percent}% / ${buff.remaining_ticks}틱`;
+    } else {
+        buffText.textContent = "없음";
+    }
+
+    if (state.paused) {
+        padPanel.classList.add("paused");
+    } else {
+        padPanel.classList.remove("paused");
+    }
+
+    drawDotMatrix(canvas, ctx, state.dots, state.width, state.height);
+    drawDotMatrix(
+        timeCanvas,
+        timeCtx,
+        state.time_dots,
+        state.time_width,
+        state.time_height
+    );
 
     updateStatus();
 }
 
+async function handleResponse(response) {
+    const data = await response.json();
 
-function updateStatus() {
+    if (data.state) {
+        drawState(data.state);
+    }
 
-    status.textContent =
-        "Pointer: "
-        + pointerX.toFixed(1)
-        + ", "
-        + pointerY.toFixed(1)
-        + "\nPressed: "
-        + pointerPressed;
-}
+    if (data.sfx) {
+        playSfx(data.sfx);
+    }
 
-
-function drawState(
-    state
-) {
-
-    currentState =
-        state;
-
-
-    logicalWidth =
-        state.width;
-
-    logicalHeight =
-        state.height;
-
-
-    pageName.textContent =
-        state.page_name;
-
-
-    hoverObject.textContent =
-        state.hover_object
-        || "없음";
-
-
-    ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-
-    ctx.fillStyle =
-        "#111";
-
-
-    ctx.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-
-    const cellWidth =
-        canvas.width
-        / logicalWidth;
-
-
-    const cellHeight =
-        canvas.height
-        / logicalHeight;
-
-
-    ctx.fillStyle =
-        "#fff";
-
-
-    for (
-        let y = 0;
-        y < logicalHeight;
-        y++
-    ) {
-
-        for (
-            let x = 0;
-            x < logicalWidth;
-            x++
-        ) {
-
-            if (
-                state.dots[y][x]
-                === 0
-            ) {
-                continue;
-            }
-
-
-            const centerX =
-                x * cellWidth
-                + cellWidth / 2;
-
-
-            const centerY =
-                y * cellHeight
-                + cellHeight / 2;
-
-
-            const radius =
-                Math.min(
-                    cellWidth,
-                    cellHeight
-                ) * 0.38;
-
-
-            ctx.beginPath();
-
-
-            ctx.arc(
-                centerX,
-                centerY,
-                radius,
-                0,
-                Math.PI * 2
-            );
-
-
-            ctx.fill();
-        }
+    if (data.tts) {
+        speak(data.tts);
     }
 }
 
+function queuePointer(endpoint, x, y) {
+    requestQueue = requestQueue.then(async () => {
+        try {
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({x, y})
+            });
+            await handleResponse(response);
+        } catch (error) {
+            console.error(error);
+        }
+    });
 
-async function sendPointer(
-    endpoint
-) {
+    return requestQueue;
+}
+
+function sendMoveIfPossible(force=false) {
+    if (!pointerInside) {
+        return;
+    }
+
+    const now = performance.now();
+    if (!force && now - lastPointerSendAt < 65) {
+        return;
+    }
+
+    lastPointerSendAt = now;
+    const endpoint = pointerPressed
+        ? "/api/pointer/drag"
+        : "/api/pointer/move";
+
+    queuePointer(endpoint, pointerX, pointerY);
+}
+
+async function sendCommand(command) {
+    unlockSpeech();
+    ensureAudioContext();
 
     try {
-
-        const response =
-            await fetch(
-                endpoint,
-                {
-                    method:
-                        "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body:
-                        JSON.stringify({
-                            x:
-                                pointerX,
-
-                            y:
-                                pointerY
-                        })
-                }
-            );
-
-
-        const data =
-            await response.json();
-
-
-        if (data.state) {
-
-            drawState(
-                data.state
-            );
-        }
-
-
-        if (data.tts) {
-
-            speak(
-                data.tts
-            );
-        }
-
+        const response = await fetch("/api/command", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({command})
+        });
+        await handleResponse(response);
     } catch (error) {
-
-        console.error(
-            error
-        );
+        console.error(error);
     }
 }
-
 
 async function loadState() {
-
     try {
-
-        const response =
-            await fetch(
-                "/api/state"
-            );
-
-
-        const state =
-            await response.json();
-
-
-        drawState(
-            state
-        );
-
+        const response = await fetch("/api/state", {cache: "no-store"});
+        drawState(await response.json());
     } catch (error) {
-
-        console.error(
-            error
-        );
+        console.error(error);
     }
 }
 
+canvas.addEventListener("mouseenter", event => {
+    pointerInside = true;
+    eventToLogical(event);
+    sendMoveIfPossible(true);
+});
 
-canvas.addEventListener(
-    "mouseenter",
-    function () {
+canvas.addEventListener("mouseleave", () => {
+    pointerInside = false;
+});
 
-        pointerInside =
-            true;
+canvas.addEventListener("mousemove", event => {
+    eventToLogical(event);
+    sendMoveIfPossible();
+});
+
+canvas.addEventListener("mousedown", event => {
+    event.preventDefault();
+    unlockSpeech();
+    ensureAudioContext();
+    eventToLogical(event);
+    pointerPressed = true;
+    updateStatus();
+    queuePointer("/api/pointer/down", pointerX, pointerY);
+});
+
+window.addEventListener("mouseup", event => {
+    if (!pointerPressed) {
+        return;
     }
-);
 
-
-canvas.addEventListener(
-    "mouseleave",
-    function () {
-
-        pointerInside =
-            false;
+    if (pointerInside) {
+        eventToLogical(event);
     }
-);
 
+    pointerPressed = false;
+    updateStatus();
+    queuePointer("/api/pointer/up", pointerX, pointerY);
+});
 
-canvas.addEventListener(
-    "mousemove",
-    function (event) {
-
-        eventToLogical(
-            event
-        );
+setInterval(() => {
+    if (pointerInside) {
+        sendMoveIfPossible(true);
     }
-);
+}, 180);
 
+setInterval(loadState, 800);
 
-canvas.addEventListener(
-    "mousedown",
-    function (event) {
+for (const button of document.querySelectorAll("button[data-command]")) {
+    button.addEventListener("click", () => {
+        sendCommand(button.dataset.command);
+    });
+}
 
-        eventToLogical(
-            event
-        );
-
-
-        pointerPressed =
-            true;
-
-
-        updateStatus();
-
-
-        sendPointer(
-            "/api/pointer/down"
-        );
+window.addEventListener("keydown", event => {
+    if (event.key === "F1") {
+        event.preventDefault();
+        sendCommand("minimap");
+    } else if (event.key === "F2") {
+        event.preventDefault();
+        sendCommand("scene");
+    } else if (event.key === "F3") {
+        event.preventDefault();
+        sendCommand("resources");
+    } else if (event.key === "F4") {
+        event.preventDefault();
+        sendCommand("pause");
     }
-);
+});
 
+ttsTestButton.addEventListener("click", () => {
+    unlockSpeech();
+    ensureAudioContext();
+    playSfx("hover_object");
+    speak("음성 안내가 정상적으로 작동하고 있습니다");
+});
 
-window.addEventListener(
-    "mouseup",
-    function () {
-
-        if (!pointerPressed) {
-            return;
-        }
-
-
-        pointerPressed =
-            false;
-
-
-        updateStatus();
-
-
-        sendPointer(
-            "/api/pointer/up"
-        );
-    }
-);
-
-
-setInterval(
-    function () {
-
-        if (!pointerInside) {
-            return;
-        }
-
-
-        sendPointer(
-            "/api/pointer/move"
-        );
-
-    },
-    100
-);
-
-
-setInterval(
-    loadState,
-    1000
-);
-
-
-resetButton.addEventListener(
-    "click",
-    async function () {
-
-        const response =
-            await fetch(
-                "/api/reset",
-                {
-                    method:
-                        "POST"
-                }
-            );
-
-
-        const data =
-            await response.json();
-
-
-        if (data.state) {
-
-            drawState(
-                data.state
-            );
-        }
-
-
-        speak(
-            "메인 맵입니다"
-        );
-    }
-);
-
+resetButton.addEventListener("click", async () => {
+    unlockSpeech();
+    ensureAudioContext();
+    const response = await fetch("/api/reset", {method: "POST"});
+    await handleResponse(response);
+});
 
 loadState();
-
 </script>
-
 </body>
-
 </html>
