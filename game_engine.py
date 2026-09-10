@@ -78,6 +78,7 @@ class GameEngine:
         self.cooking_dragging = False
         self.cooking_path_samples = []
         self.cooking_progress_index = 0
+        self.cooking_stage_index = 0
 
         self.active_buff = {
             "kind": None,
@@ -129,6 +130,7 @@ class GameEngine:
         self.cooking_dragging = False
         self.cooking_path_samples = []
         self.cooking_progress_index = 0
+        self.cooking_stage_index = 0
 
 
     def has_final_consonant(self, text):
@@ -173,11 +175,13 @@ class GameEngine:
         return plot_id
 
     def get_action_cost(self, action_name):
-        return int(
-            self.config.get("time", {})
-            .get("action_costs", {})
-            .get(action_name, 0)
-        )
+        # Movement never consumes time, even with an older configuration.
+        if action_name == "travel":
+            return 0
+        defaults = {"plant": 2, "water": 2, "fertilize": 2, "harvest": 3,
+                    "research": 3, "cook": 3}
+        configured = self.config.get("time", {}).get("action_costs", {})
+        return max(defaults.get(action_name, 0), int(configured.get(action_name, 0)))
 
     def get_time_cells(self):
         return max(0, min(self.time_total_cells, self.time_used_cells))
@@ -187,15 +191,15 @@ class GameEngine:
         remaining = max(0, self.time_total_cells - used)
         if self.day_ended:
             return "밤입니다. 침대를 눌러 잠을 자세요"
-        return f"오늘 활동 시간은 {used}칸 사용했고, {remaining}칸 남았습니다"
+        return f"활동 {remaining}시간 남음"
 
     def buff_text(self):
         remaining = int(self.active_buff.get("remaining_ticks", 0))
         multiplier = float(self.active_buff.get("multiplier", 1.0))
         if remaining <= 0 or multiplier <= 1.0:
-            return "현재 적용 중인 음식 버프가 없습니다"
+            return "버프 없음"
         percent = int(round((multiplier - 1.0) * 100))
-        return f"수확량 증가 {percent}퍼센트 버프가 {remaining}시간틱 남았습니다"
+        return f"수확 +{percent}퍼센트, {remaining}틱 남음"
 
     def tick_buff(self, cost):
         cost = max(0, int(cost))
@@ -244,18 +248,16 @@ class GameEngine:
         self.render()
 
     def night_response(self, prefix=None):
-        narration = "밤이 되었습니다. 방으로 이동합니다. 침대를 눌러 잠을 자세요"
+        narration = "밤입니다. 집에 도착했습니다. 침대를 눌러 자세요"
         if prefix:
             narration = f"{prefix}. {narration}"
         return self.response(tts=narration, sfx="day_end")
 
     def next_day(self):
         matured = []
-        bonus = int(self.config.get("fertilizer", {}).get("growth_day_bonus", 1))
-
         for state in self.farm_plots.values():
             if state["seed_id"] is not None and not state["mature"] and state["watered"]:
-                gain = 1 + (bonus if state["fertilized"] else 0)
+                gain = 1
                 seed_config = self.get_seed_config(state["seed_id"])
                 needed = int(seed_config.get("growth_days", 3))
                 state["growth"] = min(needed, state["growth"] + gain)
@@ -351,7 +353,7 @@ class GameEngine:
                 copied["tts"] = "침대입니다. 밤이 되었습니다. 선택하면 다음 날 아침으로 넘어갑니다"
             if copied.get("id") == "home_stove" and not self.day_ended:
                 craftable = sum(1 for rid in self.config.get("recipes", {}) if self.can_craft_recipe(rid))
-                copied["tts"] = f"주방입니다. 현재 만들 수 있는 요리는 {craftable}개입니다. 선택하면 레시피를 확인합니다"
+                copied["tts"] = f"주방입니다. 현재 만들 수 있는 요리는 {craftable}개입니다."
             objects.append(copied)
         return objects
 
@@ -408,7 +410,7 @@ class GameEngine:
                 },
                 {
                     "id": "plot_detail_plant", "type": "care_button", "care_kind": "plant",
-                    "x": 30, "y": 31, "width": 18, "height": 7,
+                    "x": 30, "y": 31, "width": 18, "height": 6,
                     "hit_width": 22, "hit_height": 10,
                     "label": "씨앗 심기",
                     "tts": "씨앗 심기입니다. 선택하면 현재 보유한 씨앗 목록을 엽니다",
@@ -451,10 +453,10 @@ class GameEngine:
         if state["mature"]:
             objects.append({
                 "id": "plot_detail_harvest", "type": "care_button", "care_kind": "harvest",
-                "x": 30, "y": 31, "width": 18, "height": 7,
+                "x": 30, "y": 31, "width": 18, "height": 6,
                 "hit_width": 22, "hit_height": 10,
                 "label": "수확",
-                "tts": f"수확입니다. {seed_label}가 다 자랐습니다. 선택하면 수확 미니게임을 시작합니다",
+                "tts": f"수확입니다. {seed_label}가 다 자랐습니다.",
                 "action": f"start_harvest:{plot_id}"
             })
         else:
@@ -462,11 +464,11 @@ class GameEngine:
             water_tts = (
                 "물 주기입니다. 오늘 이미 물을 줬습니다"
                 if state["watered"]
-                else "물 주기입니다. 선택하면 확대된 밭에서 드래그로 물을 뿌리는 미니게임을 시작합니다"
+                else "물 주기입니다."
             )
             objects.append({
                 "id": "plot_detail_water", "type": "care_button", "care_kind": "water",
-                "x": 23, "y": 31, "width": 18, "height": 7,
+                "x": 23, "y": 31, "width": 18, "height": 6,
                 "hit_width": 21, "hit_height": 10,
                 "label": "물 주기", "tts": water_tts, "action": water_action
             })
@@ -480,10 +482,10 @@ class GameEngine:
             elif fertilizer_count <= 0:
                 fertilizer_tts = "비료 주기입니다. 보유한 비료가 없습니다. 마을 상점에서 구매할 수 있습니다"
             else:
-                fertilizer_tts = f"비료 주기입니다. 비료 {fertilizer_count}개를 보유 중입니다. 선택하면 확대된 밭에서 드래그로 비료를 뿌리는 미니게임을 시작합니다"
+                fertilizer_tts = f"비료 주기입니다. 비료 {fertilizer_count}개를 보유 중입니다."
             objects.append({
                 "id": "plot_detail_fertilizer", "type": "care_button", "care_kind": "fertilizer",
-                "x": 46, "y": 31, "width": 18, "height": 7,
+                "x": 46, "y": 31, "width": 18, "height": 6,
                 "hit_width": 21, "hit_height": 10,
                 "label": "비료 주기", "tts": fertilizer_tts, "action": fertilizer_action
             })
@@ -505,7 +507,7 @@ class GameEngine:
             "width": int(field.get("width", 46)), "height": int(field.get("height", 30)),
             "hit_width": int(field.get("width", 46)), "hit_height": int(field.get("height", 30)),
             "label": f"{mode_label} 주기 밭",
-            "tts": f"확대된 {seed_label} 밭입니다. 손가락을 누른 채 표시된 지점들을 지나가며 {mode_label}을 고르게 뿌리세요",
+            "tts": f"확대된 {seed_label} 밭입니다. 손가락을 누른 채 지점들을 지나가며 {mode_label}을 고르게 뿌리세요",
             "action": ""
         }]
         for target in self.care_targets:
@@ -543,7 +545,7 @@ class GameEngine:
                 "x": x, "y": y, "width": 12, "height": 10,
                 "hit_width": 15, "hit_height": 13,
                 "label": f"{seed_config.get('label', seed_id)} 씨앗",
-                "tts": f"{seed_config.get('label', seed_id)} 씨앗입니다. {count}개 보유 중입니다. 기본 수확량은 {yield_count}개이고 성장에는 {growth_days}일이 필요합니다. 현재 씨앗 회수 확률은 {int(round(chance * 100))}퍼센트입니다",
+                "tts": f"{seed_config.get('label', seed_id)} 씨앗 {count}개. 성장 {growth_days}일, 수확 {yield_count}개, 씨앗 회수 {int(round(chance * 100))}퍼센트",
                 "action": f"plant:{self.seed_select_plot_id}:{seed_id}"
             })
 
@@ -558,9 +560,9 @@ class GameEngine:
             {"id": "stone", "label": "돌", "count": int(self.resources.get("stone", 0)), "kind": "material", "action": ""}
         ]
         for seed_id, seed_config in self.config.get("seeds", {}).items():
-            entries.append({"id": f"seed_{seed_id}", "label": f"{seed_config.get('label', seed_id)} 씨앗", "count": int(self.resources["seeds"].get(seed_id, 0)), "kind": "seed", "action": ""})
+            entries.append({"id": f"seed_{seed_id}", "label": f"{seed_config.get('label', seed_id)} 씨앗", "count": int(self.resources["seeds"].get(seed_id, 0)), "kind": "seed", "seed_id": seed_id, "action": ""})
         for seed_id, seed_config in self.config.get("seeds", {}).items():
-            entries.append({"id": f"crop_{seed_id}", "label": f"{seed_config.get('label', seed_id)} 작물", "count": int(self.resources["crops"].get(seed_id, 0)), "kind": "crop", "action": ""})
+            entries.append({"id": f"crop_{seed_id}", "label": f"{seed_config.get('label', seed_id)} 작물", "count": int(self.resources["crops"].get(seed_id, 0)), "kind": "crop", "seed_id": seed_id, "action": ""})
         for recipe_id, recipe in self.config.get("recipes", {}).items():
             count = int(self.resources["foods"].get(recipe_id, 0))
             if count <= 0:
@@ -571,14 +573,14 @@ class GameEngine:
             entries.append({
                 "id": f"food_{recipe_id}", "label": recipe.get("label", recipe_id),
                 "count": count, "kind": "food", "action": f"use_food:{recipe_id}",
-                "extra_tts": f"사용하면 {ticks}시간틱 동안 수확량이 {percent}퍼센트 증가합니다"
+                "extra_tts": f"사용하면 {ticks}시간 동안 수확량이 {percent}퍼센트 증가합니다"
             })
 
         positions = [
-            (8, 5), (22, 5), (37, 5), (51, 5),
-            (8, 15), (22, 15), (37, 15), (51, 15),
-            (8, 24), (22, 24), (37, 24), (51, 24),
-            (8, 34), (22, 34), (37, 34), (51, 34)
+            (9, 5), (23, 5), (37, 5), (51, 5),
+            (9, 15), (23, 15), (37, 15), (51, 15),
+            (9, 25), (23, 25), (37, 25), (51, 25),
+            (9, 35), (23, 35), (37, 35), (51, 35)
         ]
         objects = []
         for index, entry in enumerate(entries[:len(positions)]):
@@ -589,8 +591,8 @@ class GameEngine:
                 tts += f". {extra}"
             objects.append({
                 "id": f"inventory_{entry['id']}", "type": "resource",
-                "resource_kind": entry["kind"], "x": x, "y": y,
-                "width": 10, "height": 7, "hit_width": 13, "hit_height": 9,
+                "resource_kind": entry["kind"], "seed_id": entry.get("seed_id"), "x": x, "y": y,
+                "width": 10, "height": 6, "hit_width": 13, "hit_height": 9,
                 "label": entry["label"], "tts": tts, "action": entry.get("action", "")
             })
         return objects
@@ -636,7 +638,7 @@ class GameEngine:
         else:
             cost = int(costs[level]) if level < len(costs) else 999999
             bonus = float(seed_cfg.get("bonus_per_level", 0.1))
-            seed_tts = f"씨앗 회수 연구입니다. 현재 {level}단계입니다. 골드 {cost}개를 사용하면 모든 작물의 씨앗 반환 확률이 {int(round(bonus * 100))}퍼센트포인트 증가합니다. 현재 골드는 {coin}개입니다"
+            seed_tts = f"씨앗 회수 {level}단계. {cost}골드로 +{int(round(bonus * 100))}퍼센트. 보유 {coin}골드"
             seed_action = "research:seed_return"
 
         objects.append({
@@ -655,7 +657,7 @@ class GameEngine:
             expand_action = ""
         else:
             cost = int(costs[expansion_index]) if expansion_index < len(costs) else 999999
-            expand_tts = f"밭 확장 연구입니다. 현재 밭은 {self.unlocked_plot_count}개입니다. 골드 {cost}개를 사용하면 밭을 한 칸 추가합니다. 현재 골드는 {coin}개입니다"
+            expand_tts = f"밭 {self.unlocked_plot_count}개. {cost}골드로 1개 확장. 보유 {coin}골드"
             expand_action = "research:field_expand"
 
         objects.append({
@@ -680,7 +682,7 @@ class GameEngine:
             "width": int(field.get("width", 46)), "height": int(field.get("height", 30)),
             "hit_width": int(field.get("width", 46)), "hit_height": int(field.get("height", 30)),
             "label": "확대된 밭",
-            "tts": f"확대된 {seed_label} 밭입니다. 손가락을 누른 채 작물들을 지나가며 가능한 많이 채집하고 손을 떼세요",
+            "tts": f"확대된 {seed_label} 밭입니다. 손가락을 누른 채 작물들을 채집하세요",
             "action": ""
         }]
         for target in self.harvest_targets:
@@ -689,7 +691,7 @@ class GameEngine:
             objects.append({
                 "id": target["id"], "type": "harvest_crop", "x": target["x"], "y": target["y"],
                 "width": 5, "height": 5, "hit_width": 7, "hit_height": 7,
-                "label": f"수확할 {seed_label}", "tts": f"수확할 {seed_label}입니다. 누른 채 지나가면 채집됩니다", "action": ""
+                "label": f"수확할 {seed_label}", "tts": f"수확할 {seed_label}입니다. 누른 채 지나가면 채집", "action": ""
             })
         return objects
 
@@ -705,7 +707,7 @@ class GameEngine:
                 "id": f"recipe_{recipe_id}", "type": "recipe", "recipe_id": recipe_id,
                 "x": x, "y": y, "width": 12, "height": 9, "hit_width": 14, "hit_height": 11,
                 "label": recipe.get("label", recipe_id),
-                "tts": f"{recipe.get('label', recipe_id)}입니다. 재료는 {ingredient_text}입니다. 먹으면 {ticks}시간틱 동안 수확량이 증가합니다",
+                "tts": f"{recipe.get('label', recipe_id)}. {ingredient_text}. 수확 +{int(round((float(recipe.get('harvest_multiplier', 1.0)) - 1) * 100))}퍼센트, {ticks}시간",
                 "action": f"select_recipe:{recipe_id}"
             })
         objects.append(self.back_arrow("recipe_back", "집으로 돌아가기", "return_scene"))
@@ -729,7 +731,7 @@ class GameEngine:
                 "id": f"ingredient_{seed_id}", "type": "ingredient", "ingredient_id": seed_id,
                 "selected": selected, "x": x, "y": y, "width": 12, "height": 9,
                 "hit_width": 14, "hit_height": 11, "label": f"{label} 재료",
-                "tts": f"{label} 재료입니다. {needed}개가 필요하고 {count}개 보유 중입니다. {status}",
+                "tts": f"{label} 재료입니다. {needed}개 필요, {count}개 보유 중. {status}",
                 "action": f"toggle_ingredient:{seed_id}"
             })
 
@@ -737,9 +739,9 @@ class GameEngine:
         ready = required and required.issubset(self.selected_ingredients)
         objects.append({
             "id": "ingredient_start", "type": "cooking_start", "x": 30, "y": 31,
-            "width": 18, "height": 7, "hit_width": 20, "hit_height": 9,
+            "width": 18, "height": 6, "hit_width": 20, "hit_height": 9,
             "label": "조리 시작",
-            "tts": "조리 시작입니다. 선택한 재료로 요리 미니게임을 시작합니다" if ready else "조리 시작입니다. 필요한 재료를 모두 먼저 선택하세요",
+            "tts": "조리 시작입니다." if ready else "조리 시작입니다. 필요한 재료를 모두 먼저 선택하세요",
             "action": "start_cooking" if ready else ""
         })
         objects.append(self.back_arrow("ingredient_back", "레시피로 돌아가기", "open_recipes"))
@@ -764,7 +766,7 @@ class GameEngine:
 
     def get_shop_buy_objects(self):
         objects = []
-        positions = [(8, 16), (22, 16), (37, 16), (51, 16)]
+        positions = [(9, 16), (23, 16), (37, 16), (51, 16)]
         index = 0
         for seed_id, seed in self.config.get("seeds", {}).items():
             if index >= len(positions):
@@ -774,9 +776,9 @@ class GameEngine:
             count = int(self.resources["seeds"].get(seed_id, 0))
             objects.append({
                 "id": f"shop_buy_seed_{seed_id}", "type": "shop_item", "shop_kind": "seed", "item_id": seed_id,
-                "x": x, "y": y, "width": 11, "height": 9, "hit_width": 13, "hit_height": 11,
+                "x": x, "y": y, "width": 10, "height": 8, "hit_width": 13, "hit_height": 11,
                 "label": f"{self.get_seed_label(seed_id)} 씨앗",
-                "tts": f"{self.get_seed_label(seed_id)} 씨앗입니다. 가격은 골드 {price}개이고 현재 {count}개 보유 중입니다",
+                "tts": f"{self.get_seed_label(seed_id)} 씨앗, {price}골드. 보유 {count}개",
                 "action": f"buy:seed:{seed_id}"
             })
             index += 1
@@ -785,8 +787,8 @@ class GameEngine:
         fertilizer_price = int(self.config.get("fertilizer", {}).get("shop_price", 12))
         objects.append({
             "id": "shop_buy_fertilizer", "type": "shop_item", "shop_kind": "fertilizer", "item_id": "fertilizer",
-            "x": x, "y": y, "width": 11, "height": 9, "hit_width": 13, "hit_height": 11,
-            "label": "비료", "tts": f"비료입니다. 가격은 골드 {fertilizer_price}개이고 현재 {self.resources.get('fertilizer', 0)}개 보유 중입니다",
+            "x": x, "y": y, "width": 10, "height": 8, "hit_width": 13, "hit_height": 11,
+            "label": "비료", "tts": f"비료, {fertilizer_price}골드. 보유 {self.resources.get('fertilizer', 0)}개",
             "action": "buy:fertilizer:fertilizer"
         })
         objects.append(self.back_arrow("shop_buy_back", "마을로 돌아가기", "return_scene"))
@@ -803,14 +805,14 @@ class GameEngine:
             if count > 0:
                 sellables.append(("food", recipe_id, recipe.get("label", recipe_id), count, self.get_food_sell_price(recipe_id)))
 
-        positions = [(8, 12), (22, 12), (37, 12), (51, 12), (8, 25), (22, 25), (37, 25), (51, 25)]
+        positions = [(9, 12), (23, 12), (37, 12), (51, 12), (9, 25), (23, 25), (37, 25), (51, 25)]
         objects = []
         for index, (kind, item_id, label, count, price) in enumerate(sellables[:len(positions)]):
             x, y = positions[index]
             objects.append({
                 "id": f"shop_sell_{kind}_{item_id}", "type": "shop_item", "shop_kind": kind, "item_id": item_id,
-                "x": x, "y": y, "width": 11, "height": 9, "hit_width": 13, "hit_height": 11,
-                "label": label, "tts": f"{label}입니다. {count}개 보유 중이고 한 개를 팔면 골드 {price}개를 받습니다",
+                "x": x, "y": y, "width": 10, "height": 8, "hit_width": 13, "hit_height": 11,
+                "label": label, "tts": f"{label}, 보유 {count}개. 판매 {price}골드",
                 "action": f"sell:{kind}:{item_id}"
             })
         if not sellables:
@@ -982,15 +984,28 @@ class GameEngine:
     def draw_seed(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
         self.dotpad.draw_box(x, y, obj.get("width", 12), obj.get("height", 10))
-        self.dotpad.set_dot(x, y)
-        self.dotpad.set_dot(x + 1, y - 1)
-        self.dotpad.set_dot(x - 1, y + 1)
+        self.draw_crop_symbol(x, y, obj.get("seed_id"))
+
+    def draw_crop_symbol(self, x, y, seed_id):
+        # Distinct compact silhouettes: round fruit, tapered root, paired tubers.
+        patterns = {
+            "tomato": ["00100", "01010", "10001", "10001", "01110"],
+            "carrot": ["10101", "01110", "01010", "00100", "00100"],
+            "potato": ["11000", "10110", "01101", "00101", "00010"]
+        }
+        rows = patterns.get(seed_id, ["00100", "01110", "00100", "00000", "00000"])
+        for j, row in enumerate(rows):
+            for i, raised in enumerate(row):
+                if raised == "1":
+                    self.dotpad.set_dot(x + i - 2, y + j - 2)
 
     def draw_resource(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
         self.dotpad.draw_box(x, y, obj.get("width", 10), obj.get("height", 7))
         kind = obj.get("resource_kind")
-        if kind == "coin":
+        if kind in ("seed", "crop"):
+            self.draw_crop_symbol(x, y, obj.get("seed_id"))
+        elif kind == "coin":
             self.dotpad.draw_box(x, y, 4, 4)
         elif kind == "food":
             self.dotpad.draw_line(x - 2, y, x + 2, y)
@@ -1124,7 +1139,7 @@ class GameEngine:
 
     def draw_cooking_path(self):
         recipe = self.get_recipe_config(self.selected_recipe_id)
-        path = recipe.get("gesture", {}).get("path", []) if recipe else []
+        path = self.get_cooking_gesture().get("path", []) if recipe else []
         if len(path) < 2:
             return
         for i in range(len(path) - 1):
@@ -1155,12 +1170,16 @@ class GameEngine:
     def draw_shop_item(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
         self.dotpad.draw_box(x, y, obj.get("width", 11), obj.get("height", 9))
-        self.dotpad.set_dot(x, y)
-        if obj.get("shop_kind") == "fertilizer":
-            self.dotpad.set_dot(x - 2, y + 2)
-            self.dotpad.set_dot(x + 2, y + 2)
-        elif obj.get("shop_kind") == "food":
+        kind = obj.get("shop_kind")
+        if kind in ("seed", "crop"):
+            self.draw_crop_symbol(x, y, obj.get("item_id"))
+        elif kind == "fertilizer":
             self.dotpad.draw_line(x - 2, y, x + 2, y)
+            self.dotpad.draw_line(x, y - 2, x, y + 2)
+        else:
+            self.dotpad.draw_line(x - 2, y + 1, x + 2, y + 1)
+            self.dotpad.set_dot(x - 2, y)
+            self.dotpad.set_dot(x + 2, y)
 
     def point_to_segment_distance(self, px, py, x1, y1, x2, y2):
         dx, dy = x2 - x1, y2 - y1
@@ -1203,7 +1222,34 @@ class GameEngine:
         return None
 
     def get_object_tts(self, obj):
-        return obj.get("tts") or obj.get("label")
+        kind, label = obj.get("type"), obj.get("label", "")
+        if kind == "plot":
+            return self.plot_status_text(obj["id"])
+        if kind == "plot_detail_field":
+            return self.plot_status_text(self.detail_plot_id)
+        if kind == "arrow":
+            return label
+        if kind == "bed":
+            return "침대. 선택하면 다음 날"
+        if kind == "chest":
+            return "연구. 씨앗 회수와 밭 확장"
+        if kind == "stove":
+            count = sum(self.can_craft_recipe(r) for r in self.config.get("recipes", {}))
+            return f"주방. 만들 수 있는 요리 {count}개"
+        if kind == "shop_npc":
+            return "상점. 작물 판매, 씨앗과 비료 구매"
+        if kind == "care_button":
+            mode = obj.get("care_kind")
+            state = self.farm_plots.get(self.detail_plot_id, {})
+            if mode == "water":
+                return "물 주기 완료" if state.get("watered") else f"물 주기. 드래그로 뿌리기."
+            if mode == "fertilizer":
+                count = self.resources.get("fertilizer", 0)
+                if state.get("fertilized"):
+                    return "비료 주기 완료"
+                return f"비료 {count}개. 물을 준 뒤 사용. 수확까지 {self.config.get('fertilizer', {}).get('growth_day_bonus', 1)}일 즉시 단축." if count else "비료 없음. 상점에서 구매"
+            return label
+        return obj.get("tts") or label
 
     def get_hover_sfx(self, obj):
         if obj.get("hover_sfx"):
@@ -1245,20 +1291,22 @@ class GameEngine:
 
         if self.current_page in ("water_minigame", "fertilizer_minigame"):
             self.care_dragging = True
+            before = len(self.care_collected_ids)
             collected = self.collect_care_point(x, y)
             if collected:
                 self.render()
-                return self.response(sfx="care_spray")
+                return self.response(sfx="care_spray", sound_events=[{"kind": "correct", "count": len(self.care_collected_ids) - before}])
             mode_label = "물을" if self.care_mode == "water" else "비료를"
-            return self.response(tts=f"{mode_label} 뿌리기 시작했습니다. 누른 채 표시된 지점들을 지나가세요", sfx="tool_pickup")
+            return self.response(tts=f"{mode_label} 뿌리기 시작. 누른 채 지점들을 지나가세요", sfx="tool_pickup")
 
         if self.current_page == "harvest":
             self.harvest_dragging = True
+            before = len(self.harvest_collected_ids)
             collected = self.collect_harvest_point(x, y)
             if collected:
                 self.render()
-                return self.response(sfx="harvest_collect")
-            return self.response(tts="수확을 시작했습니다. 누른 채 작물들을 지나가세요", sfx="tool_pickup")
+                return self.response(sfx="harvest_collect", sound_events=[{"kind": "correct", "count": len(self.harvest_collected_ids) - before}])
+            return self.response(tts="수확을 시작. 누른 채 작물들을 지나가세요", sfx="tool_pickup")
 
         if self.current_page == "cooking":
             return self.start_cooking_trace(x, y)
@@ -1274,13 +1322,13 @@ class GameEngine:
             self.drag_tool = action.split(":", 1)[1]
             self.drag_target_ids.clear()
             if self.drag_tool == "water":
-                return self.response(tts="물뿌리개를 잡았습니다. 누른 채 물을 줄 밭까지 드래그하세요", sfx="tool_pickup")
+                return self.response(tts="물뿌리개를 잡았습니다. 누른 채 물을 줄 밭까지 드래그", sfx="tool_pickup")
             if self.drag_tool == "fertilizer":
                 count = int(self.resources.get("fertilizer", 0))
                 if count <= 0:
                     self.drag_tool = None
                     return self.response(tts="보유한 비료가 없습니다", sfx="error")
-                return self.response(tts=f"비료를 잡았습니다. {count}개 보유 중입니다. 누른 채 비료를 줄 밭까지 드래그하세요", sfx="tool_pickup")
+                return self.response(tts=f"비료를 잡았습니다. {count}개 보유 중. 누른 채 비료를 줄 밭까지 드래그", sfx="tool_pickup")
 
         return self.perform_action(action, obj)
 
@@ -1293,19 +1341,21 @@ class GameEngine:
         if self.current_page in ("water_minigame", "fertilizer_minigame") and self.care_dragging:
             if previous_x is None or previous_y is None:
                 previous_x, previous_y = x, y
+            before = len(self.care_collected_ids)
             collected = self.collect_care_segment(previous_x, previous_y, x, y)
             if collected:
                 self.render()
-                return self.response(sfx="care_spray")
+                return self.response(sfx="care_spray", sound_events=[{"kind": "correct", "count": len(self.care_collected_ids) - before}])
             return self.response()
 
         if self.current_page == "harvest" and self.harvest_dragging:
             if previous_x is None or previous_y is None:
                 previous_x, previous_y = x, y
+            before = len(self.harvest_collected_ids)
             collected = self.collect_harvest_segment(previous_x, previous_y, x, y)
             if collected:
                 self.render()
-                return self.response(sfx="harvest_collect")
+                return self.response(sfx="harvest_collect", sound_events=[{"kind": "correct", "count": len(self.harvest_collected_ids) - before}])
             return self.response()
 
         if self.current_page == "cooking" and self.cooking_dragging:
@@ -1330,20 +1380,33 @@ class GameEngine:
         return self.response()
 
     def pointer_up(self, x, y):
+        if self.paused:
+            self.pointer_pressed = False
+            self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
+            self.drag_tool = None
+            return self.response()
+        final = self.pointer_drag(x, y) if self.pointer_pressed else None
         self.pointer_pressed = False
         self.last_pointer = (x, y)
+        if final and (final.get("sfx") in ("cooking_success", "cooking_step", "day_end")):
+            final["state"] = self.get_state()
+            return final
         if self.current_page in ("water_minigame", "fertilizer_minigame") and self.care_dragging:
             self.care_dragging = False
-            return self.finish_care_minigame()
-        if self.current_page == "harvest" and self.harvest_dragging:
+            result = self.finish_care_minigame()
+        elif self.current_page == "harvest" and self.harvest_dragging:
             self.harvest_dragging = False
-            return self.finish_harvest_minigame()
-        if self.current_page == "cooking" and self.cooking_dragging:
+            result = self.finish_harvest_minigame()
+        elif self.current_page == "cooking" and self.cooking_dragging:
             self.cooking_dragging = False
-            return self.fail_or_continue_cooking()
-        self.drag_tool = None
-        self.drag_target_ids.clear()
-        return self.response()
+            result = self.fail_or_continue_cooking()
+        else:
+            self.drag_tool = None
+            self.drag_target_ids.clear()
+            result = self.response()
+        if final:
+            result["sound_events"] = final.get("sound_events", []) + result.get("sound_events", [])
+        return result
 
     def perform_action(self, action, obj):
         if self.day_ended and action != "rest":
@@ -1398,6 +1461,8 @@ class GameEngine:
         return self.response(tts="밤입니다. 침대를 눌러 잠을 자세요", sfx="error")
 
     def travel_to(self, location):
+        if self.day_ended:
+            return self.night_only_response()
         if location not in ("home", "farm", "town"):
             return self.response(tts="아직 이동할 수 없는 장소입니다")
         changed = location != self.current_location
@@ -1427,7 +1492,7 @@ class GameEngine:
         self.clear_cooking()
         self.clear_hover()
         self.render()
-        return self.response(tts="미니맵입니다. 장소 위에 손을 올리면 장소 이름을 먼저 말하고 현재 위치 기준 방향을 안내합니다", sfx="open_page")
+        return self.response(tts="미니맵입니다. 장소를 선택하면 이동합니다", sfx="open_page")
 
     def open_inventory(self):
         if self.day_ended:
@@ -1439,7 +1504,7 @@ class GameEngine:
         self.clear_cooking()
         self.clear_hover()
         self.render()
-        return self.response(tts=f"인벤토리입니다. 자원 위에 손을 올리면 이름과 보유 개수를 안내합니다. {self.buff_text()}", sfx="open_page")
+        return self.response(tts=f"인벤토리입니다. {self.resources['coin']}골드. {self.buff_text()}", sfx="open_page")
 
     def open_research(self):
         if self.day_ended:
@@ -1447,7 +1512,7 @@ class GameEngine:
         self.current_page = "research"
         self.clear_hover()
         self.render()
-        return self.response(tts="연구 상자입니다. 왼쪽은 씨앗 회수 확률 연구, 오른쪽은 밭 확장 연구입니다", sfx="open_page")
+        return self.response(tts="연구입니다.", sfx="open_page")
 
     def return_to_scene(self):
         self.current_page = "home" if self.day_ended else self.current_location
@@ -1464,17 +1529,17 @@ class GameEngine:
     def plot_status_text(self, plot_id):
         state = self.farm_plots.get(plot_id)
         if state is None:
-            return "밭 정보를 찾을 수 없습니다"
+            return "밭 정보 없음"
         label = self.get_plot_label(plot_id)
-        if state.get("seed_id") is None:
-            return f"{label}입니다. 비어 있습니다"
-        seed_label = self.get_seed_label(state["seed_id"])
+        if not state.get("seed_id"):
+            return f"{label}, 빈 밭. 씨앗을 심으세요"
+        seed = self.get_seed_label(state["seed_id"])
+        if state["mature"]:
+            return f"{label}, {seed}. 수확 가능"
         needed = int(self.get_seed_config(state["seed_id"]).get("growth_days", 3))
-        if state.get("mature"):
-            return f"{label} 상세 관리입니다. {seed_label}가 다 자랐습니다. 수확할 수 있습니다"
-        water = "물이 충분합니다" if state.get("watered") else "물이 부족합니다"
-        fertilizer = "비료가 적용되어 있습니다" if state.get("fertilized") else "비료가 부족합니다"
-        return f"{label} 상세 관리입니다. {seed_label}입니다. 성장 {state.get('growth', 0)}일 중 {needed}일입니다. {water}. {fertilizer}"
+        water = "물 완료" if state["watered"] else "물 필요"
+        fertilizer = "비료 적용" if state["fertilized"] else "비료 미사용"
+        return f"{label}, {seed}. 성장 {needed}일 중 {state['growth']}일. {water}. {fertilizer}"
 
     def open_plot_detail(self, plot_id):
         unlocked = {p["id"] for p in self.get_unlocked_plot_defs()}
@@ -1489,10 +1554,6 @@ class GameEngine:
         self.clear_hover()
         self.render()
         text = self.plot_status_text(plot_id)
-        if state.get("seed_id") is None:
-            text += ". 씨앗 심기를 선택하면 보유한 씨앗 목록을 엽니다"
-        else:
-            text += ". 화면 위쪽 게이지에서 성장 정도를 확인할 수 있습니다"
         return self.response(tts=text, sfx="open_page")
 
     def start_care_minigame(self, plot_id, mode):
@@ -1504,6 +1565,8 @@ class GameEngine:
         if mode == "water" and state.get("watered"):
             return self.response(tts="오늘 이미 물을 줬습니다", sfx="error")
         if mode == "fertilizer":
+            if not state.get("watered"):
+                return self.response(tts="먼저 물을 주세요", sfx="error")
             if state.get("fertilized"):
                 return self.response(tts="오늘 이미 비료를 줬습니다", sfx="error")
             if int(self.resources.get("fertilizer", 0)) <= 0:
@@ -1526,7 +1589,7 @@ class GameEngine:
         self.render()
         mode_label = "물 주기" if mode == "water" else "비료 주기"
         return self.response(
-            tts=f"{mode_label} 미니게임입니다. 밭이 확대되었습니다. 손가락을 누른 채 표시된 지점들을 지나가며 고르게 뿌리세요. 제한시간은 없습니다",
+            tts=f"{mode_label}. 누른 채 지점을 지나가세요.",
             sfx="care_start"
         )
 
@@ -1566,7 +1629,7 @@ class GameEngine:
             self.render()
             mode_label = "물" if mode == "water" else "비료"
             return self.response(
-                tts=f"{mode_label}을 {percent}퍼센트 영역에 뿌렸습니다. 아직 부족합니다. 다시 누른 채 남은 지점들을 지나가세요",
+                tts=f"{mode_label} {percent}퍼센트. 남은 지점에 이어서 뿌리세요",
                 sfx="error"
             )
 
@@ -1574,7 +1637,7 @@ class GameEngine:
         if mode == "water":
             state["watered"] = True
             action_name = "water"
-            text = f"물을 {percent}퍼센트 영역에 고르게 뿌렸습니다. 오늘 물 주기를 완료했습니다"
+            text = f"물 주기 완료. 잠을 자면 성장합니다"
             sfx = "water"
         else:
             count = int(self.resources.get("fertilizer", 0))
@@ -1584,9 +1647,9 @@ class GameEngine:
                 self.render()
                 return self.response(tts="보유한 비료가 없어 비료 주기를 완료하지 못했습니다", sfx="error")
             self.resources["fertilizer"] = count - 1
-            state["fertilized"] = True
+            fertilizer_text = self.apply_fertilizer_bonus(state)
             action_name = "fertilize"
-            text = f"비료를 {percent}퍼센트 영역에 고르게 뿌렸습니다. 오늘 비료 주기를 완료했습니다. 비료는 {self.resources['fertilizer']}개 남았습니다"
+            text = f"비료 완료. {fertilizer_text}. 비료 {self.resources['fertilizer']}개 남음"
             sfx = "fertilize"
 
         self.clear_care(keep_detail=True)
@@ -1596,7 +1659,7 @@ class GameEngine:
         if result["night"]:
             return self.night_response(text)
         self.render()
-        return self.response(tts=text + ". " + self.plot_status_text(plot_id), sfx=sfx)
+        return self.response(tts=text, sfx=sfx)
 
     def open_seed_select(self, plot_id):
         if self.day_ended:
@@ -1614,7 +1677,7 @@ class GameEngine:
         self.current_page = "seed_select"
         self.clear_hover()
         self.render()
-        return self.response(tts="씨앗 선택 창입니다. 보유 씨앗은 " + ", ".join(available) + "입니다. 씨앗 위에 손을 올리면 성장일과 수확량을 안내합니다", sfx="open_page")
+        return self.response(tts="씨앗 선택입니다. " + ", ".join(available), sfx="open_page")
 
     def plant_seed(self, plot_id, seed_id):
         state = self.farm_plots.get(plot_id)
@@ -1629,7 +1692,8 @@ class GameEngine:
         self.resources["seeds"][seed_id] = count - 1
         self.farm_plots[plot_id] = self.new_plot_state()
         self.farm_plots[plot_id]["seed_id"] = seed_id
-        self.current_page = "farm"
+        self.detail_plot_id = plot_id
+        self.current_page = "plot_detail"
         self.current_location = "farm"
         self.seed_select_plot_id = None
         self.clear_hover()
@@ -1637,7 +1701,7 @@ class GameEngine:
         if result["night"]:
             return self.night_response(f"{self.get_seed_label(seed_id)} 씨앗을 심었습니다")
         self.render()
-        return self.response(tts=f"{self.get_seed_label(seed_id)} 씨앗을 심었습니다. 성장은 하루가 지나야 진행됩니다. 물을 주고 잠을 자세요", sfx="plant")
+        return self.response(tts=f"{self.get_seed_label(seed_id)} 심기 완료. 물을 주고 자세요", sfx="plant")
 
     def water_plot(self, plot_id):
         state = self.farm_plots.get(plot_id)
@@ -1657,6 +1721,19 @@ class GameEngine:
         self.render()
         return self.response(tts=f"{label}에 물을 줬습니다. {self.get_seed_label(state['seed_id'])}의 성장은 오늘 밤 잠을 잔 뒤 진행됩니다", sfx="water")
 
+    def apply_fertilizer_bonus(self, state):
+        """Apply the saved growth days now; sleep must not apply them twice."""
+        needed = int(self.get_seed_config(state["seed_id"]).get("growth_days", 3))
+        bonus = max(0, int(self.config.get("fertilizer", {}).get("growth_day_bonus", 1)))
+        before = state["growth"]
+        state["growth"] = min(needed, before + bonus)
+        state["fertilized"] = True
+        state["mature"] = state["growth"] >= needed
+        saved = state["growth"] - before
+        remaining = max(0, needed - state["growth"])
+        status = "수확 가능" if state["mature"] else f"물을 주고 {remaining}일 더 자면 수확"
+        return f"수확까지 {saved}일 단축. {status}"
+
     def fertilize_plot(self, plot_id):
         state = self.farm_plots.get(plot_id)
         if state is None:
@@ -1674,13 +1751,12 @@ class GameEngine:
         if count <= 0:
             return self.response(tts="보유한 비료가 없습니다. 마을 상점에서 구매할 수 있습니다", sfx="error")
         self.resources["fertilizer"] = count - 1
-        state["fertilized"] = True
-        bonus = int(self.config.get("fertilizer", {}).get("growth_day_bonus", 1))
+        fertilizer_text = self.apply_fertilizer_bonus(state)
         result = self.consume_time("fertilize")
         if result["night"]:
             return self.night_response(f"{label}에 비료를 사용했습니다")
         self.render()
-        return self.response(tts=f"{label}에 비료를 사용했습니다. 오늘 밤 성장할 때 {bonus}일만큼 추가 진행됩니다. 비료는 {self.resources.get('fertilizer', 0)}개 남았습니다", sfx="fertilize")
+        return self.response(tts=f"{label}에 비료를 사용했습니다. {fertilizer_text}. 비료는 {self.resources.get('fertilizer', 0)}개 남았습니다", sfx="fertilize")
 
     def get_effective_seed_return_chance(self, seed_id):
         base = float(self.get_seed_config(seed_id).get("seed_return_chance", 0.0))
@@ -1744,7 +1820,7 @@ class GameEngine:
         self.current_page = "harvest"
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{self.get_seed_label(state['seed_id'])} 수확 미니게임입니다. 밭이 확대되었습니다. 손가락을 누른 채 작물들을 최대한 많이 지나간 뒤 손을 떼세요. 채집 비율에 따라 수확량이 달라집니다", sfx="harvest_start")
+        return self.response(tts=f"{self.get_seed_label(state['seed_id'])} 수확. 작물들을 수확하세요.", sfx="harvest_start")
 
     def collect_harvest_point(self, x, y):
         collected = False
@@ -1813,14 +1889,14 @@ class GameEngine:
         self.clear_hover()
 
         percent = int(round(ratio * 100))
-        text = f"{grade}입니다. 전체 작물 중 {percent}퍼센트를 채집해 {seed_label} 작물 {yield_count}개를 수확했습니다"
+        text = f"{seed_label} {yield_count}개 수확. 채집 {percent}퍼센트"
         if buff_applied:
             bonus_percent = int(round((buff_multiplier - 1.0) * 100))
-            text += f". 음식 버프의 수확량 {bonus_percent}퍼센트 증가 효과가 적용되었습니다"
+            text += f". 수확 버프 +{bonus_percent}퍼센트 적용"
         if got_seed:
-            text += f". 현재 {int(round(chance * 100))}퍼센트 확률 판정에 성공해 {seed_label} 씨앗 1개를 돌려받았습니다"
+            text += f". 씨앗 1개 회수"
         else:
-            text += ". 이번에는 씨앗을 돌려받지 못했습니다"
+            text += ". 씨앗 회수 없음"
 
         result = self.consume_time("harvest")
         if result["night"]:
@@ -1838,9 +1914,9 @@ class GameEngine:
         self.clear_hover()
         self.render()
         if not craftable:
-            return self.response(tts="요리 레시피입니다. 현재 보유한 작물로 만들 수 있는 요리가 없습니다. 작물을 두 종류 이상 수확해 다시 확인하세요", sfx="open_page")
+            return self.response(tts="요리 레시피입니다. 현재 보유한 작물로 만들 수 있는 요리가 없습니다.", sfx="open_page")
         names = ", ".join(self.get_recipe_label(rid) for rid in craftable)
-        return self.response(tts=f"요리 레시피입니다. 현재 만들 수 있는 요리는 {names}입니다. 레시피 위에 손을 올리면 필요한 재료를 안내합니다", sfx="open_page")
+        return self.response(tts=f"요리 선택입니다.", sfx="open_page")
 
     def select_recipe(self, recipe_id):
         if not self.can_craft_recipe(recipe_id):
@@ -1850,7 +1926,7 @@ class GameEngine:
         self.current_page = "ingredient_select"
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{self.get_recipe_label(recipe_id)}를 선택했습니다. 필요한 재료는 {self.recipe_ingredient_text(recipe_id)}입니다. 각 재료를 하나씩 선택한 뒤 조리 시작을 누르세요", sfx="open_page")
+        return self.response(tts=f"{self.get_recipe_label(recipe_id)}. {self.recipe_ingredient_text(recipe_id)}. 재료를 고르고 조리 시작", sfx="open_page")
 
     def toggle_ingredient(self, seed_id):
         recipe = self.get_recipe_config(self.selected_recipe_id)
@@ -1868,8 +1944,35 @@ class GameEngine:
         self.render()
         required = set(recipe.get("ingredients", {}).keys())
         if required.issubset(self.selected_ingredients):
-            text += ". 필요한 재료를 모두 선택했습니다. 조리 시작을 누르세요"
+            text += ". 필요한 재료를 모두 선택했습니다."
         return self.response(tts=text, sfx="ingredient_select")
+
+    def get_cooking_steps(self):
+        recipe = self.get_recipe_config(self.selected_recipe_id)
+        steps = recipe.get("gesture_steps")
+        return steps if steps else [recipe.get("gesture", {})]
+
+    def get_cooking_gesture(self):
+        steps = self.get_cooking_steps()
+        return steps[min(self.cooking_stage_index, len(steps) - 1)]
+
+    def get_cooking_kind(self):
+        return "stir" if self.get_cooking_gesture().get("kind") == "stir" else "cut"
+
+    def cooking_step_text(self):
+        label = "젓기" if self.get_cooking_kind() == "stir" else "자르기"
+        return f"{self.cooking_stage_index + 1}단계 {label}. 사각형부터 선을 따라 드래그하세요"
+
+    def complete_cooking_step(self):
+        self.cooking_dragging = False
+        if self.cooking_stage_index + 1 >= len(self.get_cooking_steps()):
+            return self.finish_cooking_success()
+        self.cooking_stage_index += 1
+        self.cooking_progress_index = 0
+        self.cooking_path_samples = self.build_path_samples(self.get_cooking_gesture().get("path", []))
+        self.clear_hover()
+        self.render()
+        return self.response(tts="자르기 완료. 손을 떼고 " + self.cooking_step_text(), sfx="cooking_step")
 
     def open_cooking_minigame(self):
         recipe = self.get_recipe_config(self.selected_recipe_id)
@@ -1883,10 +1986,11 @@ class GameEngine:
         self.current_page = "cooking"
         self.cooking_dragging = False
         self.cooking_progress_index = 0
-        self.cooking_path_samples = self.build_path_samples(recipe.get("gesture", {}).get("path", []))
+        self.cooking_stage_index = 0
+        self.cooking_path_samples = self.build_path_samples(self.get_cooking_gesture().get("path", []))
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{self.get_recipe_label(self.selected_recipe_id)} 요리 미니게임입니다. 점자로 표시된 선의 시작점에서 손가락을 누르고 선을 따라 끝까지 드래그하세요. 제한시간은 없습니다", sfx="cooking_start")
+        return self.response(tts=f"{self.get_recipe_label(self.selected_recipe_id)}. {self.cooking_step_text()}. 시간제한 없음", sfx="cooking_start")
 
     def build_path_samples(self, path, spacing=1.5):
         if len(path) < 2:
@@ -1906,7 +2010,7 @@ class GameEngine:
         if not self.cooking_path_samples:
             return self.response(tts="조리 경로를 불러오지 못했습니다", sfx="error")
         recipe = self.get_recipe_config(self.selected_recipe_id)
-        tolerance = float(recipe.get("gesture", {}).get("tolerance", 4.5))
+        tolerance = float(self.get_cooking_gesture().get("tolerance", 4.5))
         sx, sy = self.cooking_path_samples[0]
         if math.hypot(x - sx, y - sy) > tolerance * 1.35:
             self.cooking_dragging = False
@@ -1914,13 +2018,16 @@ class GameEngine:
             return self.response(tts="선의 시작점에서 눌러주세요. 시작점은 작은 사각형으로 표시되어 있습니다", sfx="error")
         self.cooking_dragging = True
         self.cooking_progress_index = 1
-        return self.response(tts="조리를 시작했습니다. 누른 채 점자 선을 따라 이동하세요", sfx="tool_pickup")
+        return self.response(sfx="tool_pickup", sound_events=[{"kind": "work_start", "sound": "cook" if self.get_cooking_kind() == "stir" else "cut"}])
 
     def advance_cooking_trace(self, x1, y1, x2, y2):
         if not self.cooking_path_samples:
             return self.response()
         recipe = self.get_recipe_config(self.selected_recipe_id)
-        tolerance = float(recipe.get("gesture", {}).get("tolerance", 4.5))
+        tolerance = float(self.get_cooking_gesture().get("tolerance", 4.5))
+        if math.hypot(x2 - x1, y2 - y1) < 0.05:
+            return self.response()
+        before = self.cooking_progress_index
         advanced = False
         while self.cooking_progress_index < len(self.cooking_path_samples):
             px, py = self.cooking_path_samples[self.cooking_progress_index]
@@ -1930,10 +2037,12 @@ class GameEngine:
             else:
                 break
         if self.cooking_progress_index >= len(self.cooking_path_samples):
-            self.cooking_dragging = False
-            return self.finish_cooking_success()
+            gained = self.cooking_progress_index - before
+            result = self.complete_cooking_step()
+            result["sound_events"] = [{"kind": "correct", "count": gained}]
+            return result
         if advanced:
-            return self.response(sfx="cooking_trace")
+            return self.response(sfx="cooking_trace", sound_events=[{"kind": "correct", "count": self.cooking_progress_index - before}])
         return self.response()
 
     def fail_or_continue_cooking(self):
@@ -1941,7 +2050,7 @@ class GameEngine:
         progress = self.cooking_progress_index
         percent = int(round((progress / total) * 100)) if total else 0
         self.cooking_progress_index = 0
-        return self.response(tts=f"선의 {percent}퍼센트까지 따라갔습니다. 재료는 소비되지 않았습니다. 시작점에서 다시 눌러 끝까지 따라가세요", sfx="error")
+        return self.response(tts=f"진행 {percent}퍼센트. 시작점에서 재시도. 재료 소모 없음", sfx="error")
 
     def finish_cooking_success(self):
         recipe_id = self.selected_recipe_id
@@ -1961,7 +2070,7 @@ class GameEngine:
         self.clear_cooking()
         self.clear_hover()
         result = self.consume_time("cook")
-        text = f"요리에 성공했습니다. {label} 1개를 만들었고 인벤토리에 저장했습니다"
+        text = f"{label} 1개 완성. 인벤토리에 저장"
         if result["night"]:
             return self.night_response(text)
         self.render()
@@ -1985,7 +2094,7 @@ class GameEngine:
         self.clear_hover()
         self.render()
         percent = int(round((self.active_buff["multiplier"] - 1.0) * 100))
-        return self.response(tts=f"{self.get_recipe_label(recipe_id)}를 먹었습니다. 앞으로 {self.active_buff['remaining_ticks']}시간틱 동안 수확량이 {percent}퍼센트 증가합니다", sfx="eat_food")
+        return self.response(tts=f"{self.get_recipe_label(recipe_id)} 사용. 수확 +{percent}퍼센트, {self.active_buff['remaining_ticks']}시간", sfx="eat_food")
 
     def open_shop(self):
         if self.current_location != "town":
@@ -1993,15 +2102,15 @@ class GameEngine:
         self.current_page = "shop_choice"
         self.clear_hover()
         self.render()
-        return self.response(tts="상점 주인이 묻습니다. 물건을 파시겠습니까, 사시겠습니까? 화면 왼쪽은 판매, 오른쪽은 구매입니다", sfx="shop_open")
+        return self.response(tts="상점입니다. 왼쪽 판매, 오른쪽 구매", sfx="shop_open")
 
     def open_shop_mode(self, mode):
         if mode == "sell":
             self.current_page = "shop_sell"
-            text = "판매 목록입니다. 작물이나 요리 위에 손을 올리면 보유 수량과 판매 가격을 안내합니다. 선택하면 한 개를 판매합니다"
+            text = "판매 목록입니다."
         else:
             self.current_page = "shop_buy"
-            text = "구매 목록입니다. 씨앗과 비료 위에 손을 올리면 가격을 안내합니다. 선택하면 한 개를 구매합니다"
+            text = "구매 목록입니다."
         self.clear_hover()
         self.render()
         return self.response(tts=text, sfx="open_page")
@@ -2029,7 +2138,7 @@ class GameEngine:
             count = self.resources["fertilizer"]
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{label} 1개를 {price}골드에 구매했습니다. 현재 {count}개 보유 중이고 골드는 {self.resources['coin']}개 남았습니다", sfx="shop_buy")
+        return self.response(tts=f"{label} 1개 구매, {price}골드. 보유 {count}개, 잔액 {self.resources['coin']}골드", sfx="shop_buy")
 
     def sell_shop_item(self, kind, item_id):
         if kind == "crop":
@@ -2051,12 +2160,16 @@ class GameEngine:
         self.resources["coin"] += price
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{label} 1개를 판매해 {price}골드를 벌었습니다. 현재 골드는 {self.resources['coin']}개입니다", sfx="shop_sell")
+        return self.response(tts=f"{label} 1개 판매, +{price}골드. 잔액 {self.resources['coin']}골드", sfx="shop_sell")
 
     def handle_command(self, command):
         command = str(command).lower().strip()
         if command == "pause":
             self.paused = not self.paused
+            if self.paused:
+                self.pointer_pressed = False
+                self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
+                self.drag_tool = None
             return self.response(tts="게임을 일시정지했습니다" if self.paused else "게임을 계속합니다")
         if self.paused:
             return self.response(tts="일시정지를 먼저 해제하세요")
@@ -2076,14 +2189,19 @@ class GameEngine:
         seed_total = sum(int(v) for v in self.resources["seeds"].values())
         crop_total = sum(int(v) for v in self.resources["crops"].values())
         food_total = sum(int(v) for v in self.resources["foods"].values())
-        return f"골드 {self.resources.get('coin', 0)}개, 비료 {self.resources.get('fertilizer', 0)}개, 씨앗 {seed_total}개, 작물 {crop_total}개, 요리 {food_total}개. {self.buff_text()}. {self.time_text()}"
+        return f"골드 {self.resources.get('coin', 0)}개, 비료 {self.resources.get('fertilizer', 0)}개, 씨앗 {seed_total}개, 작물 {crop_total}개, 요리 {food_total}개. {self.buff_text()}"
 
-    def response(self, tts=None, sfx=None):
-        return {"tts": tts, "sfx": sfx, "state": self.get_state()}
+    def response(self, tts=None, sfx=None, sound_events=None):
+        return {"tts": tts, "sfx": sfx, "sound_events": sound_events or [], "priority": "hover" if (sfx or "").startswith("hover_") else "action", "state": self.get_state()}
 
     def get_state(self):
         plots = {plot_id: dict(state) for plot_id, state in self.farm_plots.items()}
         return {
+            "objects": [{"id": o["id"], "label": o.get("label", ""),
+                         "type": o.get("type"), "x": o.get("x"), "y": o.get("y"),
+                         "description": self.get_object_tts(o), "actionable": bool(o.get("action"))}
+                        for o in self.get_objects() if o.get("type") != "route"],
+            "action_costs": {k: self.get_action_cost(k) for k in ("travel", "plant", "water", "fertilize", "harvest", "research", "cook")},
             "page": self.current_page,
             "page_name": self.get_page_name(self.current_page),
             "current_location": self.current_location,
@@ -2118,6 +2236,11 @@ class GameEngine:
                 "dragging": self.harvest_dragging
             },
             "cooking": {
+                "stage_index": self.cooking_stage_index,
+                "stage_count": len(self.get_cooking_steps()),
+                "gesture_kind": self.get_cooking_kind(),
+                "stage_label": "젓기" if self.get_cooking_kind() == "stir" else "자르기",
+                "start_point": list(self.cooking_path_samples[0]) if self.cooking_path_samples else None,
                 "recipe_id": self.selected_recipe_id,
                 "recipe_name": self.get_recipe_label(self.selected_recipe_id) if self.selected_recipe_id else None,
                 "selected_ingredients": list(self.selected_ingredients),

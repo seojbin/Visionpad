@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {packCells,displayPacket,extractPackets,SerialPad} from './web/hardware.mjs';
+const full=Array.from({length:40},()=>Array(60).fill(1));
+assert.deepEqual([...packCells(full,0,30)],Array(30).fill(255));
+const single=Array.from({length:4},()=>Array(2).fill(0));single[3][1]=1;
+assert.equal(packCells(single,0,1)[0],128);
+const packet=displayPacket(1,Uint8Array.from([1,16]));
+assert.deepEqual([...packet.slice(0,9)],[170,85,0,8,1,2,0,0,0]);
+assert.equal(displayPacket(0,new Uint8Array(20))[7],128);
+const split=extractPackets(packet.slice(0,5));assert.equal(split.packets.length,0);
+assert.equal(extractPackets([...split.rest,...packet.slice(5)]).packets.length,1);
+const bad=packet.slice();bad[bad.length-1]^=1;assert.equal(extractPackets(bad).packets.length,0);
+assert.equal(extractPackets([4,5,...packet,...packet]).packets.length,2);
+const pad=new SerialPad(()=>{},()=>{});pad.connected=true;let writes=0;
+pad.writer={write:async()=>{writes++;pad.ack.resolve();}};
+await pad.send(1,new Uint8Array(30));assert.equal(writes,1);
+console.log('Hardware protocol: 9 checks passed (mock device, not real hardware)');

@@ -1,6 +1,2 @@
-fastapi
-uvicorn[standard]
-numpy==1.26.4
-opencv-contrib-python==4.11.0.86
-mediapipe==0.10.21
-websockets
+fastapi>=0.110,<1
+uvicorn>=0.29,<1

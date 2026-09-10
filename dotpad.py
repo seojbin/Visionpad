@@ -58,41 +58,23 @@ class DotPad:
         self.draw_line(x1, y2, x1, y1)
 
     def draw_hollow_triangle(self, x, y, direction, size=2):
-        x = int(round(x))
-        y = int(round(y))
-        size = max(2, int(round(size)))
-
-        if direction == "right":
-            points = [
-                (x - size, y - size),
-                (x - size, y + size),
-                (x + size, y)
-            ]
-        elif direction == "left":
-            points = [
-                (x + size, y - size),
-                (x + size, y + size),
-                (x - size, y)
-            ]
-        elif direction == "up":
-            points = [
-                (x - size, y + size),
-                (x + size, y + size),
-                (x, y - size)
-            ]
-        elif direction == "down":
-            points = [
-                (x - size, y - size),
-                (x + size, y - size),
-                (x, y + size)
-            ]
-        else:
+        # Integer 45-degree edges: symmetric outline, no rasterized 2:1 slope.
+        x, y = int(round(x)), int(round(y))
+        radius = max(2, min(4, int(round(size))))
+        if direction not in ("left", "right", "up", "down"):
             return
-
-        for i in range(3):
-            x1, y1 = points[i]
-            x2, y2 = points[(i + 1) % 3]
-            self.draw_line(x1, y1, x2, y2)
+        for row in range(-radius, radius + 1):
+            for col in range(radius + 1):
+                if col != 0 and col != radius - abs(row):
+                    continue
+                dx, dy = col - radius // 2, row
+                if direction == "left":
+                    dx = -dx
+                elif direction == "up":
+                    dx, dy = dy, -dx
+                elif direction == "down":
+                    dx, dy = dy, dx
+                self.set_dot(x + dx, y + dy)
 
     def draw_arrow(self, x, y, direction, size=2):
         """모든 방향 표시는 막대기 없는 비어 있는 삼각형으로 그린다."""

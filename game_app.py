@@ -4,7 +4,7 @@ import json
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from game_engine import GameEngine
 
@@ -29,8 +29,8 @@ app.mount(
 
 
 class PointerRequest(BaseModel):
-    x: float
-    y: float
+    x: float = Field(ge=0, lt=CONFIG["dotpad"]["width"], allow_inf_nan=False)
+    y: float = Field(ge=0, lt=CONFIG["dotpad"]["height"], allow_inf_nan=False)
 
 
 class CommandRequest(BaseModel):

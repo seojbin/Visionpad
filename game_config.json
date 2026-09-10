@@ -1,104 +1,111 @@
 {
   "dotpad": {
     "width": 60,
-    "height": 40,
-    "refresh_interval_ms": 1000
-  },
-  "interaction": {
-    "hover_dwell_ms": 0,
-    "pointer_interval_ms": 80
+    "height": 40
   },
   "game": {
     "start_day": 1
+  },
+  "time": {
+    "total_cells": 20,
+    "action_costs": {
+      "travel": 0,
+      "plant": 2,
+      "water": 2,
+      "fertilize": 2,
+      "harvest": 3,
+      "research": 3,
+      "cook": 3
+    },
+    "bar": {
+      "panel_width": 40,
+      "panel_height": 4,
+      "cell_width": 2,
+      "cell_height": 4
+    }
+  },
+  "resources": {
+    "coin": 60,
+    "fertilizer": 2,
+    "seeds": {
+      "tomato": 3,
+      "carrot": 3,
+      "potato": 2
+    },
+    "crops": {
+      "tomato": 3,
+      "carrot": 3,
+      "potato": 3
+    }
   },
   "pages": {
     "home": "집",
     "farm": "농장",
     "town": "마을",
     "minimap": "미니맵",
-    "seed_select": "씨앗 선택",
     "inventory": "인벤토리",
-    "research": "연구 상자",
-    "harvest": "수확 미니게임",
-    "recipe_select": "요리 레시피",
-    "ingredient_select": "요리 재료 선택",
-    "cooking": "요리 미니게임",
-    "shop_choice": "상점 거래 선택",
-    "shop_buy": "상점 구매",
-    "shop_sell": "상점 판매",
-    "plot_detail": "상세 밭 관리",
-    "water_minigame": "물 주기 미니게임",
-    "fertilizer_minigame": "비료 주기 미니게임"
-  },
-  "resources": {
-    "coin": 60,
-    "wood": 0,
-    "stone": 0,
-    "fertilizer": 3,
-    "seeds": {
-      "tomato": 2,
-      "carrot": 2,
-      "potato": 1
-    },
-    "crops": {
-      "tomato": 0,
-      "carrot": 0,
-      "potato": 0
-    },
-    "foods": {
-      "tomato_carrot_stew": 0,
-      "potato_tomato_soup": 0,
-      "garden_stew": 0
-    }
-  },
-  "seeds": {
-    "tomato": {
-      "label": "토마토",
-      "yield": 2,
-      "growth_days": 3,
-      "seed_return_chance": 0.4,
-      "crop_price": 12,
-      "seed_price": 10
-    },
-    "carrot": {
-      "label": "당근",
-      "yield": 1,
-      "growth_days": 2,
-      "seed_return_chance": 0.5,
-      "crop_price": 10,
-      "seed_price": 8
-    },
-    "potato": {
-      "label": "감자",
-      "yield": 3,
-      "growth_days": 4,
-      "seed_return_chance": 0.3,
-      "crop_price": 15,
-      "seed_price": 12
-    }
+    "research": "연구",
+    "plot_detail": "밭 관리",
+    "water_minigame": "물 주기",
+    "fertilizer_minigame": "비료 주기",
+    "harvest": "수확",
+    "seed_select": "씨앗 선택",
+    "recipe_select": "요리 선택",
+    "ingredient_select": "재료 선택",
+    "cooking": "조리",
+    "shop_choice": "상점",
+    "shop_buy": "구매",
+    "shop_sell": "판매"
   },
   "fertilizer": {
     "growth_day_bonus": 1,
-    "shop_price": 12
+    "price": 12
+  },
+  "shop": {
+    "fertilizer_price": 12
   },
   "research": {
     "seed_return": {
-      "label": "씨앗 회수 연구",
-      "bonus_per_level": 0.1,
       "max_level": 3,
       "costs": [
         20,
-        35,
-        50
-      ]
+        40,
+        60
+      ],
+      "bonus_per_level": 0.1
     },
     "field_expansion": {
-      "label": "밭 확장 연구",
       "initial_plot_count": 2,
       "costs": [
         30,
         50
       ]
+    }
+  },
+  "seeds": {
+    "tomato": {
+      "label": "토마토",
+      "growth_days": 3,
+      "yield": 2,
+      "crop_price": 12,
+      "seed_price": 10,
+      "seed_return_chance": 0.4
+    },
+    "carrot": {
+      "label": "당근",
+      "growth_days": 2,
+      "yield": 2,
+      "crop_price": 10,
+      "seed_price": 8,
+      "seed_return_chance": 0.5
+    },
+    "potato": {
+      "label": "감자",
+      "growth_days": 3,
+      "yield": 3,
+      "crop_price": 15,
+      "seed_price": 12,
+      "seed_return_chance": 0.3
     }
   },
   "recipes": {
@@ -111,30 +118,176 @@
       "buff_ticks": 6,
       "harvest_multiplier": 1.25,
       "gesture": {
+        "kind": "cut",
+        "label": "재료 자르기",
         "tolerance": 4.5,
         "path": [
           [
             12,
-            28
+            13
           ],
           [
-            20,
-            12
+            19,
+            27
           ],
           [
-            30,
-            28
+            26,
+            13
+          ],
+          [
+            33,
+            27
           ],
           [
             40,
-            12
+            13
           ],
           [
-            48,
-            28
+            47,
+            27
           ]
         ]
-      }
+      },
+      "gesture_steps": [
+        {
+          "kind": "cut",
+          "label": "재료 자르기",
+          "tolerance": 4.5,
+          "path": [
+            [
+              12,
+              13
+            ],
+            [
+              19,
+              27
+            ],
+            [
+              26,
+              13
+            ],
+            [
+              33,
+              27
+            ],
+            [
+              40,
+              13
+            ],
+            [
+              47,
+              27
+            ]
+          ]
+        },
+        {
+          "kind": "stir",
+          "label": "젓기",
+          "tolerance": 4.0,
+          "path": [
+            [
+              30.0,
+              9.0
+            ],
+            [
+              34.34,
+              9.53
+            ],
+            [
+              38.25,
+              10.75
+            ],
+            [
+              41.49,
+              12.56
+            ],
+            [
+              43.86,
+              14.82
+            ],
+            [
+              45.22,
+              17.36
+            ],
+            [
+              45.51,
+              20.0
+            ],
+            [
+              44.74,
+              22.56
+            ],
+            [
+              43.0,
+              24.86
+            ],
+            [
+              40.44,
+              26.76
+            ],
+            [
+              37.26,
+              28.14
+            ],
+            [
+              33.69,
+              28.92
+            ],
+            [
+              30.0,
+              29.07
+            ],
+            [
+              26.43,
+              28.61
+            ],
+            [
+              23.24,
+              27.58
+            ],
+            [
+              20.61,
+              26.08
+            ],
+            [
+              18.71,
+              24.22
+            ],
+            [
+              17.65,
+              22.14
+            ],
+            [
+              17.46,
+              20.0
+            ],
+            [
+              18.13,
+              17.94
+            ],
+            [
+              19.57,
+              16.1
+            ],
+            [
+              21.66,
+              14.6
+            ],
+            [
+              24.23,
+              13.53
+            ],
+            [
+              27.08,
+              12.94
+            ],
+            [
+              30.0,
+              12.85
+            ]
+          ]
+        }
+      ]
     },
     "potato_tomato_soup": {
       "label": "감자 토마토 수프",
@@ -145,42 +298,192 @@
       "buff_ticks": 7,
       "harvest_multiplier": 1.25,
       "gesture": {
+        "kind": "cut",
+        "label": "재료 자르기",
         "tolerance": 4.5,
         "path": [
           [
-            16,
+            12,
             12
           ],
           [
-            44,
-            12
-          ],
-          [
-            44,
+            12,
             28
-          ],
-          [
-            16,
-            28
-          ],
-          [
-            16,
-            18
-          ],
-          [
-            36,
-            18
-          ],
-          [
-            36,
-            23
           ],
           [
             24,
-            23
+            12
+          ],
+          [
+            24,
+            28
+          ],
+          [
+            36,
+            12
+          ],
+          [
+            36,
+            28
+          ],
+          [
+            48,
+            12
+          ],
+          [
+            48,
+            28
           ]
         ]
-      }
+      },
+      "gesture_steps": [
+        {
+          "kind": "cut",
+          "label": "재료 자르기",
+          "tolerance": 4.5,
+          "path": [
+            [
+              12,
+              12
+            ],
+            [
+              12,
+              28
+            ],
+            [
+              24,
+              12
+            ],
+            [
+              24,
+              28
+            ],
+            [
+              36,
+              12
+            ],
+            [
+              36,
+              28
+            ],
+            [
+              48,
+              12
+            ],
+            [
+              48,
+              28
+            ]
+          ]
+        },
+        {
+          "kind": "stir",
+          "label": "젓기",
+          "tolerance": 4.0,
+          "path": [
+            [
+              30.0,
+              9.0
+            ],
+            [
+              34.34,
+              9.53
+            ],
+            [
+              38.25,
+              10.75
+            ],
+            [
+              41.49,
+              12.56
+            ],
+            [
+              43.86,
+              14.82
+            ],
+            [
+              45.22,
+              17.36
+            ],
+            [
+              45.51,
+              20.0
+            ],
+            [
+              44.74,
+              22.56
+            ],
+            [
+              43.0,
+              24.86
+            ],
+            [
+              40.44,
+              26.76
+            ],
+            [
+              37.26,
+              28.14
+            ],
+            [
+              33.69,
+              28.92
+            ],
+            [
+              30.0,
+              29.07
+            ],
+            [
+              26.43,
+              28.61
+            ],
+            [
+              23.24,
+              27.58
+            ],
+            [
+              20.61,
+              26.08
+            ],
+            [
+              18.71,
+              24.22
+            ],
+            [
+              17.65,
+              22.14
+            ],
+            [
+              17.46,
+              20.0
+            ],
+            [
+              18.13,
+              17.94
+            ],
+            [
+              19.57,
+              16.1
+            ],
+            [
+              21.66,
+              14.6
+            ],
+            [
+              24.23,
+              13.53
+            ],
+            [
+              27.08,
+              12.94
+            ],
+            [
+              30.0,
+              12.85
+            ]
+          ]
+        }
+      ]
     },
     "garden_stew": {
       "label": "정원 채소 스튜",
@@ -192,221 +495,301 @@
       "buff_ticks": 9,
       "harvest_multiplier": 1.25,
       "gesture": {
+        "kind": "cut",
+        "label": "재료 자르기",
         "tolerance": 4.5,
         "path": [
           [
             12,
-            28
-          ],
-          [
-            12,
             12
           ],
           [
-            30,
+            22,
+            28
+          ],
+          [
+            32,
+            12
+          ],
+          [
+            42,
             28
           ],
           [
             48,
             12
-          ],
-          [
-            48,
-            28
           ]
         ]
-      }
-    }
-  },
-  "harvest_minigame": {
-    "target_count": 6,
-    "excellent_ratio": 0.85,
-    "good_ratio": 0.5,
-    "excellent_multiplier": 1.5,
-    "good_multiplier": 1.0,
-    "poor_multiplier": 0.5,
-    "field": {
-      "x": 30,
-      "y": 20,
-      "width": 46,
-      "height": 30
-    },
-    "target_positions": [
-      [
-        15,
-        11
-      ],
-      [
-        24,
-        10
-      ],
-      [
-        35,
-        11
-      ],
-      [
-        45,
-        12
-      ],
-      [
-        18,
-        19
-      ],
-      [
-        29,
-        18
-      ],
-      [
-        40,
-        20
-      ],
-      [
-        14,
-        27
-      ],
-      [
-        25,
-        29
-      ],
-      [
-        36,
-        27
-      ],
-      [
-        47,
-        28
+      },
+      "gesture_steps": [
+        {
+          "kind": "cut",
+          "label": "재료 자르기",
+          "tolerance": 4.5,
+          "path": [
+            [
+              12,
+              12
+            ],
+            [
+              22,
+              28
+            ],
+            [
+              32,
+              12
+            ],
+            [
+              42,
+              28
+            ],
+            [
+              48,
+              12
+            ]
+          ]
+        },
+        {
+          "kind": "stir",
+          "label": "젓기",
+          "tolerance": 4.0,
+          "path": [
+            [
+              30.0,
+              9.0
+            ],
+            [
+              34.34,
+              9.53
+            ],
+            [
+              38.25,
+              10.75
+            ],
+            [
+              41.49,
+              12.56
+            ],
+            [
+              43.86,
+              14.82
+            ],
+            [
+              45.22,
+              17.36
+            ],
+            [
+              45.51,
+              20.0
+            ],
+            [
+              44.74,
+              22.56
+            ],
+            [
+              43.0,
+              24.86
+            ],
+            [
+              40.44,
+              26.76
+            ],
+            [
+              37.26,
+              28.14
+            ],
+            [
+              33.69,
+              28.92
+            ],
+            [
+              30.0,
+              29.07
+            ],
+            [
+              26.43,
+              28.61
+            ],
+            [
+              23.24,
+              27.58
+            ],
+            [
+              20.61,
+              26.08
+            ],
+            [
+              18.71,
+              24.22
+            ],
+            [
+              17.65,
+              22.14
+            ],
+            [
+              17.46,
+              20.0
+            ],
+            [
+              18.13,
+              17.94
+            ],
+            [
+              19.57,
+              16.1
+            ],
+            [
+              21.66,
+              14.6
+            ],
+            [
+              24.23,
+              13.53
+            ],
+            [
+              27.08,
+              12.94
+            ],
+            [
+              30.0,
+              12.85
+            ]
+          ]
+        }
       ]
-    ]
+    }
   },
   "home": {
     "objects": [
       {
         "id": "home_bed",
         "type": "bed",
-        "x": 12,
+        "x": 14,
         "y": 10,
-        "width": 10,
-        "height": 6,
-        "hit_width": 12,
-        "hit_height": 9,
         "label": "침대",
-        "tts": "침대입니다. 선택하면 잠을 자고 다음 날로 넘어갑니다",
         "action": "rest",
-        "hover_sfx": "hover_bed"
+        "tts": "침대",
+        "width": 12,
+        "height": 8
       },
       {
         "id": "home_chest",
         "type": "chest",
-        "x": 12,
-        "y": 28,
-        "width": 8,
-        "height": 6,
-        "hit_width": 11,
-        "hit_height": 9,
+        "x": 14,
+        "y": 26,
         "label": "연구 상자",
-        "tts": "연구 상자입니다. 돈을 사용해 씨앗 회수 확률을 높이거나 밭을 확장할 수 있습니다",
         "action": "open_research",
-        "hover_sfx": "hover_chest"
+        "tts": "연구 상자",
+        "width": 10,
+        "height": 8
       },
       {
         "id": "home_stove",
         "type": "stove",
-        "x": 34,
-        "y": 28,
-        "width": 10,
-        "height": 7,
-        "hit_width": 13,
-        "hit_height": 10,
+        "x": 37,
+        "y": 24,
         "label": "주방",
-        "tts": "주방입니다. 선택하면 현재 재료로 만들 수 있는 요리를 확인합니다",
         "action": "open_recipes",
-        "hover_sfx": "hover_stove"
+        "tts": "주방",
+        "width": 10,
+        "height": 8
       },
       {
-        "id": "home_to_farm",
+        "id": "home_farm",
         "type": "arrow",
-        "x": 53,
+        "x": 54,
         "y": 12,
+        "label": "농장으로 이동",
+        "action": "travel:farm",
+        "tts": "농장으로 이동",
         "direction": "right",
-        "size": 2,
-        "hit_width": 10,
-        "hit_height": 10,
-        "label": "농장",
-        "tts": "농장입니다. 오른쪽 출구입니다",
-        "action": "travel:farm"
+        "size": 3,
+        "hit_width": 9,
+        "hit_height": 9
       },
       {
-        "id": "home_to_town",
+        "id": "home_town",
         "type": "arrow",
-        "x": 48,
-        "y": 34,
+        "x": 47,
+        "y": 35,
+        "label": "마을로 이동",
+        "action": "travel:town",
+        "tts": "마을로 이동",
         "direction": "down",
-        "size": 2,
-        "hit_width": 11,
-        "hit_height": 9,
-        "label": "마을",
-        "tts": "마을입니다. 아래쪽 출구입니다",
-        "action": "travel:town"
+        "size": 3,
+        "hit_width": 9,
+        "hit_height": 9
       }
     ]
   },
   "farm": {
-    "tools": [],
     "plots": [
       {
         "id": "plot_1",
-        "x": 20,
-        "y": 12,
-        "width": 10,
+        "type": "plot",
+        "x": 21,
+        "y": 10,
+        "label": "1번 밭",
+        "action": "",
+        "tts": "1번 밭",
+        "width": 12,
         "height": 8,
-        "hit_width": 13,
-        "hit_height": 11,
-        "label": "1번 밭"
+        "hit_width": 16,
+        "hit_height": 12
       },
       {
         "id": "plot_2",
-        "x": 40,
-        "y": 12,
-        "width": 10,
+        "type": "plot",
+        "x": 43,
+        "y": 10,
+        "label": "2번 밭",
+        "action": "",
+        "tts": "2번 밭",
+        "width": 12,
         "height": 8,
-        "hit_width": 13,
-        "hit_height": 11,
-        "label": "2번 밭"
+        "hit_width": 16,
+        "hit_height": 12
       },
       {
         "id": "plot_3",
-        "x": 20,
-        "y": 26,
-        "width": 10,
+        "type": "plot",
+        "x": 21,
+        "y": 27,
+        "label": "3번 밭",
+        "action": "",
+        "tts": "3번 밭",
+        "width": 12,
         "height": 8,
-        "hit_width": 13,
-        "hit_height": 11,
-        "label": "3번 밭"
+        "hit_width": 16,
+        "hit_height": 12
       },
       {
         "id": "plot_4",
-        "x": 40,
-        "y": 26,
-        "width": 10,
+        "type": "plot",
+        "x": 43,
+        "y": 27,
+        "label": "4번 밭",
+        "action": "",
+        "tts": "4번 밭",
+        "width": 12,
         "height": 8,
-        "hit_width": 13,
-        "hit_height": 11,
-        "label": "4번 밭"
+        "hit_width": 16,
+        "hit_height": 12
       }
     ],
     "objects": [
       {
-        "id": "farm_to_home",
+        "id": "farm_home",
         "type": "arrow",
-        "x": 6,
-        "y": 35,
+        "x": 5,
+        "y": 20,
+        "label": "집으로 이동",
+        "action": "travel:home",
+        "tts": "집으로 이동",
         "direction": "left",
-        "size": 2,
-        "hit_width": 11,
-        "hit_height": 9,
-        "label": "집",
-        "tts": "집입니다. 왼쪽 아래 출구입니다",
-        "action": "travel:home"
+        "size": 3,
+        "hit_width": 9,
+        "hit_height": 9
       }
     ]
   },
@@ -415,123 +798,100 @@
       {
         "id": "town_shop",
         "type": "shop_npc",
-        "x": 30,
+        "x": 31,
         "y": 18,
-        "width": 16,
-        "height": 12,
-        "hit_width": 20,
-        "hit_height": 16,
-        "label": "마을 상점",
-        "tts": "마을 상점입니다. 선택하면 상점 주인이 구매할지 판매할지 물어봅니다",
+        "label": "상점",
         "action": "open_shop",
-        "hover_sfx": "hover_shop"
+        "tts": "상점",
+        "width": 18,
+        "height": 14,
+        "hit_width": 22,
+        "hit_height": 18
       },
       {
-        "id": "town_to_home",
+        "id": "town_home",
         "type": "arrow",
-        "x": 7,
-        "y": 34,
+        "x": 6,
+        "y": 33,
+        "label": "집으로 이동",
+        "action": "travel:home",
+        "tts": "집으로 이동",
         "direction": "left",
-        "size": 2,
-        "hit_width": 11,
-        "hit_height": 9,
-        "label": "집",
-        "tts": "집입니다. 왼쪽 출구입니다",
-        "action": "travel:home"
+        "size": 3,
+        "hit_width": 9,
+        "hit_height": 9
       }
     ]
   },
   "minimap": {
-    "routes": [
-      {
-        "id": "route_home_farm",
-        "x1": 34,
-        "y1": 15,
-        "x2": 44,
-        "y2": 15,
-        "label": "집과 농장을 연결하는 길",
-        "tts": "집과 농장을 연결하는 길입니다. 집의 오른쪽에 농장이 있습니다",
-        "hit_radius": 2.5
-      },
-      {
-        "id": "route_home_town",
-        "x1": 30,
-        "y1": 19,
-        "x2": 30,
-        "y2": 27,
-        "label": "집과 마을을 연결하는 길",
-        "tts": "집과 마을을 연결하는 길입니다. 집의 아래쪽에 마을이 있습니다",
-        "hit_radius": 2.5
-      }
-    ],
     "locations": [
       {
         "id": "map_home",
+        "type": "node",
+        "x": 18,
+        "y": 12,
+        "label": "집",
+        "action": "travel:home",
+        "tts": "집",
         "location": "home",
-        "x": 30,
-        "y": 15,
-        "hit_width": 10,
-        "hit_height": 10,
-        "label": "집"
+        "width": 8,
+        "height": 6,
+        "hit_width": 12,
+        "hit_height": 10
       },
       {
         "id": "map_farm",
+        "type": "node",
+        "x": 44,
+        "y": 12,
+        "label": "농장",
+        "action": "travel:farm",
+        "tts": "농장",
         "location": "farm",
-        "x": 48,
-        "y": 15,
-        "hit_width": 10,
-        "hit_height": 10,
-        "label": "농장"
+        "width": 8,
+        "height": 6,
+        "hit_width": 12,
+        "hit_height": 10
       },
       {
         "id": "map_town",
+        "type": "node",
+        "x": 18,
+        "y": 30,
+        "label": "마을",
+        "action": "travel:town",
+        "tts": "마을",
         "location": "town",
-        "x": 30,
-        "y": 31,
-        "hit_width": 10,
-        "hit_height": 10,
-        "label": "마을"
+        "width": 8,
+        "height": 6,
+        "hit_width": 12,
+        "hit_height": 10
+      }
+    ],
+    "routes": [
+      {
+        "id": "home_farm_route",
+        "x1": 22,
+        "y1": 12,
+        "x2": 40,
+        "y2": 12,
+        "label": "농장 길"
+      },
+      {
+        "id": "home_town_route",
+        "x1": 18,
+        "y1": 16,
+        "x2": 18,
+        "y2": 26,
+        "label": "마을 길"
       }
     ]
   },
-  "shop": {
-    "choice": {
-      "sell_label": "판매",
-      "buy_label": "구매"
-    }
-  },
-  "time": {
-    "mode": "action",
-    "total_cells": 20,
-    "action_costs": {
-      "travel": 1,
-      "plant": 1,
-      "water": 1,
-      "fertilize": 1,
-      "harvest": 1,
-      "research": 1,
-      "cook": 2
-    },
-    "bar": {
-      "panel_width": 40,
-      "panel_height": 4,
-      "cell_width": 2,
-      "cell_height": 4
-    }
-  },
   "care_minigame": {
     "target_count": 8,
-    "success_ratio": 0.65,
-    "tolerance": 4.0,
-    "field": {
-      "x": 30,
-      "y": 20,
-      "width": 46,
-      "height": 30
-    },
     "target_positions": [
       [
-        14,
+        12,
         10
       ],
       [
@@ -543,37 +903,110 @@
         10
       ],
       [
-        46,
-        11
+        48,
+        10
       ],
       [
-        18,
-        18
+        12,
+        20
       ],
       [
-        30,
-        18
-      ],
-      [
-        42,
-        19
-      ],
-      [
-        14,
-        27
-      ],
-      [
-        25,
-        28
+        24,
+        20
       ],
       [
         36,
-        27
+        20
       ],
       [
-        47,
-        28
+        48,
+        20
+      ],
+      [
+        12,
+        30
+      ],
+      [
+        24,
+        30
+      ],
+      [
+        36,
+        30
+      ],
+      [
+        48,
+        30
       ]
-    ]
+    ],
+    "tolerance": 4,
+    "success_ratio": 0.65,
+    "field": {
+      "x": 30,
+      "y": 20,
+      "width": 48,
+      "height": 32
+    }
+  },
+  "harvest_minigame": {
+    "target_count": 6,
+    "target_positions": [
+      [
+        12,
+        10
+      ],
+      [
+        24,
+        10
+      ],
+      [
+        36,
+        10
+      ],
+      [
+        48,
+        10
+      ],
+      [
+        12,
+        20
+      ],
+      [
+        24,
+        20
+      ],
+      [
+        36,
+        20
+      ],
+      [
+        48,
+        20
+      ],
+      [
+        12,
+        30
+      ],
+      [
+        24,
+        30
+      ],
+      [
+        36,
+        30
+      ],
+      [
+        48,
+        30
+      ]
+    ],
+    "tolerance": 4,
+    "success_ratio": 0.65,
+    "field": {
+      "x": 30,
+      "y": 20,
+      "width": 48,
+      "height": 32
+    }
   }
 }
