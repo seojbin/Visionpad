@@ -11,7 +11,7 @@ class GameAudio {
         this.settings = {
             default_volume:0.7,
             bgm_gain:{basic:0.22,minigame:0.10,shop:0.40},
-            one_shot_gain:{sleep:0.8,door:0.7,coin:0.65,pickaxe:0.8,break:0.8,shine:0.8},
+            one_shot_gain:{sleep:0.8,door:0.7,coin:0.65,pickaxe:0.8,break:0.8,shine:0.8,destroy:0.8},
             one_shot_gain_links:{step:'door'},
             bgm_minigame_pages:['seed_select','water_minigame','fertilizer_minigame','harvest','recipe_select','ingredient_select','cooking'],
             bgm_shop_pages:['shop_choice','shop_buy','shop_sell'],
@@ -29,7 +29,7 @@ class GameAudio {
         this.buffers = new Map(); this.raw = new Map(); this.rewardSources = new Set();
         this.clickSources = new Set(); this.clickToken = 0;
         this.effectToken = 0; this.lastPosition = null; this.lastCorrectAt = -Infinity; this.lastMotion = 0;
-        this.urls = Object.fromEntries(['water','soil','cut','cook','crop','correct','sleep','door','coin','background-basic','background-minigame','background-shop','step','pickaxe','break','shine'].map(n => [n, `/static/audio/${n}.mp3`]));
+        this.urls = Object.fromEntries(['water','soil','cut','cook','crop','correct','sleep','door','coin','background-basic','background-minigame','background-shop','step','pickaxe','break','shine','destroy'].map(n => [n, `/static/audio/${n}.mp3`]));
     }
     configure(settings = {}) {
         this.settings = {
@@ -180,6 +180,10 @@ class GameAudio {
         this.syncBackground(state);
         // Layer 2 only: never stop, restart, pulse, or change gain of layer 1.
         for (const event of events) {
+            if(event.kind==='item_destroyed') {
+                if (event.reward_sound) this.miningLoot({...event, sound:event.reward_sound, impact_sound:'destroy'});
+                else this.oneShot('destroy');
+            }
             if(event.kind==='mining_loot') this.miningLoot(event);
             if(event.kind==='one_shot') this.oneShot(event.sound);
             if(event.kind==='correct' && event.count>0) this.correct(event.count, event.activity === 'cooking' || state?.page === 'cooking' || ['cut','cook'].includes(this.workName));
@@ -215,7 +219,7 @@ class GameAudio {
         if (this.bgm) { try { this.bgm.stop(); } catch {} this.bgm = null; }
     }
     async oneShot(name) {
-        if (!this.enabled || !['sleep','door','coin','step','pickaxe','break','shine'].includes(name)) return;
+        if (!this.enabled || !['sleep','door','coin','step','pickaxe','break','shine','destroy'].includes(name)) return;
         this.unlock();
         const token = this.oneShotToken;
         const buffer = await this.load(name);
@@ -238,7 +242,7 @@ class GameAudio {
     async miningLoot(event) {
         if (!this.enabled) { this.onNarration(event.tts || ''); return; }
         const token = this.miningNarrationToken;
-        await this.oneShot('break');
+        await this.oneShot(event.impact_sound === 'destroy' ? 'destroy' : 'break');
         if (token !== this.miningNarrationToken || !this.enabled) return;
         this.onNarration(event.tts || '');
         if (event.sound === 'shine') this.oneShot('shine');

@@ -138,4 +138,17 @@ class MineTests(unittest.TestCase):
                 self.assertEqual(self.e.dotpad.dots[y][x],int(node.get('current',False)))
                 if node.get('current'):
                     for dx,dy in [(-2,0),(2,0),(0,-2),(0,2)]:self.assertEqual(self.e.dotpad.dots[y+dy][x+dx],1)
+    def test_pickaxe_destroy_replaces_nonbreaking_hit(self):
+        self.enter();self.e.resources['pickaxe']=1;self.e._pickaxe_hits=9;r=self.e.mine_rocks[0]
+        with patch.object(module.random,'random',return_value=0):out=self.e.hit_mine_rock(r['id'])
+        self.assertEqual(out['sound_events'],[{'kind':'item_destroyed','item_id':'pickaxe'}])
+        self.assertEqual(r['hits'],1);self.assertEqual(self.e.time_used_cells,0)
+        self.assertEqual(self.e.resources['pickaxe'],0)
+    def test_simultaneous_rock_and_item_destruction_keeps_loot(self):
+        self.enter();self.e.resources['pickaxe']=1;self.e._pickaxe_hits=9;r=self.e.mine_rocks[0];r['hits']=2
+        with patch.object(module.random,'choices',return_value=['diamond']),patch.object(module.random,'random',return_value=0):out=self.e.hit_mine_rock(r['id'])
+        self.assertEqual(len(out['sound_events']),1);event=out['sound_events'][0]
+        self.assertEqual(event['kind'],'item_destroyed');self.assertEqual(event['reward_sound'],'shine')
+        self.assertIn('다이아몬드',event['tts']);self.assertIn('곡괭이가 부서',event['tts'])
+        self.assertEqual(self.e.resources['diamond'],1);self.assertEqual(self.e.resources['pickaxe'],0);self.assertEqual(self.e.time_used_cells,2)
 if __name__=='__main__':unittest.main()

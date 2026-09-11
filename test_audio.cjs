@@ -111,3 +111,16 @@ test('navigation cancels stale delayed mining narration',async()=>{
 });
 
 test('night snapshots preserve final mining loot narration',async()=>{const {audio}=fixture();const said=[];audio.onNarration=t=>said.push(t);audio.held=true;audio.handle({page:'home',day_ended:true},[{kind:'mining_loot',sound:'correct',tts:'돌 1개 획득. 집에 도착'}]);await flush();const breaking=[...audio.oneShotSources][0];audio.handle({page:'home',day_ended:true});breaking.onended();await flush();assert.equal(said.length,1);audio.stopAll();});
+
+test('generic item destruction uses destroy only',async()=>{
+ const {audio}=fixture();const names=[];const load=audio.load.bind(audio);audio.load=n=>{names.push(n);return load(n)};
+ audio.configure({one_shot_gain:{destroy:.61}});audio.handle({page:'mine'},[{kind:'item_destroyed',item_id:'future_tool'}]);await flush();
+ assert(names.includes('destroy'));assert(!names.includes('pickaxe'));assert(!names.includes('break'));
+ assert.equal([...audio.oneShotSources][0].destination.gain.value,.61);audio.stopAll();
+});
+test('destroy replaces break then diamond narration and shine follow',async()=>{
+ const {audio}=fixture();const names=[],said=[];const load=audio.load.bind(audio);audio.load=n=>{names.push(n);return load(n)};audio.onNarration=t=>said.push(t);
+ audio.handle({page:'mine'},[{kind:'item_destroyed',item_id:'pickaxe',reward_sound:'shine',tts:'다이아몬드 1개 획득. 곡괭이가 부서졌습니다'}]);await flush();
+ assert(names.includes('destroy'));assert(!names.includes('break'));assert.deepEqual(said,[]);
+ [...audio.oneShotSources][0].onended();await flush();assert.equal(said.length,1);assert(names.includes('shine'));audio.stopAll();
+});

@@ -2142,7 +2142,7 @@ class GameEngine:
         self.cooking_path_samples = self.build_path_samples(self.get_cooking_gesture().get("path", []))
         self.clear_hover()
         self.render()
-        return self.response(tts="자르기 완료." + self.cooking_step_text(), sfx="cooking_step")
+        return self.response(tts=self.cooking_step_text(), sfx="cooking_step")
 
     def open_cooking_minigame(self):
         recipe = self.get_recipe_config(self.selected_recipe_id)
@@ -2520,6 +2520,13 @@ class GameEngine:
         objects.append(exit_arrow)
         return objects
 
+    def item_destroyed_event(self, item_id, reward_sound=None, loot_tts=None):
+        """Shared destruction event for pickaxes and future breakable items."""
+        event = {"kind": "item_destroyed", "item_id": item_id}
+        if reward_sound is not None:
+            event.update(reward_sound=reward_sound, tts=loot_tts or "")
+        return event
+
     def hit_mine_rock(self, rock_id):
         if self.current_page != "mine" or self.paused or self.day_ended:
             return self.response()
@@ -2552,7 +2559,8 @@ class GameEngine:
             events.append({"kind": "one_shot", "sound": "pickaxe"})
         safe_hits = int(cfg.get("pickaxe_safe_hits", 9))
         break_chance = min(1, max(0, self._pickaxe_hits - safe_hits) * float(cfg.get("pickaxe_break_increment", .05)))
-        if break_chance > 0 and random.random() < break_chance:
+        item_destroyed = break_chance > 0 and random.random() < break_chance
+        if item_destroyed:
             self.resources["pickaxe"] = 0
             self._pickaxe_hits = 0
             text += (". " if text else "") + "곡괭이가 부서졌습니다. 상점에서 다시 구매하세요"
@@ -2561,10 +2569,13 @@ class GameEngine:
             if fatigue["night"]:
                 text += ". 밤이 되어 집에 도착했습니다. 침대를 눌러 주무세요"
         self.render()
-        if destroyed:
+        if item_destroyed:
+            # Replace the mining impact instead of layering both impact sounds.
+            reward_sound = ("shine" if mineral == "diamond" else "correct") if destroyed else None
+            events = [self.item_destroyed_event("pickaxe", reward_sound, text if destroyed else None)]
+        elif destroyed:
             events.append({"kind": "mining_loot", "sound": "shine" if mineral == "diamond" else "correct", "tts": text})
-            return self.response(sound_events=events)
-        return self.response(tts=text or None, sound_events=events)
+        return self.response(tts=None if destroyed else (text or None), sound_events=events)
 
     def get_harvest_base_yield(self, seed_id):
         cfg = self.config.get("research", {}).get("harvest_yield", {})

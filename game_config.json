@@ -1121,7 +1121,8 @@
         "coin": 0.7,
         "pickaxe": 0.8,
         "break": 0.8,
-        "shine": 0.8
+        "shine": 0.8,
+        "destroy": 0.8
       },
       "bgm_minigame_pages": [
         "seed_select",
