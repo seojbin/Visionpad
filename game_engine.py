@@ -2298,7 +2298,7 @@ class GameEngine:
             count = self.resources["fertilizer"]
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{label} 1개 구매, {price}골드. 보유 {count}개, 잔액 {self.resources['coin']}골드", sfx="shop_buy", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
+        return self.response(tts=f"{label} 1개 구매, 잔액 {self.resources['coin']}골드", sfx="shop_buy", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
 
     def sell_shop_item(self, kind, item_id):
         if kind == "crop":
@@ -2320,7 +2320,7 @@ class GameEngine:
         self.resources["coin"] += price
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{label} 1개 판매, +{price}골드. 잔액 {self.resources['coin']}골드", sfx="shop_sell", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
+        return self.response(tts=f"{label} 1개 판매, 잔액 {self.resources['coin']}골드", sfx="shop_sell", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
 
     def handle_command(self, command):
         if self.sleep_until is not None:
