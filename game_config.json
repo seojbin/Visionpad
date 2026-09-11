@@ -1001,12 +1001,49 @@
       ]
     ],
     "tolerance": 4,
-    "success_ratio": 0.65,
     "field": {
       "x": 30,
       "y": 20,
       "width": 48,
       "height": 32
+    }
+  },
+  "interaction": {
+    "feedback": {
+      "disappear_delay_ms": 1000,
+      "visual_refresh_interval_ms": 100
+    },
+    "cooking": {
+      "resume_marker_delay_ms": 2000,
+      "stir_scale": 1.6
+    },
+    "inventory": {
+      "items_per_page": 12,
+      "hide_zero_items": true
+    },
+    "audio": {
+      "default_volume": 0.7,
+      "work_gain": {
+        "water": 0.45,
+        "soil": 0.45,
+        "cut": 0.8,
+        "cook": 0.8
+      },
+      "work_gain_during_tts": {
+        "water": 0.18,
+        "soil": 0.18,
+        "cut": 0.32,
+        "cook": 0.32
+      },
+      "reward_gain": 0.42,
+      "reward_gain_during_tts": 0.25,
+      "cooking_correct_interval_ms": 650,
+      "other_correct_interval_ms": 90,
+      "click_duration_ms": 650,
+      "motion_idle_ms": 450,
+      "motion_check_interval_ms": 120,
+      "correct_max_load_age_ms": 650,
+      "max_reward_sources": 2
     }
   }
 }

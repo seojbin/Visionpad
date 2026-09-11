@@ -5,12 +5,31 @@ class GameAudio {
         this.fetcher = options.fetcher || (url => fetch(url));
         this.onStatus = options.onStatus || (() => {});
         this.now = options.now || (() => performance.now());
+        // Fallbacks support old configs; game_config.json overrides these via state.
+        this.settings = {
+            default_volume:0.7,
+            work_gain:{water:0.45,soil:0.45,cut:0.8,cook:0.8},
+            work_gain_during_tts:{water:0.18,soil:0.18,cut:0.32,cook:0.32},
+            reward_gain:0.42,reward_gain_during_tts:0.25,
+            cooking_correct_interval_ms:650,other_correct_interval_ms:90,
+            click_duration_ms:650,motion_idle_ms:450,motion_check_interval_ms:120,
+            correct_max_load_age_ms:650,max_reward_sources:2
+        };
         this.enabled = true; this.volume = 0.7; this.ducked = false;
         this.held = false; this.work = null; this.workName = null; this.workToken = 0;
         this.buffers = new Map(); this.raw = new Map(); this.rewardSources = new Set();
         this.clickSources = new Set(); this.clickToken = 0;
         this.effectToken = 0; this.lastPosition = null; this.lastCorrectAt = -Infinity; this.lastMotion = 0;
         this.urls = Object.fromEntries(['water','soil','cut','cook','correct'].map(n => [n, `/static/audio/${n}.mp3`]));
+    }
+    configure(settings = {}) {
+        this.settings = {
+            ...this.settings, ...settings,
+            work_gain:{...this.settings.work_gain,...settings.work_gain},
+            work_gain_during_tts:{...this.settings.work_gain_during_tts,...settings.work_gain_during_tts}
+        };
+        this.setVolume(this.settings.default_volume);
+        this.setDucked(this.ducked);
     }
     preload() {
         for (const [name,url] of Object.entries(this.urls)) {
@@ -26,7 +45,7 @@ class GameAudio {
                 this.context = this.contextFactory();
                 this.master = this.context.createGain(); this.master.connect(this.context.destination);
                 this.workGain = this.context.createGain(); this.workGain.connect(this.master);
-                this.rewardGain = this.context.createGain(); this.rewardGain.gain.value = 0.72; this.rewardGain.connect(this.master);
+                this.rewardGain = this.context.createGain(); this.rewardGain.gain.value = this.settings.reward_gain; this.rewardGain.connect(this.master);
                 this.setVolume(this.volume); this.setDucked(this.ducked);
             }
             if (this.context.state === 'suspended') this.context.resume().catch(() => this.onStatus('소리 버튼을 눌러 오디오를 활성화하세요'));
@@ -48,9 +67,10 @@ class GameAudio {
         this.setVolume(this.volume);
     }
     setDucked(ducked) {
+        const workName = this.workName || 'water';
         this.ducked = !!ducked;
-        if (this.workGain) this.workGain.gain.setTargetAtTime(this.ducked ? 0.18 : 0.45,this.context.currentTime,0.03);
-        if (this.rewardGain) this.rewardGain.gain.setTargetAtTime(this.ducked ? 0.25 : 0.42,this.context.currentTime,0.02);
+        if (this.workGain) this.workGain.gain.setTargetAtTime(this.ducked ? this.settings.work_gain_during_tts[workName] : this.settings.work_gain[workName],this.context.currentTime,0.03);
+        if (this.rewardGain) this.rewardGain.gain.setTargetAtTime(this.ducked ? this.settings.reward_gain_during_tts : this.settings.reward_gain,this.context.currentTime,0.02);
     }
     inputDown(state, x, y) {
         this.lastPosition = [x,y];
@@ -71,7 +91,7 @@ class GameAudio {
         source.buffer = buffer; source.connect(this.workGain);
         this.clickSources.add(source);
         source.onended = () => {this.clickSources.delete(source);source.disconnect();};
-        source.start(0, 0, Math.min(0.65, buffer.duration));
+        source.start(0, 0, Math.min(this.settings.click_duration_ms / 1000, buffer.duration));
     }
     inputUp() {this.held = false; this.stopWork();}
     move(x,y) {
@@ -95,9 +115,9 @@ class GameAudio {
         this.onStatus(({water:'물 뿌리는 중',soil:'비료 뿌리는 중',cut:'재료 자르는 중',cook:'젓는 중'})[name]);
         // Cutting/stirring only remains audible while the pointer is moving.
         this.motionTimer=setInterval(()=>{
-            if (['cut','cook'].includes(this.workName) && this.now()-this.lastMotion>450)
+            if (['cut','cook'].includes(this.workName) && this.now()-this.lastMotion>this.settings.motion_idle_ms)
                 this.workGain.gain.setTargetAtTime(0,this.context.currentTime,0.035);
-        },120);
+        },this.settings.motion_check_interval_ms);
     }
     stopWork() {
         const wasWorking = !!this.workName;
@@ -105,16 +125,16 @@ class GameAudio {
         if(wasWorking)this.onStatus(this.enabled?"작업음 · 성공음 준비":"효과음 꺼짐");
         if (this.work) {try{this.work.stop();}catch{}this.work=null;}
     }
-    async correct(count=1) {
+    async correct(count=1, cooking=false) {
         if (!this.enabled || count<=0) return;
         this.unlock();if(!this.context)return;
         const at=this.now(), token=this.effectToken;
         // One cue per scoring response; dense checkpoints cannot build a queue.
-        if (at-this.lastCorrectAt<90) return;
+        if (at-this.lastCorrectAt<(cooking ? this.settings.cooking_correct_interval_ms : this.settings.other_correct_interval_ms)) return;
         this.lastCorrectAt=at;
         const buffer=await this.load('correct');
-        if (!buffer || !this.enabled || token!==this.effectToken || this.now()-at>650) return;
-        while(this.rewardSources.size>=2) {
+        if (!buffer || !this.enabled || token!==this.effectToken || this.now()-at>this.settings.correct_max_load_age_ms) return;
+        while(this.rewardSources.size>=Math.max(1, this.settings.max_reward_sources)) {
             const oldest=this.rewardSources.values().next().value;
             try{oldest.stop();}catch{}this.rewardSources.delete(oldest);
         }
@@ -138,7 +158,7 @@ class GameAudio {
         if (state?.paused || state?.day_ended) return;
         // Layer 2 only: never stop, restart, pulse, or change gain of layer 1.
         for (const event of events) {
-            if(event.kind==='correct' && event.count>0) this.correct(event.count);
+            if(event.kind==='correct' && event.count>0) this.correct(event.count, event.activity === 'cooking' || state?.page === 'cooking' || ['cut','cook'].includes(this.workName));
         }
     }
     stopAll() {

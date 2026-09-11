@@ -1,5 +1,6 @@
 import math
 import random
+import time
 
 from dotpad import DotPad
 
@@ -8,6 +9,20 @@ class GameEngine:
 
     def __init__(self, config):
         self.config = config
+        interaction = config.get("interaction", {})
+        feedback = interaction.get("feedback", {})
+        cooking = interaction.get("cooking", {})
+        inventory = interaction.get("inventory", {})
+        self.disappear_delay_seconds = max(0, float(feedback.get("disappear_delay_ms", 1000))) / 1000
+        self.resume_marker_delay_seconds = max(0, float(cooking.get("resume_marker_delay_ms", 2000))) / 1000
+        self.stir_scale = max(0.1, float(cooking.get("stir_scale", 1.6)))
+        # The physical layout has twelve slots and reserves its bottom row for arrows.
+        self.inventory_items_per_page = max(1, min(12, int(inventory.get("items_per_page", 12))))
+        self.inventory_hide_zero_items = bool(inventory.get("hide_zero_items", True))
+        self.client_settings = {
+            "visual_refresh_interval_ms": max(50, int(feedback.get("visual_refresh_interval_ms", 100))),
+            "audio": interaction.get("audio", {})
+        }
 
         dot_config = config["dotpad"]
         self.dotpad = DotPad(
@@ -24,6 +39,9 @@ class GameEngine:
         self.reset()
 
     def reset(self):
+        self.pending_visual_completion = None
+        self.inventory_page = 0
+        self.inventory_page_count = 1
         self.day = int(self.config.get("game", {}).get("start_day", 1))
         self.current_location = "home"
         self.current_page = "home"
@@ -67,6 +85,7 @@ class GameEngine:
         self.care_targets = []
         self.care_dragging = False
         self.care_collected_ids = set()
+        self.care_visible_until = {}
 
         self.harvest_plot_id = None
         self.harvest_targets = []
@@ -77,8 +96,11 @@ class GameEngine:
         self.selected_ingredients = set()
         self.cooking_dragging = False
         self.cooking_path_samples = []
+        self.cooking_visible_until = {}
         self.cooking_progress_index = 0
         self.cooking_stage_index = 0
+        self.cooking_last_progress_at = None
+        self.cooking_resume_marker = False
 
         self.active_buff = {
             "kind": None,
@@ -110,10 +132,13 @@ class GameEngine:
         self.hover_object_id = None
 
     def clear_care(self, keep_detail=False):
+        if self.pending_visual_completion and self.pending_visual_completion[1] == "care":
+            self.pending_visual_completion = None
         self.care_mode = None
         self.care_targets = []
         self.care_dragging = False
         self.care_collected_ids.clear()
+        self.care_visible_until = {}
         if not keep_detail:
             self.detail_plot_id = None
 
@@ -124,13 +149,18 @@ class GameEngine:
         self.harvest_collected_ids.clear()
 
     def clear_cooking(self, keep_recipe=False):
+        if self.pending_visual_completion and self.pending_visual_completion[1] == "cooking":
+            self.pending_visual_completion = None
         if not keep_recipe:
             self.selected_recipe_id = None
             self.selected_ingredients.clear()
         self.cooking_dragging = False
         self.cooking_path_samples = []
+        self.cooking_visible_until = {}
         self.cooking_progress_index = 0
         self.cooking_stage_index = 0
+        self.cooking_last_progress_at = None
+        self.cooking_resume_marker = False
 
 
     def has_final_consonant(self, text):
@@ -511,7 +541,8 @@ class GameEngine:
             "action": ""
         }]
         for target in self.care_targets:
-            if target["id"] in self.care_collected_ids:
+            if (target["id"] in self.care_collected_ids
+                    and self.care_visible_until.get(target["id"], 0) <= time.monotonic()):
                 continue
             objects.append({
                 "id": target["id"], "type": "care_target", "care_kind": self.care_mode,
@@ -565,7 +596,7 @@ class GameEngine:
             entries.append({"id": f"crop_{seed_id}", "label": f"{seed_config.get('label', seed_id)} 작물", "count": int(self.resources["crops"].get(seed_id, 0)), "kind": "crop", "seed_id": seed_id, "action": ""})
         for recipe_id, recipe in self.config.get("recipes", {}).items():
             count = int(self.resources["foods"].get(recipe_id, 0))
-            if count <= 0:
+            if count <= 0 and self.inventory_hide_zero_items:
                 continue
             ticks = int(recipe.get("buff_ticks", 0))
             multiplier = float(recipe.get("harvest_multiplier", 1.0))
@@ -576,11 +607,16 @@ class GameEngine:
                 "extra_tts": f"사용하면 {ticks}시간 동안 수확량이 {percent}퍼센트 증가합니다"
             })
 
+        if self.inventory_hide_zero_items:
+            entries = [entry for entry in entries if entry["count"] > 0]
+        page_size = self.inventory_items_per_page
+        self.inventory_page_count = max(1, math.ceil(len(entries) / page_size))
+        self.inventory_page = min(self.inventory_page, self.inventory_page_count - 1)
+        entries = entries[self.inventory_page * page_size:(self.inventory_page + 1) * page_size]
         positions = [
             (9, 5), (23, 5), (37, 5), (51, 5),
             (9, 15), (23, 15), (37, 15), (51, 15),
-            (9, 25), (23, 25), (37, 25), (51, 25),
-            (9, 35), (23, 35), (37, 35), (51, 35)
+            (9, 25), (23, 25), (37, 25), (51, 25)
         ]
         objects = []
         for index, entry in enumerate(entries[:len(positions)]):
@@ -595,6 +631,13 @@ class GameEngine:
                 "width": 10, "height": 6, "hit_width": 13, "hit_height": 9,
                 "label": entry["label"], "tts": tts, "action": entry.get("action", "")
             })
+        for delta, x, label, direction in [(-1, 9, "이전 페이지입니다", "left"), (1, 51, "다음 페이지입니다", "right")]:
+            if 0 <= self.inventory_page + delta < self.inventory_page_count:
+                objects.append({"id": f"inventory_page_{direction}", "type": "arrow",
+                                "x": x, "y": 35, "direction": direction, "size": 2,
+                                "hit_width": 11, "hit_height": 7,
+                                "label": label, "tts": label,
+                                "action": f"inventory_page:{delta}"})
         return objects
 
     def get_minimap_objects(self):
@@ -1137,21 +1180,66 @@ class GameEngine:
         self.dotpad.draw_line(x - 3, y, x + 3, y)
         self.dotpad.draw_line(x, y - 2, x, y + 2)
 
+    def cooking_resume_point(self):
+        if not self.cooking_resume_marker or not self.cooking_path_samples:
+            return None
+        return self.cooking_path_samples[min(self.cooking_progress_index, len(self.cooking_path_samples) - 1)]
+
+    def defer_visual_completion(self, kind, visible_until):
+        deadline = max(visible_until.values(), default=0)
+        if time.monotonic() >= deadline:
+            return False
+        self.pending_visual_completion = (deadline, kind)
+        return True
+
+    def visual_tick(self):
+        # Browser polling keeps physical output current even without movement.
+        if not self.paused and self.pending_visual_completion:
+            deadline, kind = self.pending_visual_completion
+            if time.monotonic() >= deadline:
+                self.pending_visual_completion = None
+                if kind == "care":
+                    return self.finish_care_minigame()
+                return self.complete_cooking_step()
+        return self.response()
+
+    def update_cooking_marker(self):
+        if (self.current_page == "cooking" and not self.paused and self.cooking_dragging
+                and self.cooking_last_progress_at is not None
+                and time.monotonic() - self.cooking_last_progress_at >= self.resume_marker_delay_seconds
+                and not self.cooking_resume_marker):
+            self.cooking_resume_marker = True
+            self.render()
+
     def draw_cooking_path(self):
-        recipe = self.get_recipe_config(self.selected_recipe_id)
-        path = self.get_cooking_gesture().get("path", []) if recipe else []
-        if len(path) < 2:
+        # Progress is the index of the next checkpoint to visit.
+        # Render only unvisited samples; scoring still uses the full path.
+        samples = self.cooking_path_samples
+        if not samples:
             return
-        for i in range(len(path) - 1):
-            self.dotpad.draw_line(path[i][0], path[i][1], path[i + 1][0], path[i + 1][1])
-        sx, sy = path[0]
-        ex, ey = path[-1]
-        self.dotpad.draw_box(sx, sy, 4, 4)
+        progress = max(0, min(self.cooking_progress_index, len(samples)))
+        visible_progress = next((i for i in range(progress)
+                                 if self.cooking_visible_until.get(i, 0) > time.monotonic()), progress)
+        remaining = samples[visible_progress:]
+        if not remaining:
+            return
+        for start, end in zip(remaining, remaining[1:]):
+            self.dotpad.draw_line(
+                round(start[0]), round(start[1]),
+                round(end[0]), round(end[1])
+            )
+        if visible_progress == 0:
+            sx, sy = samples[0]
+            self.dotpad.draw_box(round(sx), round(sy), 4, 4)
+        ex, ey = map(round, samples[-1])
         self.dotpad.set_dot(ex, ey)
         self.dotpad.set_dot(ex - 1, ey)
         self.dotpad.set_dot(ex + 1, ey)
         self.dotpad.set_dot(ex, ey - 1)
         self.dotpad.set_dot(ex, ey + 1)
+        resume = self.cooking_resume_point()
+        if resume is not None:
+            self.dotpad.draw_box(round(resume[0]), round(resume[1]), 4, 4)
 
     def draw_shop_npc(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
@@ -1284,6 +1372,8 @@ class GameEngine:
         return self.response()
 
     def pointer_down(self, x, y):
+        if self.pending_visual_completion:
+            return self.response()
         self.pointer_pressed = True
         self.last_pointer = (x, y)
         if self.paused:
@@ -1333,6 +1423,8 @@ class GameEngine:
         return self.perform_action(action, obj)
 
     def pointer_drag(self, x, y):
+        if self.pending_visual_completion:
+            return self.response()
         previous_x, previous_y = self.last_pointer
         self.last_pointer = (x, y)
         if self.paused:
@@ -1388,7 +1480,7 @@ class GameEngine:
         final = self.pointer_drag(x, y) if self.pointer_pressed else None
         self.pointer_pressed = False
         self.last_pointer = (x, y)
-        if final and (final.get("sfx") in ("cooking_success", "cooking_step", "day_end")):
+        if final and (final.get("sfx") in ("cooking_success", "cooking_step", "cooking_wait", "day_end")):
             final["state"] = self.get_state()
             return final
         if self.current_page in ("water_minigame", "fertilizer_minigame") and self.care_dragging:
@@ -1411,6 +1503,15 @@ class GameEngine:
     def perform_action(self, action, obj):
         if self.day_ended and action != "rest":
             return self.night_only_response()
+        if action.startswith("inventory_page:"):
+            if self.current_page != "inventory":
+                return self.response()
+            delta = int(action.split(":", 1)[1])
+            self.get_inventory_objects()
+            self.inventory_page = max(0, min(self.inventory_page + delta, self.inventory_page_count - 1))
+            self.clear_hover()
+            self.render()
+            return self.response(tts="다음 페이지입니다" if delta > 0 else "이전 페이지입니다", sfx="open_page")
         if action.startswith("travel:"):
             return self.travel_to(action.split(":", 1)[1])
         if action == "return_scene":
@@ -1497,6 +1598,7 @@ class GameEngine:
     def open_inventory(self):
         if self.day_ended:
             return self.night_only_response()
+        self.inventory_page = 0
         self.current_page = "inventory"
         self.seed_select_plot_id = None
         self.clear_care()
@@ -1583,6 +1685,7 @@ class GameEngine:
             for i, (x, y) in enumerate(selected)
         ]
         self.care_collected_ids.clear()
+        self.care_visible_until = {}
         self.care_dragging = False
         self.current_page = "water_minigame" if mode == "water" else "fertilizer_minigame"
         self.clear_hover()
@@ -1599,6 +1702,7 @@ class GameEngine:
         for target in self.care_targets:
             if target["id"] not in self.care_collected_ids and math.hypot(x - target["x"], y - target["y"]) <= tolerance:
                 self.care_collected_ids.add(target["id"])
+                self.care_visible_until[target["id"]] = time.monotonic() + self.disappear_delay_seconds
                 collected = True
         return collected
 
@@ -1610,6 +1714,7 @@ class GameEngine:
                 continue
             if self.point_to_segment_distance(target["x"], target["y"], x1, y1, x2, y2) <= tolerance:
                 self.care_collected_ids.add(target["id"])
+                self.care_visible_until[target["id"]] = time.monotonic() + self.disappear_delay_seconds
                 collected = True
         return collected
 
@@ -1632,6 +1737,9 @@ class GameEngine:
                 tts=f"{mode_label} {percent}퍼센트. 남은 지점에 이어서 뿌리세요",
                 sfx="error"
             )
+
+        if self.defer_visual_completion("care", self.care_visible_until):
+            return self.response()
 
         state = self.farm_plots[plot_id]
         if mode == "water":
@@ -1951,7 +2059,7 @@ class GameEngine:
         if span_x <= 0 or span_y <= 0:
             return gesture
         width, height = self.config["dotpad"]["width"], self.config["dotpad"]["height"]
-        scale = min(1.6, (width - 10) / span_x, (height - 10) / span_y)
+        scale = min(self.stir_scale, (width - 10) / span_x, (height - 10) / span_y)
         cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
         return {**gesture, "path": [
             [round((x - cx) * scale + (width - 1) / 2),
@@ -1967,10 +2075,15 @@ class GameEngine:
 
     def complete_cooking_step(self):
         self.cooking_dragging = False
+        if self.defer_visual_completion("cooking", self.cooking_visible_until):
+            return self.response(sfx="cooking_wait")
         if self.cooking_stage_index + 1 >= len(self.get_cooking_steps()):
             return self.finish_cooking_success()
         self.cooking_stage_index += 1
+        self.cooking_last_progress_at = None
+        self.cooking_resume_marker = False
         self.cooking_progress_index = 0
+        self.cooking_visible_until = {}
         self.cooking_path_samples = self.build_path_samples(self.get_cooking_gesture().get("path", []))
         self.clear_hover()
         self.render()
@@ -1989,6 +2102,9 @@ class GameEngine:
         self.cooking_dragging = False
         self.cooking_progress_index = 0
         self.cooking_stage_index = 0
+        self.cooking_last_progress_at = None
+        self.cooking_resume_marker = False
+        self.cooking_visible_until = {}
         self.cooking_path_samples = self.build_path_samples(self.get_cooking_gesture().get("path", []))
         self.clear_hover()
         self.render()
@@ -2013,13 +2129,18 @@ class GameEngine:
             return self.response(tts="조리 경로를 불러오지 못했습니다", sfx="error")
         recipe = self.get_recipe_config(self.selected_recipe_id)
         tolerance = float(self.get_cooking_gesture().get("tolerance", 4.5))
-        sx, sy = self.cooking_path_samples[0]
+        resume_index = min(self.cooking_progress_index, len(self.cooking_path_samples) - 1)
+        sx, sy = self.cooking_path_samples[resume_index]
         if math.hypot(x - sx, y - sy) > tolerance * 1.35:
             self.cooking_dragging = False
-            self.cooking_progress_index = 0
-            return self.response(tts="선의 시작점에서 눌러주세요. 시작점은 작은 사각형으로 표시되어 있습니다", sfx="error")
+            return self.response(tts="네모 지점에서 눌러 이어가세요", sfx="error")
         self.cooking_dragging = True
-        self.cooking_progress_index = 1
+        if self.cooking_progress_index == 0:
+            self.cooking_visible_until[0] = time.monotonic() + self.disappear_delay_seconds
+        self.cooking_progress_index = max(1, self.cooking_progress_index)
+        self.cooking_last_progress_at = time.monotonic()
+        self.cooking_resume_marker = False
+        self.render()
         return self.response(sfx="tool_pickup", sound_events=[{"kind": "work_start", "sound": "cook" if self.get_cooking_kind() == "stir" else "cut"}])
 
     def advance_cooking_trace(self, x1, y1, x2, y2):
@@ -2034,6 +2155,7 @@ class GameEngine:
         while self.cooking_progress_index < len(self.cooking_path_samples):
             px, py = self.cooking_path_samples[self.cooking_progress_index]
             if self.point_to_segment_distance(px, py, x1, y1, x2, y2) <= tolerance:
+                self.cooking_visible_until[self.cooking_progress_index] = time.monotonic() + self.disappear_delay_seconds
                 self.cooking_progress_index += 1
                 advanced = True
             else:
@@ -2041,18 +2163,22 @@ class GameEngine:
         if self.cooking_progress_index >= len(self.cooking_path_samples):
             gained = self.cooking_progress_index - before
             result = self.complete_cooking_step()
-            result["sound_events"] = [{"kind": "correct", "count": gained}]
+            result["sound_events"] = [{"kind": "correct", "activity": "cooking", "count": gained}]
             return result
         if advanced:
-            return self.response(sfx="cooking_trace", sound_events=[{"kind": "correct", "count": self.cooking_progress_index - before}])
+            self.cooking_last_progress_at = time.monotonic()
+            self.cooking_resume_marker = False
+            self.render()
+            return self.response(sfx="cooking_trace", sound_events=[{"kind": "correct", "activity": "cooking", "count": self.cooking_progress_index - before}])
         return self.response()
 
     def fail_or_continue_cooking(self):
         total = len(self.cooking_path_samples)
         progress = self.cooking_progress_index
         percent = int(round((progress / total) * 100)) if total else 0
-        self.cooking_progress_index = 0
-        return self.response(tts=f"진행 {percent}퍼센트. 시작점에서 재시도. 재료 소모 없음", sfx="error")
+        self.cooking_resume_marker = progress > 0
+        self.render()
+        return self.response(tts=f"진행 {percent}퍼센트. 네모에서 이어가세요. 재료 소모 없음")
 
     def finish_cooking_success(self):
         recipe_id = self.selected_recipe_id
@@ -2197,6 +2323,9 @@ class GameEngine:
         return {"tts": tts, "sfx": sfx, "sound_events": sound_events or [], "priority": "hover" if (sfx or "").startswith("hover_") else "action", "state": self.get_state()}
 
     def get_state(self):
+        self.update_cooking_marker()
+        if self.current_page in ("water_minigame", "fertilizer_minigame", "cooking"):
+            self.render()
         plots = {plot_id: dict(state) for plot_id, state in self.farm_plots.items()}
         return {
             "objects": [{"id": o["id"], "label": o.get("label", ""),
@@ -2204,6 +2333,7 @@ class GameEngine:
                          "description": self.get_object_tts(o), "actionable": bool(o.get("action"))}
                         for o in self.get_objects() if o.get("type") != "route"],
             "action_costs": {k: self.get_action_cost(k) for k in ("travel", "plant", "water", "fertilize", "harvest", "research", "cook")},
+            "client_settings": self.client_settings,
             "page": self.current_page,
             "page_name": self.get_page_name(self.current_page),
             "current_location": self.current_location,
@@ -2237,7 +2367,9 @@ class GameEngine:
                 "collected_targets": len(self.harvest_collected_ids),
                 "dragging": self.harvest_dragging
             },
+            "inventory": {"page": self.inventory_page + 1, "pages": self.inventory_page_count},
             "cooking": {
+                "resume_point": self.cooking_resume_point(),
                 "stage_index": self.cooking_stage_index,
                 "stage_count": len(self.get_cooking_steps()),
                 "gesture_kind": self.get_cooking_kind(),

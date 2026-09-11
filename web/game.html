@@ -23,7 +23,7 @@
 <section class="card"><h2>오늘의 상태</h2><div id="score-feedback" style="color:var(--mint);font-size:12px;min-height:22px"></div><div id="buff-text">버프 없음</div><div class="progress-track"><div id="activity-fill"></div></div><div class="metrics"><div>비료<strong id="fertilizer-text">2</strong></div><div>사용 가능한 밭<strong id="plot-text">2</strong></div><div>씨앗 회수 연구<strong id="research-text">0단계</strong></div><div>남은 활동<strong id="remaining-text">20틱</strong></div></div></section>
 <section class="card"><h2>현재 위치의 상호작용 오브젝트</h2><div class="scene-sub" style="margin-bottom:12px">버튼으로도 같은 동작을 실행할 수 있습니다.</div><div id="object-list"></div></section>
 <section class="card"><h2>실물 패드와 손 추적</h2><div class="toolbar"><button id="usb-button">USB 패드 연결</button></div><p class="scene-sub" id="hardware-status">USB 연결 전 · 웹 시뮬레이터</p><label class="setting" for="tracking-url">손 추적 서버</label><input id="tracking-url" value="ws://127.0.0.1:8765" aria-label="손 추적 WebSocket 주소" style="width:100%;padding:9px;background:#111b13;border:1px solid #41543b;color:#dcead4;border-radius:6px;margin:8px 0"><div class="toolbar"><button id="tracking-button">손 추적 서버 연결</button><button id="tracking-hold" aria-pressed="false" disabled>누르기 시작</button></div><p id="tracking-status" class="scene-sub">연결 전</p><p class="scene-sub" style="line-height:1.6">원본 서버는 손 좌표만 전송합니다. 누르기 버튼으로 선택·드래그를 시작하고, 다시 눌러 손을 뗍니다.</p><a href="https://github.com/eun022/hand_drawing" target="_blank" rel="noopener noreferrer" style="color:#cbe8b8;font-size:12px">연결 프로그램과 실행 방법 ↗</a></section><details class="card"><summary>연결 진단 및 초기화</summary><p>현재 화면은 웹 시뮬레이터입니다. 실물 USB 패드는 Chrome·Edge의 localhost에서 연결할 수 있습니다. 손 추적은 참조 저장소의 서버를 먼저 실행하세요. 게임 상태는 서버 메모리에 보관되며 서버 재시작 시 초기화됩니다.</p><div id="status"></div><button class="text-button" id="reset-button">새 게임 시작</button></details>
-</aside></div></div><script src="/static/game-audio.js?v=12"></script><script>
+</aside></div></div><script src="/static/game-audio.js?v=15"></script><script>
 
 const canvas = document.getElementById("dotpad");
 const ctx = canvas.getContext("2d");
@@ -319,6 +319,7 @@ function drawDotMatrix(targetCanvas, targetCtx, dots, width, height) {
 
 function drawState(state) {
     currentState = state;
+    applyClientSettings(state.client_settings);
     logicalWidth = state.width;
     logicalHeight = state.height;
 
@@ -374,6 +375,8 @@ function drawState(state) {
     if (state.care?.mode) task = `뿌리기 ${state.care.collected_targets} / ${state.care.total_targets} · 65% 이상 성공`;
     if (state.page === "harvest") task = `수확 ${state.harvest.collected_targets} / ${state.harvest.total_targets} · 모든 지점을 모은 뒤 손을 떼면 완료`;
     if (state.page === "cooking") task = `${state.cooking.stage_index+1}/${state.cooking.stage_count} ${state.cooking.stage_label} · ${Math.round(100*state.cooking.progress/Math.max(1,state.cooking.total))}% · 선을 따라 이동`;
+    if (state.page === "cooking" && state.cooking.resume_point) task += " · 네모 지점에서 이어가세요";
+    if (state.page === "inventory") task = `인벤토리 ${state.inventory.page}/${state.inventory.pages} · 보유 물품만 표시`;
     if (state.day_ended) task = "밤입니다. 침대를 선택하세요";
     if (state.paused) task = "일시정지 · F4로 계속하기";
     document.getElementById("task-progress").textContent = task;
@@ -428,7 +431,7 @@ async function handleResponse(response) {
         scoreTimer=setTimeout(()=>{document.getElementById("score-feedback").textContent="";},1400);
         document.getElementById("score-feedback").animate([{opacity:1},{opacity:0.25}],{duration:600});
     }
-    const recordedEvents = ["care_spray","harvest_collect","cooking_trace","water","fertilize"];
+    const recordedEvents = ["care_spray","harvest_collect","cooking_trace","cooking_wait","water","fertilize"];
     if (data.sfx && !recordedEvents.includes(data.sfx) && !(data.sound_events?.length && data.sfx === "tool_pickup")) playSfx(data.sfx);
 
     if (data.tts) {
@@ -606,4 +609,33 @@ window.DotdewInput = {
     release:()=>{pointerPressed=false;return queuePointer("/api/pointer/up",pointerX,pointerY)}
 };
 loadState();
+// Serialize visual refreshes with pointer input to avoid stale snapshots.
+let visualPollPending = false;
+let visualPollTimer = null;
+let clientSettingsSignature = "";
+const delayedVisualPages = ["cooking", "water_minigame", "fertilizer_minigame"];
+function applyClientSettings(settings = {}) {
+    const signature = JSON.stringify(settings);
+    if (signature === clientSettingsSignature) return;
+    clientSettingsSignature = signature;
+    gameAudio.configure(settings.audio || {});
+    document.getElementById("sfx-volume").value = gameAudio.volume;
+    document.getElementById("volume-label").textContent = Math.round(gameAudio.volume * 100) + "%";
+    const visualRefreshIntervalMs = Math.max(50, Number(settings.visual_refresh_interval_ms) || 100);
+    clearInterval(visualPollTimer);
+    visualPollTimer = setInterval(refreshDelayedVisuals, visualRefreshIntervalMs);
+}
+function refreshDelayedVisuals() {
+    if (visualPollPending || document.hidden || !delayedVisualPages.includes(currentState?.page) || currentState.paused) return;
+    visualPollPending = true;
+    requestQueue = requestQueue.then(async () => {
+        if (!delayedVisualPages.includes(currentState?.page) || currentState.paused) return;
+        try {
+            const response = await fetch("/api/visual-tick", {method:"POST"});
+            await handleResponse(response);
+        } catch (error) {
+            connection(false, "연결 오류 · 서버를 확인하세요");
+        }
+    }).finally(() => { visualPollPending = false; });
+}
 </script><script type="module" src="/static/hardware.mjs"></script></body></html>

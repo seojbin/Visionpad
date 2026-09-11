@@ -79,3 +79,8 @@ async def reset():
         "tts": "게임을 초기화했습니다. 집입니다",
         "state": engine.get_state()
     }
+
+
+@app.post("/api/visual-tick")
+async def visual_tick():
+    return engine.visual_tick()
