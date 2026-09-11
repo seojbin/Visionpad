@@ -1024,18 +1024,18 @@
     "audio": {
       "default_volume": 0.7,
       "work_gain": {
-        "water": 0.75,
-        "soil": 0.75,
-        "cut": 0.95,
-        "cook": 0.95,
-        "crop": 0.75
+        "water": 0.8,
+        "soil": 0.8,
+        "cut": 1.0,
+        "cook": 1.0,
+        "crop": 0.8
       },
       "work_gain_during_tts": {
-        "water": 0.3,
-        "soil": 0.3,
-        "cut": 0.38,
-        "cook": 0.38,
-        "crop": 0.3
+        "water": 0.4,
+        "soil": 0.4,
+        "cut": 0.48,
+        "cook": 0.48,
+        "crop": 0.4
       },
       "reward_gain": 0.42,
       "reward_gain_during_tts": 0.25,
@@ -1047,9 +1047,9 @@
       "correct_max_load_age_ms": 650,
       "max_reward_sources": 2,
       "bgm_gain": {
-        "basic": 0.22,
-        "minigame": 0.1,
-        "shop": 0.4
+        "basic": 0.5,
+        "minigame": 0.3,
+        "shop": 0.6
       },
       "one_shot_gain": {
         "sleep": 0.8,
