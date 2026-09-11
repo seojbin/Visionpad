@@ -141,7 +141,7 @@
       "yield": 2,
       "crop_price": 12,
       "seed_price": 10,
-      "seed_return_chance": 0.4
+      "seed_return_chance": 0.1
     },
     "carrot": {
       "label": "당근",
@@ -149,7 +149,7 @@
       "yield": 2,
       "crop_price": 10,
       "seed_price": 8,
-      "seed_return_chance": 0.5
+      "seed_return_chance": 0.1
     },
     "potato": {
       "label": "감자",
@@ -157,7 +157,7 @@
       "yield": 3,
       "crop_price": 15,
       "seed_price": 12,
-      "seed_return_chance": 0.3
+      "seed_return_chance": 0.1
     }
   },
   "recipes": {
@@ -168,7 +168,6 @@
         "carrot": 1
       },
       "buff_ticks": 6,
-      "harvest_multiplier": 1.25,
       "gesture": {
         "kind": "cut",
         "label": "재료 자르기",
@@ -346,7 +345,10 @@
         "1111111",
         "0100010",
         "0011100"
-      ]
+      ],
+      "buff_kind": "harvest_multiplier",
+      "buff_multiplier": 1.5,
+      "buff_label": "수확량 증가"
     },
     "potato_tomato_soup": {
       "label": "감자 토마토 수프",
@@ -354,8 +356,7 @@
         "potato": 1,
         "tomato": 1
       },
-      "buff_ticks": 7,
-      "harvest_multiplier": 1.25,
+      "buff_ticks": 10,
       "gesture": {
         "kind": "cut",
         "label": "재료 자르기",
@@ -549,7 +550,10 @@
         "1111111",
         "0100010",
         "0011100"
-      ]
+      ],
+      "buff_kind": "pickaxe_protection",
+      "buff_multiplier": 0.5,
+      "buff_label": "곡괭이 보호"
     },
     "vegetable_fritters": {
       "label": "야채 튀김",
@@ -557,8 +561,7 @@
         "potato": 1,
         "carrot": 1
       },
-      "buff_ticks": 9,
-      "harvest_multiplier": 1.25,
+      "buff_ticks": 10,
       "gesture": {
         "kind": "cut",
         "label": "재료 자르기",
@@ -1144,7 +1147,10 @@
         "0100010",
         "1010101",
         "0101010"
-      ]
+      ],
+      "buff_kind": "time_slow",
+      "buff_multiplier": 0.5,
+      "buff_label": "시간 소모 감소"
     }
   },
   "home": {

@@ -232,38 +232,40 @@ class GameEngine:
             return "밤입니다. 침대를 눌러 잠을 자세요"
         return f"활동 {remaining}시간 남음"
 
+    def recipe_effect_text(self, recipe):
+        return f"{recipe.get('buff_label', '요리 효과')}, {float(recipe.get('buff_ticks', 0)):g}시간"
+
+    def buff_multiplier_for(self, kind):
+        if self.active_buff.get("kind") == kind and float(self.active_buff.get("remaining_ticks", 0)) > 0:
+            return float(self.active_buff.get("multiplier", 1.0))
+        return 1.0
+
     def buff_text(self):
-        remaining = int(self.active_buff.get("remaining_ticks", 0))
-        multiplier = float(self.active_buff.get("multiplier", 1.0))
-        if remaining <= 0 or multiplier <= 1.0:
+        remaining = float(self.active_buff.get("remaining_ticks", 0))
+        if remaining <= 0:
             return "버프 없음"
-        percent = int(round((multiplier - 1.0) * 100))
-        return f"수확 +{percent}퍼센트, {remaining}틱 남음"
+        recipe = self.get_recipe_config(self.active_buff.get("source")) or {}
+        return f"{recipe.get('buff_label', '요리 효과')}, {remaining:g}시간 남음"
 
     def tick_buff(self, cost):
-        cost = max(0, int(cost))
-        remaining = int(self.active_buff.get("remaining_ticks", 0))
-        if remaining <= 0 or cost <= 0:
-            return
-        remaining = max(0, remaining - cost)
+        remaining = float(self.active_buff.get("remaining_ticks", 0))
+        remaining = max(0, remaining - max(0, float(cost)))
         self.active_buff["remaining_ticks"] = remaining
         if remaining == 0:
-            self.active_buff = {
-                "kind": None,
-                "source": None,
-                "multiplier": 1.0,
-                "remaining_ticks": 0
-            }
+            self.active_buff = {"kind": None, "source": None, "multiplier": 1.0, "remaining_ticks": 0}
 
     def consume_time(self, action_name):
         cost = max(0, self.get_action_cost(action_name))
         if self.day_ended:
             return {"cost": 0, "night": True}
 
-        self.time_used_cells = min(
-            self.time_total_cells,
-            self.time_used_cells + cost
-        )
+        # Buff duration follows elapsed game hours. Split an action at expiry.
+        multiplier = self.buff_multiplier_for("time_slow")
+        if 0 < multiplier < 1:
+            remaining = float(self.active_buff["remaining_ticks"])
+            covered = min(cost, remaining / multiplier)
+            cost = covered * multiplier + (cost - covered)
+        self.time_used_cells = min(self.time_total_cells, self.time_used_cells + cost)
         self.tick_buff(cost)
 
         if self.time_used_cells >= self.time_total_cells:
@@ -346,11 +348,10 @@ class GameEngine:
         bar = self.config.get("time", {}).get("bar", {})
         cell_width = int(bar.get("cell_width", 2))
         cell_height = int(bar.get("cell_height", 4))
-        for cell_index in range(self.get_time_cells()):
-            start_x = cell_index * cell_width
+        filled_columns = int(self.get_time_cells() * cell_width)
+        for x in range(filled_columns):
             for dy in range(cell_height):
-                for dx in range(cell_width):
-                    self.timepad.set_dot(start_x + dx, dy)
+                self.timepad.set_dot(x, dy)
 
     def get_unlocked_plot_defs(self):
         return self.config.get("farm", {}).get("plots", [])[:self.unlocked_plot_count]
@@ -627,12 +628,10 @@ class GameEngine:
             if count <= 0 and self.inventory_hide_zero_items:
                 continue
             ticks = int(recipe.get("buff_ticks", 0))
-            multiplier = float(recipe.get("harvest_multiplier", 1.0))
-            percent = int(round((multiplier - 1.0) * 100))
             entries.append({
                 "id": f"food_{recipe_id}", "label": recipe.get("label", recipe_id),
                 "count": count, "kind": "food", "recipe_id": recipe_id, "action": f"use_food:{recipe_id}",
-                "extra_tts": f"사용하면 {ticks}시간 동안 수확량이 {percent}퍼센트 증가합니다"
+                "extra_tts": f"사용하면 {self.recipe_effect_text(recipe)}"
             })
 
         if self.inventory_hide_zero_items:
@@ -787,7 +786,7 @@ class GameEngine:
                 "id": f"recipe_{recipe_id}", "type": "recipe", "recipe_id": recipe_id,
                 "x": x, "y": y, "width": 12, "height": 9, "hit_width": 14, "hit_height": 11,
                 "label": recipe.get("label", recipe_id),
-                "tts": f"{recipe.get('label', recipe_id)}. {ingredient_text}. 수확 +{int(round((float(recipe.get('harvest_multiplier', 1.0)) - 1) * 100))}퍼센트, {ticks}시간",
+                "tts": f"{recipe.get('label', recipe_id)}. {ingredient_text}. {self.recipe_effect_text(recipe)}",
                 "action": f"select_recipe:{recipe_id}"
             })
         objects.append(self.back_arrow("recipe_back", "집으로 돌아가기", "return_scene"))
@@ -2031,11 +2030,8 @@ class GameEngine:
         seed_config = self.get_seed_config(seed_id)
         seed_label = self.get_seed_label(seed_id)
         base_yield = self.get_harvest_base_yield(seed_id)
-        buff_multiplier = 1.0
-        buff_applied = False
-        if int(self.active_buff.get("remaining_ticks", 0)) > 0:
-            buff_multiplier = float(self.active_buff.get("multiplier", 1.0))
-            buff_applied = buff_multiplier > 1.0
+        buff_multiplier = self.buff_multiplier_for("harvest_multiplier")
+        buff_applied = buff_multiplier > 1.0
         yield_count = max(1, int(math.ceil(base_yield * buff_multiplier)))
         self.resources["crops"][seed_id] = int(self.resources["crops"].get(seed_id, 0)) + yield_count
 
@@ -2053,8 +2049,7 @@ class GameEngine:
 
         text = f"수확 완료. {seed_label} {yield_count}개."
         if buff_applied:
-            bonus_percent = int(round((buff_multiplier - 1.0) * 100))
-            text += f". 수확 버프 +{bonus_percent}퍼센트 적용"
+            text += ". 수확량 증가 효과 적용"
         if got_seed:
             text += f". 씨앗 1개 회수"
         else:
@@ -2280,19 +2275,15 @@ class GameEngine:
         if count <= 0 or not recipe:
             return self.response(tts="보유한 요리가 없습니다", sfx="error")
         self.resources["foods"][recipe_id] = count - 1
-        ticks = int(recipe.get("buff_ticks", 0))
-        multiplier = float(recipe.get("harvest_multiplier", 1.0))
-        current_remaining = int(self.active_buff.get("remaining_ticks", 0))
         self.active_buff = {
-            "kind": "harvest_multiplier",
+            "kind": recipe.get("buff_kind", "harvest_multiplier"),
             "source": recipe_id,
-            "multiplier": max(multiplier, float(self.active_buff.get("multiplier", 1.0))),
-            "remaining_ticks": min(self.time_total_cells, current_remaining + ticks)
+            "multiplier": float(recipe.get("buff_multiplier", 1.0)),
+            "remaining_ticks": float(recipe.get("buff_ticks", 0))
         }
         self.clear_hover()
         self.render()
-        percent = int(round((self.active_buff["multiplier"] - 1.0) * 100))
-        return self.response(tts=f"{self.get_recipe_label(recipe_id)} 사용. 수확 +{percent}퍼센트, {self.active_buff['remaining_ticks']}시간", sfx="eat_food")
+        return self.response(tts=f"{self.get_recipe_label(recipe_id)} 사용. {self.buff_text()}", sfx="eat_food")
 
     def open_shop(self):
         if self.current_location != "town":
@@ -2430,6 +2421,7 @@ class GameEngine:
             "paused": self.paused,
             "resources": self.resources,
             "active_buff": dict(self.active_buff),
+            "buff_text": self.buff_text(),
             "research_levels": dict(self.research_levels),
             "unlocked_plot_count": self.unlocked_plot_count,
             "farm_plots": plots,
@@ -2574,6 +2566,7 @@ class GameEngine:
             events.append({"kind": "one_shot", "sound": "pickaxe"})
         safe_hits = int(cfg.get("pickaxe_safe_hits", 9))
         break_chance = min(1, max(0, self._pickaxe_hits - safe_hits) * float(cfg.get("pickaxe_break_increment", .05)))
+        break_chance *= self.buff_multiplier_for("pickaxe_protection")
         item_destroyed = break_chance > 0 and random.random() < break_chance
         if item_destroyed:
             self.resources["pickaxe"] = 0

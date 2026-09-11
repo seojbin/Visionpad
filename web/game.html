@@ -338,12 +338,7 @@ function drawState(state) {
         : used + " / " + total;
 
     const buff = state.active_buff || {};
-    if ((buff.remaining_ticks ?? 0) > 0 && (buff.multiplier ?? 1) > 1) {
-        const percent = Math.round(((buff.multiplier ?? 1) - 1) * 100);
-        buffText.textContent = `수확 +${percent}% / ${buff.remaining_ticks}틱`;
-    } else {
-        buffText.textContent = "없음";
-    }
+    buffText.textContent = state.buff_text || "버프 없음";
 
     if (state.paused) {
         padPanel.classList.add("paused");
