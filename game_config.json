@@ -1031,14 +1031,14 @@
         "crop": 0.8
       },
       "work_gain_during_tts": {
-        "water": 0.45,
-        "soil": 0.45,
+        "water": 0.4,
+        "soil": 0.4,
         "cut": 0.55,
         "cook": 0.55,
-        "crop": 0.45
+        "crop": 0.4
       },
-      "reward_gain": 0.42,
-      "reward_gain_during_tts": 0.25,
+      "reward_gain": 0.5,
+      "reward_gain_during_tts": 0.3,
       "cooking_correct_interval_ms": 650,
       "other_correct_interval_ms": 90,
       "click_duration_ms": 650,
@@ -1047,7 +1047,7 @@
       "correct_max_load_age_ms": 650,
       "max_reward_sources": 2,
       "bgm_gain": {
-        "basic": 0.8,
+        "basic": 0.9,
         "minigame": 0.5,
         "shop": 0.9
       },
