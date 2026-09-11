@@ -703,7 +703,7 @@ class GameEngine:
         costs = list(seed_cfg.get("costs", []))
 
         if level >= max_level:
-            seed_tts = f"씨앗 회수 연구. 현재 {level}단계로 최대 단계입니다"
+            seed_tts = f"씨앗 회수 연구. 현재 {level}단계로 최대 단계"
             seed_action = ""
         else:
             cost = int(costs[level]) if level < len(costs) else 999999
