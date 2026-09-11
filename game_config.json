@@ -1010,11 +1010,11 @@
   },
   "interaction": {
     "feedback": {
-      "disappear_delay_ms": 1000,
+      "disappear_delay_ms": 200,
       "visual_refresh_interval_ms": 100
     },
     "cooking": {
-      "resume_marker_delay_ms": 2000,
+      "resume_marker_delay_ms": 400,
       "stir_scale": 1.6
     },
     "inventory": {
