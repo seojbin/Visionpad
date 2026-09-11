@@ -815,12 +815,12 @@ class GameEngine:
             {
                 "id": "shop_sell_choice", "type": "shop_choice", "choice": "sell",
                 "x": 15, "y": 20, "width": 28, "height": 34, "hit_width": 30, "hit_height": 38,
-                "label": "판매", "tts": "판매. 왼쪽 영역을 선택하면 보유한 작물과 요리를 팝니다", "action": "shop_mode:sell"
+                "label": "판매", "tts": "판매.", "action": "shop_mode:sell"
             },
             {
                 "id": "shop_buy_choice", "type": "shop_choice", "choice": "buy",
                 "x": 45, "y": 20, "width": 28, "height": 34, "hit_width": 30, "hit_height": 38,
-                "label": "구매", "tts": "구매. 오른쪽 영역을 선택하면 씨앗과 비료를 삽니다", "action": "shop_mode:buy"
+                "label": "구매", "tts": "구매.", "action": "shop_mode:buy"
             }
         ]
 
