@@ -19,7 +19,7 @@ with open(CONFIG_PATH, "r", encoding="utf-8") as f:
 
 
 engine = GameEngine(CONFIG)
-app = FastAPI(title="Dotdue Valley")
+app = FastAPI(title="Dotdew Valley")
 
 app.mount(
     "/static",

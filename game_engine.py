@@ -248,7 +248,7 @@ class GameEngine:
         self.render()
 
     def night_response(self, prefix=None):
-        narration = "밤입니다. 집에 도착했습니다. 침대를 눌러 자세요"
+        narration = "밤이 되어 집에 도착했습니다. 침대를 눌러 주무세요"
         if prefix:
             narration = f"{prefix}. {narration}"
         return self.response(tts=narration, sfx="day_end")
@@ -1480,7 +1480,7 @@ class GameEngine:
         self.render()
         name = self.get_page_name(location)
         particle = self.ro_particle(name)
-        return self.response(tts=f"{name}{particle} 이동했습니다", sfx="travel")
+        return self.response(tts=f"{name}", sfx="travel")
 
     def open_minimap(self):
         if self.day_ended:
@@ -1889,7 +1889,7 @@ class GameEngine:
         self.clear_hover()
 
         percent = int(round(ratio * 100))
-        text = f"{seed_label} {yield_count}개 수확. 채집 {percent}퍼센트"
+        text = f"{seed_label} {yield_count}개 수확."
         if buff_applied:
             bonus_percent = int(round((buff_multiplier - 1.0) * 100))
             text += f". 수확 버프 +{bonus_percent}퍼센트 적용"
@@ -1972,7 +1972,7 @@ class GameEngine:
         self.cooking_path_samples = self.build_path_samples(self.get_cooking_gesture().get("path", []))
         self.clear_hover()
         self.render()
-        return self.response(tts="자르기 완료. 손을 떼고 " + self.cooking_step_text(), sfx="cooking_step")
+        return self.response(tts="자르기 완료." + self.cooking_step_text(), sfx="cooking_step")
 
     def open_cooking_minigame(self):
         recipe = self.get_recipe_config(self.selected_recipe_id)
@@ -2107,10 +2107,10 @@ class GameEngine:
     def open_shop_mode(self, mode):
         if mode == "sell":
             self.current_page = "shop_sell"
-            text = "판매 목록입니다."
+            text = "판매 목록."
         else:
             self.current_page = "shop_buy"
-            text = "구매 목록입니다."
+            text = "구매 목록."
         self.clear_hover()
         self.render()
         return self.response(tts=text, sfx="open_page")
@@ -2170,7 +2170,7 @@ class GameEngine:
                 self.pointer_pressed = False
                 self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
                 self.drag_tool = None
-            return self.response(tts="게임을 일시정지했습니다" if self.paused else "게임을 계속합니다")
+            return self.response(tts="게임 일시정지" if self.paused else "게임 재개")
         if self.paused:
             return self.response(tts="일시정지를 먼저 해제하세요")
         if self.day_ended:

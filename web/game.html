@@ -15,7 +15,7 @@
 <div class="hardware-layout"><div class="screen"><canvas id="dotpad" width="900" height="600" tabindex="0" aria-label="촉각 게임 패드. 방향키로 포인터 이동, Enter로 선택, Space로 누르기와 놓기"></canvas></div></div>
 <div class="hardware-controls"><button id="nav-prev" class="physical-arrow" aria-label="이전 오브젝트"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4L6 12l10 8Z"/></svg></button><div class="controls"><button data-command="minimap">F1<span>미니맵</span></button><button data-command="scene">F2<span>현재 장소</span></button><button data-command="resources">F3<span>인벤토리</span></button><button data-command="pause">F4<span>일시정지</span></button></div><button id="nav-next" class="physical-arrow" aria-label="다음 오브젝트"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l10 8L8 20Z"/></svg></button></div>
 <div class="device-leds" aria-hidden="true"><i></i><i></i></div><div class="braille-bezel"><canvas id="timepad" width="600" height="60" aria-label="사용한 활동 시간 · 하단 20셀"></canvas></div><div class="time-label">활동 시간 · 20셀 · 이동 0틱</div>
-<div class="device-bottom"><span>DOTDUE VALLEY</span><span id="pointer-info">TOUCH · DRAG · RELEASE</span></div></div>
+<div class="device-bottom"><span>DOTDEW VALLEY</span><span id="pointer-info">TOUCH · DRAG · RELEASE</span></div></div>
 <div class="support-line"><span>실물 연결 전, 동일한 도트와 입력으로 연습하세요.</span><a href="https://dot-canvas-esy-0910.ey55616.chatgpt.site/" target="_blank" rel="noopener noreferrer">참고 패드 열기 ↗</a></div>
 <details class="card"><summary>조작 방법과 시간 규칙</summary><p>마우스·터치로 선택하고 누른 채 움직입니다. 패드에 초점을 맞추면 방향키로 1칸(Shift: 3칸), Enter로 선택, Space로 드래그를 시작·종료합니다.<br>이동과 화면 열기는 0틱, 심기·물·비료는 2틱, 수확·연구·요리는 3틱입니다. 물을 주고 잠을 자야 성장합니다. 비료는 선택 사항이며 다음 성장에 1일을 더합니다.<br>물과 비료는 65% 이상 뿌리면 성공합니다. 수확은 많이 모을수록 수확량이 늘어납니다. 요리는 자르기와 젓기의 선을 차례로 따라가면 완성됩니다. 각 단계가 끝나면 손을 떼고 다음 시작점에서 다시 누르세요. 미니게임에는 제한시간이 없습니다.<br>20틱이 차면 자동 귀가합니다. 침대를 선택하면 다음 날이 됩니다. 브라우저의 음성 지원은 기기마다 다릅니다.</p></details>
 </main><aside>
@@ -430,7 +430,7 @@ function drawState(state) {
         ctx.strokeStyle = "#a6d983"; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.arc((pointerX+.5)*pitch, (pointerY+.5)*pitch, pitch*.85, 0, Math.PI*2); ctx.stroke();
     }
-    window.dispatchEvent(new CustomEvent("dotdue-state", {detail:state}));
+    window.dispatchEvent(new CustomEvent("dotdew-state", {detail:state}));
     updateStatus();
 }
 
@@ -621,7 +621,7 @@ document.getElementById("sfx-toggle").addEventListener("click",event=>{
 });
 window.addEventListener("blur",()=>{gameAudio.stopAll();if(pointerPressed){pointerPressed=false;sendCommand("scene");}});
 document.addEventListener("visibilitychange",()=>{if(document.hidden)gameAudio.stopAll();});
-window.DotdueInput = {
+window.DotdewInput = {
     state:()=>currentState,
     command:sendCommand,
     move:(x,y)=>{if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>=logicalWidth||y>=logicalHeight)return;pointerX=x;pointerY=y;pointerInside=true;return queuePointer(pointerPressed?"/api/pointer/drag":"/api/pointer/move",x,y)},
