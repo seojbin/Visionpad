@@ -76,7 +76,7 @@ class GameEngine:
 
         research = self.config.get("research", {})
         expansion = research.get("field_expansion", {})
-        self.research_levels = {"seed_return": 0, "harvest_yield": 0, "mineral_luck": 0}
+        self.research_levels = {"seed_return": 0, "mineral_luck": 0}
         self.unlocked_plot_count = int(expansion.get("initial_plot_count", 2))
 
         self.farm_plots = {}
@@ -602,7 +602,7 @@ class GameEngine:
                 "x": x, "y": y, "width": 12, "height": 10,
                 "hit_width": 15, "hit_height": 13,
                 "label": f"{seed_config.get('label', seed_id)} 씨앗",
-                "tts": f"{seed_config.get('label', seed_id)} 씨앗 {count}개. 성장 {growth_days}일, 수확 {yield_count}개, 씨앗 회수 {int(round(chance * 100))}퍼센트",
+                "tts": f"{seed_config.get('label', seed_id)} 씨앗 {count}개. 성장 {growth_days}일, 수확 {yield_count}개, 씨앗 회수 연구 {self.research_levels.get('seed_return', 0)}단계",
                 "action": f"plant:{self.seed_select_plot_id}:{seed_id}"
             })
 
@@ -631,7 +631,7 @@ class GameEngine:
             percent = int(round((multiplier - 1.0) * 100))
             entries.append({
                 "id": f"food_{recipe_id}", "label": recipe.get("label", recipe_id),
-                "count": count, "kind": "food", "action": f"use_food:{recipe_id}",
+                "count": count, "kind": "food", "recipe_id": recipe_id, "action": f"use_food:{recipe_id}",
                 "extra_tts": f"사용하면 {ticks}시간 동안 수확량이 {percent}퍼센트 증가합니다"
             })
 
@@ -655,8 +655,8 @@ class GameEngine:
                 tts += f". {extra}"
             objects.append({
                 "id": f"inventory_{entry['id']}", "type": "resource",
-                "resource_kind": entry["kind"], "seed_id": entry.get("seed_id"), "x": x, "y": y,
-                "width": 10, "height": 6, "hit_width": 13, "hit_height": 9,
+                "resource_kind": entry["kind"], "recipe_id": entry.get("recipe_id"), "seed_id": entry.get("seed_id"), "x": x, "y": y,
+                "width": 10, "height": 8 if entry["kind"] == "food" else 6, "hit_width": 13, "hit_height": 9,
                 "label": entry["label"], "tts": tts, "action": entry.get("action", "")
             })
         for delta, x, label, direction in [(-1, 9, "이전 페이지입니다", "left"), (1, 51, "다음 페이지입니다", "right")]:
@@ -700,7 +700,7 @@ class GameEngine:
         coin = int(self.resources.get("coin", 0))
         seed_cfg = self.config.get("research", {}).get("seed_return", {})
         level = int(self.research_levels.get("seed_return", 0))
-        max_level = int(seed_cfg.get("max_level", 3))
+        max_level = int(seed_cfg.get("max_level", 2))
         costs = list(seed_cfg.get("costs", []))
 
         if level >= max_level:
@@ -708,8 +708,8 @@ class GameEngine:
             seed_action = ""
         else:
             cost = int(costs[level]) if level < len(costs) else 999999
-            bonus = float(seed_cfg.get("bonus_per_level", 0.1))
-            seed_tts = f"씨앗 회수 {level}단계. {cost}골드로 +{int(round(bonus * 100))}퍼센트. 보유 {coin}골드"
+            copper_cost = int(seed_cfg.get("copper_costs", [3, 6])[level])
+            seed_tts = f"씨앗 회수 연구. 현재 {level}단계. {level + 1}단계 연구에 {cost}골드, 구리 {copper_cost}개 필요"
             seed_action = "research:seed_return"
 
         objects.append({
@@ -737,14 +737,14 @@ class GameEngine:
             "x": 41, "y": 18, "width": 18, "height": 12, "hit_width": 20, "hit_height": 14,
             "label": "밭 확장 연구", "tts": expand_tts, "action": expand_action
         })
-        for kind, label, mineral in [("harvest_yield", "수확량 증가", "copper"), ("mineral_luck", "광물 획득 확률 증가", "iron")]:
+        for kind, label, mineral in [("mineral_luck", "광물 획득 확률 증가", "iron")]:
             cfg = self.config.get("research", {}).get(kind, {})
             level = self.research_levels.get(kind, 0)
             action = "" if level >= int(cfg.get("max_level", 2)) else f"research:{kind}"
-            text = f"{label}. 최대 단계" if not action else f"{label}. {cfg.get('costs', [20, 40])[level]}골드, {self.MINERAL_LABELS[mineral]} {cfg.get(mineral + '_costs', [3, 6])[level]}개 필요"
+            text = f"{label}. {level}단계, 최대 단계" if not action else f"{label}. {level + 1}단계 연구. {cfg.get('costs', [20, 40])[level]}골드, {self.MINERAL_LABELS[mineral]} {cfg.get(mineral + '_costs', [3, 6])[level]}개 필요"
             objects.append({"id": f"research_{kind}", "type": "research", "research_kind": kind, "label": label, "tts": text, "action": action})
         for i, obj in enumerate(objects):
-            obj.update(x=(16, 44)[i % 2], y=(9, 24)[i // 2], width=20, height=10, hit_width=24, hit_height=12)
+            obj.update(x=(16, 44, 30)[i], y=(9, 9, 24)[i], width=20, height=10, hit_width=24, hit_height=12)
         objects.append(self.back_arrow("research_back", "집으로 돌아가기", "return_scene"))
         return objects
 
@@ -1059,10 +1059,7 @@ class GameEngine:
         elif kind == "coin":
             self.dotpad.draw_box(x, y, 4, 4)
         elif kind == "food":
-            self.dotpad.draw_line(x - 2, y, x + 2, y)
-            self.dotpad.draw_line(x, y - 2, x, y + 2)
-            self.dotpad.set_dot(x - 2, y - 2)
-            self.dotpad.set_dot(x + 2, y - 2)
+            self.draw_recipe_icon(x, y, obj.get("recipe_id"))
         else:
             self.dotpad.set_dot(x, y)
             self.dotpad.set_dot(x - 1, y)
@@ -1075,16 +1072,24 @@ class GameEngine:
             self.dotpad.draw_line(x - 2, y, x + 2, y)
             self.dotpad.draw_line(x, y - 2, x, y + 2)
 
+    def draw_icon_pattern(self, x, y, rows):
+        if not rows:
+            return
+        width, height = max(map(len, rows)), len(rows)
+        for row_index, row in enumerate(rows):
+            for column, value in enumerate(row):
+                if value == "1":
+                    self.dotpad.set_dot(int(x) + column - width // 2, int(y) + row_index - height // 2)
+
+    def draw_recipe_icon(self, x, y, recipe_id):
+        self.draw_icon_pattern(x, y, self.get_recipe_config(recipe_id).get("icon", []))
+
     def draw_research(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
-        self.dotpad.draw_box(x, y, obj.get("width", 18), obj.get("height", 12))
-        if obj.get("research_kind") == "seed_return":
-            self.dotpad.draw_line(x - 3, y, x + 3, y)
-            self.dotpad.draw_line(x, y - 3, x, y + 3)
-        else:
-            self.dotpad.draw_box(x, y, 6, 6)
-            self.dotpad.set_dot(x - 4, y)
-            self.dotpad.set_dot(x + 4, y)
+        self.dotpad.draw_box(x, y, obj.get("width", 20), obj.get("height", 10))
+        kind = obj.get("research_kind")
+        cfg = self.config.get("research", {}).get("field_expansion" if kind == "field_expand" else kind, {})
+        self.draw_icon_pattern(x, y, cfg.get("icon", []))
 
     def draw_plot_detail_field(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
@@ -1168,9 +1173,7 @@ class GameEngine:
     def draw_recipe(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
         self.dotpad.draw_box(x, y, obj.get("width", 12), obj.get("height", 9))
-        self.dotpad.draw_line(x - 3, y + 1, x + 3, y + 1)
-        self.dotpad.set_dot(x - 2, y - 2)
-        self.dotpad.set_dot(x + 2, y - 2)
+        self.draw_recipe_icon(x, y, obj.get("recipe_id"))
 
     def draw_ingredient(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
@@ -1266,6 +1269,10 @@ class GameEngine:
             self.dotpad.draw_arrow(x, y, "right", 3)
 
     def draw_shop_item(self, obj):
+        if obj.get("shop_kind") == "food":
+            self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 10), 8)
+            self.draw_recipe_icon(obj["x"], obj["y"], obj.get("item_id"))
+            return
         if obj.get("shop_kind") in ("pickaxe", "mineral"):
             self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 10), obj.get("height", 6))
             self.draw_mine_item(obj["x"], obj["y"], obj["item_id"])
@@ -1916,25 +1923,30 @@ class GameEngine:
         return self.response(tts=f"{label}에 비료를 사용했습니다. {fertilizer_text}. 비료는 {self.resources.get('fertilizer', 0)}개 남았습니다", sfx="fertilize")
 
     def get_effective_seed_return_chance(self, seed_id):
-        base = float(self.get_seed_config(seed_id).get("seed_return_chance", 0.0))
         cfg = self.config.get("research", {}).get("seed_return", {})
-        bonus = float(cfg.get("bonus_per_level", 0.1)) * int(self.research_levels.get("seed_return", 0))
-        return min(0.95, max(0.0, base + bonus))
+        level = int(self.research_levels.get("seed_return", 0))
+        chances = cfg.get("return_chances", [0.3, 0.6])
+        chance = chances[min(level - 1, len(chances) - 1)] if level > 0 else self.get_seed_config(seed_id).get("seed_return_chance", 0.0)
+        return min(1.0, max(0.0, float(chance)))
 
     def buy_research(self, research_kind):
-        if research_kind in ("harvest_yield", "mineral_luck"):
+        if research_kind == "mineral_luck":
             return self.buy_mineral_research(research_kind)
         if research_kind == "seed_return":
             cfg = self.config.get("research", {}).get("seed_return", {})
             level = int(self.research_levels.get("seed_return", 0))
-            max_level = int(cfg.get("max_level", 3))
+            max_level = int(cfg.get("max_level", 2))
             costs = list(cfg.get("costs", []))
             if level >= max_level:
                 return self.response(tts="씨앗 회수 연구는 이미 최대 단계입니다", sfx="error")
             cost = int(costs[level]) if level < len(costs) else 999999
+            copper_cost = int(cfg.get("copper_costs", [3, 6])[level])
+            if self.resources["copper"] < copper_cost:
+                return self.response(tts=f"구리 {copper_cost}개 필요", sfx="error")
             if int(self.resources.get("coin", 0)) < cost:
                 return self.response(tts=f"골드가 부족합니다. 씨앗 회수 연구에는 골드 {cost}개가 필요합니다", sfx="error")
             self.resources["coin"] -= cost
+            self.resources["copper"] -= copper_cost
             self.research_levels["seed_return"] = level + 1
             result = self.consume_time("research")
             text = f"씨앗 회수 연구를 {level + 1}단계로 올렸습니다. 골드 {cost}개를 사용했습니다"
@@ -2124,8 +2136,11 @@ class GameEngine:
     def get_cooking_kind(self):
         return "stir" if self.get_cooking_gesture().get("kind") == "stir" else "cut"
 
+    def get_cooking_stage_label(self):
+        return self.get_cooking_gesture().get("label") or ("젓기" if self.get_cooking_kind() == "stir" else "자르기")
+
     def cooking_step_text(self):
-        label = "젓기" if self.get_cooking_kind() == "stir" else "자르기"
+        label = self.get_cooking_stage_label()
         return f"{self.cooking_stage_index + 1}단계 {label}. 사각형부터 선을 따라 드래그하세요"
 
     def complete_cooking_step(self):
@@ -2142,7 +2157,7 @@ class GameEngine:
         self.cooking_path_samples = self.build_path_samples(self.get_cooking_gesture().get("path", []))
         self.clear_hover()
         self.render()
-        return self.response(tts=self.cooking_step_text(), sfx="cooking_step")
+        return self.response(tts= self.cooking_step_text(), sfx="cooking_step")
 
     def open_cooking_minigame(self):
         recipe = self.get_recipe_config(self.selected_recipe_id)
@@ -2439,7 +2454,7 @@ class GameEngine:
                 "stage_index": self.cooking_stage_index,
                 "stage_count": len(self.get_cooking_steps()),
                 "gesture_kind": self.get_cooking_kind(),
-                "stage_label": "젓기" if self.get_cooking_kind() == "stir" else "자르기",
+                "stage_label": self.get_cooking_stage_label(),
                 "start_point": list(self.cooking_path_samples[0]) if self.cooking_path_samples else None,
                 "recipe_id": self.selected_recipe_id,
                 "recipe_name": self.get_recipe_label(self.selected_recipe_id) if self.selected_recipe_id else None,
@@ -2578,8 +2593,7 @@ class GameEngine:
         return self.response(tts=None if destroyed else (text or None), sound_events=events)
 
     def get_harvest_base_yield(self, seed_id):
-        cfg = self.config.get("research", {}).get("harvest_yield", {})
-        return int(self.get_seed_config(seed_id).get("yield", 1)) + self.research_levels.get("harvest_yield", 0) * int(cfg.get("bonus_per_level", 1))
+        return int(self.get_seed_config(seed_id).get("yield", 1))
 
     def build_shop_objects(self, entries, mode):
         page_size = 12
@@ -2626,12 +2640,14 @@ class GameEngine:
         return self.response(tts=f"{label} 1개 구매. 잔액 {self.resources['coin']}골드", sound_events=[{"kind": "one_shot", "sound": "coin"}])
 
     def buy_mineral_research(self, kind):
+        if kind != "mineral_luck":
+            return self.response(tts="사용할 수 없는 연구입니다", sfx="error")
         cfg = self.config.get("research", {}).get(kind, {})
         level = self.research_levels.get(kind, 0)
         maximum = int(cfg.get("max_level", 2))
         if level >= maximum:
             return self.response(tts="최대 연구 단계입니다", sfx="error")
-        mineral = "copper" if kind == "harvest_yield" else "iron"
+        mineral = "iron"
         costs, materials = cfg.get("costs", [20, 40]), cfg.get(f"{mineral}_costs", [3, 6])
         cost, material_cost = int(costs[level]), int(materials[level])
         if self.resources["coin"] < cost or self.resources[mineral] < material_cost:
@@ -2639,7 +2655,7 @@ class GameEngine:
         self.resources["coin"] -= cost
         self.resources[mineral] -= material_cost
         self.research_levels[kind] = level + 1
-        text = "수확량 증가" if kind == "harvest_yield" else "광물 획득 확률 증가"
+        text = f"광물 획득 연구 {level + 1}단계 완료"
         result = self.consume_time("research")
         events = [{"kind": "one_shot", "sound": "coin"}]
         if result["night"]:

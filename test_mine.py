@@ -91,10 +91,10 @@ class MineTests(unittest.TestCase):
         self.e.resources['coin']=1000
         before=self.e.resources['coin'];self.assertEqual(self.e.buy_research('field_expand')['sfx'],'error');self.assertEqual(self.e.resources['coin'],before)
         self.e.resources.update(stone=15,copper=9,iron=9)
-        for kind in ['field_expand','harvest_yield','mineral_luck']:
+        for kind in ['field_expand','seed_return','mineral_luck']:
             for _ in range(2):self.e.buy_research(kind)
         self.assertEqual(self.e.resources['stone'],0);self.assertEqual(self.e.resources['copper'],0);self.assertEqual(self.e.resources['iron'],0)
-        self.assertEqual(self.e.get_harvest_base_yield('tomato'),4)
+        self.assertEqual(self.e.get_harvest_base_yield('tomato'),2)
         self.e.get_research_objects() # No invalid cost index at max level.
         before=self.e.resources['coin'];self.e.buy_research('harvest_yield');self.assertEqual(self.e.resources['coin'],before)
     def test_all_shop_and_inventory_items_accessible(self):
