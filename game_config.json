@@ -1047,14 +1047,14 @@
       "correct_max_load_age_ms": 650,
       "max_reward_sources": 2,
       "bgm_gain": {
-        "basic": 0.5,
-        "minigame": 0.3,
-        "shop": 0.6
+        "basic": 0.7,
+        "minigame": 0.5,
+        "shop": 0.8
       },
       "one_shot_gain": {
-        "sleep": 0.8,
-        "door": 0.7,
-        "coin": 0.65
+        "sleep": 1.0,
+        "door": 0.8,
+        "coin": 0.7
       },
       "bgm_minigame_pages": [
         "seed_select",
