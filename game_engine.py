@@ -1820,7 +1820,7 @@ class GameEngine:
         self.current_page = "harvest"
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{self.get_seed_label(state['seed_id'])} 수확. 작물들을 수확하세요.", sfx="harvest_start")
+        return self.response(tts=f"{self.get_seed_label(state['seed_id'])} 수확. 모든 작물을 모으세요. 시간제한은 없습니다.", sfx="harvest_start")
 
     def collect_harvest_point(self, x, y):
         collected = False
@@ -1846,10 +1846,9 @@ class GameEngine:
             return self.return_to_scene()
         collected = len(self.harvest_collected_ids)
         total = len(self.harvest_targets)
-        ratio = collected / total if total else 0.0
-        if collected == 0:
+        if collected < total:
             self.render()
-            return self.response(tts="작물을 하나도 채집하지 못했습니다. 다시 누른 채 작물들을 지나가세요", sfx="error")
+            return self.response(tts=f"수확 {collected}/{total}. 남은 작물을 이어서 수확하세요")
 
         plot_id = self.harvest_plot_id
         state = self.farm_plots[plot_id]
@@ -1857,23 +1856,12 @@ class GameEngine:
         seed_config = self.get_seed_config(seed_id)
         seed_label = self.get_seed_label(seed_id)
         base_yield = int(seed_config.get("yield", 1))
-        cfg = self.config.get("harvest_minigame", {})
-        if ratio >= float(cfg.get("excellent_ratio", 0.85)):
-            multiplier = float(cfg.get("excellent_multiplier", 1.5))
-            grade = "훌륭한 수확"
-        elif ratio >= float(cfg.get("good_ratio", 0.5)):
-            multiplier = float(cfg.get("good_multiplier", 1.0))
-            grade = "보통 수확"
-        else:
-            multiplier = float(cfg.get("poor_multiplier", 0.5))
-            grade = "아쉬운 수확"
-
         buff_multiplier = 1.0
         buff_applied = False
         if int(self.active_buff.get("remaining_ticks", 0)) > 0:
             buff_multiplier = float(self.active_buff.get("multiplier", 1.0))
             buff_applied = buff_multiplier > 1.0
-        yield_count = max(1, int(math.ceil(base_yield * multiplier * buff_multiplier)))
+        yield_count = max(1, int(math.ceil(base_yield * buff_multiplier)))
         self.resources["crops"][seed_id] = int(self.resources["crops"].get(seed_id, 0)) + yield_count
 
         chance = self.get_effective_seed_return_chance(seed_id)
@@ -1888,8 +1876,7 @@ class GameEngine:
         self.clear_harvest()
         self.clear_hover()
 
-        percent = int(round(ratio * 100))
-        text = f"{seed_label} {yield_count}개 수확."
+        text = f"수확 완료. {seed_label} {yield_count}개."
         if buff_applied:
             bonus_percent = int(round((buff_multiplier - 1.0) * 100))
             text += f". 수확 버프 +{bonus_percent}퍼센트 적용"
@@ -1954,7 +1941,22 @@ class GameEngine:
 
     def get_cooking_gesture(self):
         steps = self.get_cooking_steps()
-        return steps[min(self.cooking_stage_index, len(steps) - 1)]
+        gesture = steps[min(self.cooking_stage_index, len(steps) - 1)]
+        path = gesture.get("path", [])
+        if gesture.get("kind") != "stir" or len(path) < 2:
+            return gesture
+        # Enlarge both rendered path and hit-test samples, without editing recipes.
+        xs, ys = [p[0] for p in path], [p[1] for p in path]
+        span_x, span_y = max(xs) - min(xs), max(ys) - min(ys)
+        if span_x <= 0 or span_y <= 0:
+            return gesture
+        width, height = self.config["dotpad"]["width"], self.config["dotpad"]["height"]
+        scale = min(1.6, (width - 10) / span_x, (height - 10) / span_y)
+        cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+        return {**gesture, "path": [
+            [round((x - cx) * scale + (width - 1) / 2),
+             round((y - cy) * scale + (height - 1) / 2)] for x, y in path
+        ]}
 
     def get_cooking_kind(self):
         return "stir" if self.get_cooking_gesture().get("kind") == "stir" else "cut"

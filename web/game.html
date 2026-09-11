@@ -17,7 +17,7 @@
 <div class="device-leds" aria-hidden="true"><i></i><i></i></div><div class="braille-bezel"><canvas id="timepad" width="600" height="60" aria-label="사용한 활동 시간 · 하단 20셀"></canvas></div><div class="time-label">활동 시간 · 20셀 · 이동 0틱</div>
 <div class="device-bottom"><span>DOTDEW VALLEY</span><span id="pointer-info">TOUCH · DRAG · RELEASE</span></div></div>
 <div class="support-line"><span>실물 연결 전, 동일한 도트와 입력으로 연습하세요.</span><a href="https://dot-canvas-esy-0910.ey55616.chatgpt.site/" target="_blank" rel="noopener noreferrer">참고 패드 열기 ↗</a></div>
-<details class="card"><summary>조작 방법과 시간 규칙</summary><p>마우스·터치로 선택하고 누른 채 움직입니다. 패드에 초점을 맞추면 방향키로 1칸(Shift: 3칸), Enter로 선택, Space로 드래그를 시작·종료합니다.<br>이동과 화면 열기는 0틱, 심기·물·비료는 2틱, 수확·연구·요리는 3틱입니다. 물을 주고 잠을 자야 성장합니다. 비료는 선택 사항이며 다음 성장에 1일을 더합니다.<br>물과 비료는 65% 이상 뿌리면 성공합니다. 수확은 많이 모을수록 수확량이 늘어납니다. 요리는 자르기와 젓기의 선을 차례로 따라가면 완성됩니다. 각 단계가 끝나면 손을 떼고 다음 시작점에서 다시 누르세요. 미니게임에는 제한시간이 없습니다.<br>20틱이 차면 자동 귀가합니다. 침대를 선택하면 다음 날이 됩니다. 브라우저의 음성 지원은 기기마다 다릅니다.</p></details>
+<details class="card"><summary>조작 방법과 시간 규칙</summary><p>마우스·터치로 선택하고 누른 채 움직입니다. 패드에 초점을 맞추면 방향키로 1칸(Shift: 3칸), Enter로 선택, Space로 드래그를 시작·종료합니다.<br>이동과 화면 열기는 0틱, 심기·물·비료는 2틱, 수확·연구·요리는 3틱입니다. 물을 주고 잠을 자야 성장합니다. 비료는 선택 사항이며 다음 성장에 1일을 더합니다.<br>물과 비료는 65% 이상 뿌리면 성공합니다. 수확은 모든 지점을 모은 뒤 손을 떼면 완료됩니다. 중간에 손을 떼도 이어서 할 수 있습니다. 기본 수확량은 고정이며 음식 등 외부 버프만 적용됩니다. 요리는 자르기와 젓기의 선을 차례로 따라가면 완성됩니다. 각 단계가 끝나면 손을 떼고 다음 시작점에서 다시 누르세요. 미니게임에는 제한시간이 없습니다.<br>20틱이 차면 자동 귀가합니다. 침대를 선택하면 다음 날이 됩니다. 브라우저의 음성 지원은 기기마다 다릅니다.</p></details>
 </main><aside>
 <section class="card"><div class="section-tag">CURRENT SCENE</div><div class="scene-title" id="page-text">집</div><div class="scene-sub" id="task-progress">밭에서 하루를 시작하세요.</div><h2 style="margin-top:22px">음성 안내 <small id="tts-text" class="section-tag">준비 중</small></h2><div id="caption" role="status">패드의 오브젝트를 선택하세요.</div><div class="toolbar"><button id="repeat-button">다시 듣기</button><button id="mute-button" aria-pressed="false">음성 켜짐</button><button id="tts-test-button">테스트</button></div><label class="setting">음성 속도 <input id="speech-rate" type="range" min="0.8" max="1.5" step="0.1" value="1.1"><span id="rate-label">1.1×</span></label><label class="setting">효과음 볼륨 <input id="sfx-volume" type="range" min="0" max="1" step="0.1" value="0.7"><span id="volume-label">70%</span></label><div class="toolbar" style="margin-top:12px"><button id="sfx-toggle" aria-pressed="false">효과음 켜짐</button></div><p id="sound-text" class="scene-sub">작업음 · 성공음 준비</p></section>
 <section class="card"><h2>오늘의 상태</h2><div id="score-feedback" style="color:var(--mint);font-size:12px;min-height:22px"></div><div id="buff-text">버프 없음</div><div class="progress-track"><div id="activity-fill"></div></div><div class="metrics"><div>비료<strong id="fertilizer-text">2</strong></div><div>사용 가능한 밭<strong id="plot-text">2</strong></div><div>씨앗 회수 연구<strong id="research-text">0단계</strong></div><div>남은 활동<strong id="remaining-text">20틱</strong></div></div></section>
@@ -66,15 +66,11 @@ let actionSpeaking = false;
 let hoverTimer = null;
 let objectSignature = "";
 let scoreTimer = null;
+// Keep the latest message until the browser can actually start speech.
+let pendingSpeech = null;
+let activeUtterance = null;
 function announce(text, priority="action") {
-    if (!text) return;
-    clearTimeout(hoverTimer);
-    if (priority === "hover") {
-        if (actionSpeaking) return;
-        hoverTimer = setTimeout(() => speak(text, false), 180);
-    } else {
-        speak(text, true);
-    }
+    if (text) speak(text, priority !== "hover");
 }
 function connection(ok, message) {
     document.getElementById("connection").classList.toggle("online", ok);
@@ -87,99 +83,80 @@ function refreshVoices() {
         ttsText.textContent = "지원 안 됨";
         return;
     }
-
-    const voices = window.speechSynthesis.getVoices();
-    koreanVoice = voices.find(
-        voice => voice.lang?.toLowerCase() === "ko-kr"
-    ) || voices.find(
-        voice => voice.lang?.toLowerCase().startsWith("ko")
-    ) || null;
-
-    ttsText.textContent = koreanVoice ? "준비됨" : "기본 음성";
+    const voices = speechSynthesis.getVoices();
+    koreanVoice = voices.find(v => v.lang?.toLowerCase() === "ko-kr")
+        || voices.find(v => v.lang?.toLowerCase().startsWith("ko")) || null;
+    if (!activeUtterance) ttsText.textContent = koreanVoice ? "준비됨" : "기본 음성";
 }
-
-if ("speechSynthesis" in window) {
-    window.speechSynthesis.onvoiceschanged = refreshVoices;
-    refreshVoices();
-}
-
-function unlockSpeech() {
-    if (!("speechSynthesis" in window)) {
-        return;
-    }
-    window.speechSynthesis.resume();
-    refreshVoices();
-    gameAudio.unlock();
-}
-
-function speak(text, important=true) {
-    if (text) {
-        lastAnnouncement = String(text).trim();
-        document.getElementById("caption").textContent = lastAnnouncement;
-    }
-    if (!speechEnabled) return;
-    if (!text || !("speechSynthesis" in window)) {
-        return;
-    }
-
-    const normalized = String(text).trim();
-    if (!normalized) {
-        return;
-    }
-
-    const now = Date.now();
-    if (normalized === lastSpokenText && now - lastSpokenAt < 500) {
-        return;
-    }
-
-    lastSpokenText = normalized;
-    lastSpokenAt = now;
-    speechSequence += 1;
-    const sequence = speechSequence;
-
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.resume();
-
-    actionSpeaking = important;
-    const utterance = new SpeechSynthesisUtterance(normalized);
+function playPendingSpeech() {
+    if (!speechEnabled || !pendingSpeech || !("speechSynthesis" in window)) return;
+    const message = pendingSpeech;
+    const sequence = ++speechSequence;
+    // Invalidate old callbacks before cancel, including delayed start callbacks.
+    speechSynthesis.cancel();
+    gameAudio.setDucked(false);
+    speechSynthesis.resume();
+    const utterance = new SpeechSynthesisUtterance(message.text);
+    activeUtterance = utterance;
     utterance.lang = "ko-KR";
     utterance.rate = Number(document.getElementById("speech-rate").value);
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-
-    if (koreanVoice) {
-        utterance.voice = koreanVoice;
-    }
-
+    utterance.volume = 1;
+    if (koreanVoice) utterance.voice = koreanVoice;
     utterance.onstart = () => {
+        if (sequence !== speechSequence) return;
+        pendingSpeech = null;
+        actionSpeaking = message.important;
         gameAudio.setDucked(true);
         ttsText.textContent = "재생 중";
     };
-
     utterance.onend = () => {
-        if (sequence === speechSequence) {
-            ttsText.textContent = "준비됨";
-            actionSpeaking = false;
-            gameAudio.setDucked(false);
-        }
+        if (sequence !== speechSequence) return;
+        pendingSpeech = null;
+        activeUtterance = null;
+        actionSpeaking = false;
+        gameAudio.setDucked(false);
+        ttsText.textContent = "준비됨";
     };
-
     utterance.onerror = event => {
-        if (sequence === speechSequence) { actionSpeaking = false; gameAudio.setDucked(false); }
-        if (event.error !== "canceled") {
-            console.error("TTS error:", event.error);
-            ttsText.textContent = "자막 안내";
+        if (sequence !== speechSequence) return;
+        activeUtterance = null;
+        actionSpeaking = false;
+        gameAudio.setDucked(false);
+        if (!["canceled", "interrupted"].includes(event.error)) {
+            pendingSpeech = message;
+            ttsText.textContent = event.error === "not-allowed"
+                ? "클릭 또는 키 입력 후 음성 시작" : "음성 준비 중 · 다시 듣기 가능";
         }
     };
-
-    setTimeout(() => {
-        if (sequence !== speechSequence) {
-            return;
-        }
-        window.speechSynthesis.resume();
-        window.speechSynthesis.speak(utterance);
-    }, 25);
+    // Call synchronously so a first trusted input retains browser activation.
+    speechSynthesis.speak(utterance);
 }
+function unlockSpeech() {
+    gameAudio.unlock();
+    refreshVoices();
+    if ("speechSynthesis" in window) {
+        speechSynthesis.resume();
+        if (pendingSpeech) playPendingSpeech();
+    }
+}
+function speak(text, important=true) {
+    const normalized = String(text || "").trim();
+    if (!normalized) return;
+    clearTimeout(hoverTimer);
+    lastAnnouncement = normalized;
+    document.getElementById("caption").textContent = normalized;
+    pendingSpeech = speechEnabled ? {text:normalized, important} : null;
+    playPendingSpeech();
+}
+if ("speechSynthesis" in window) {
+    speechSynthesis.addEventListener("voiceschanged", () => {
+        refreshVoices();
+        if (pendingSpeech) playPendingSpeech();
+    });
+    refreshVoices();
+}
+document.addEventListener("pointerdown", unlockSpeech, {capture:true});
+document.addEventListener("keydown", unlockSpeech, {capture:true});
 
 function ensureAudioContext() {
     if (!audioContext) {
@@ -395,7 +372,7 @@ function drawState(state) {
     let task = tasks[state.page] || "오브젝트를 선택해 진행하세요";
     if (state.page === "plot_detail") task = (state.objects || []).find(o=>o.type === "plot_detail_field")?.description || task;
     if (state.care?.mode) task = `뿌리기 ${state.care.collected_targets} / ${state.care.total_targets} · 65% 이상 성공`;
-    if (state.page === "harvest") task = `수확 ${state.harvest.collected_targets} / ${state.harvest.total_targets} · 손을 떼면 완료`;
+    if (state.page === "harvest") task = `수확 ${state.harvest.collected_targets} / ${state.harvest.total_targets} · 모든 지점을 모은 뒤 손을 떼면 완료`;
     if (state.page === "cooking") task = `${state.cooking.stage_index+1}/${state.cooking.stage_count} ${state.cooking.stage_label} · ${Math.round(100*state.cooking.progress/Math.max(1,state.cooking.total))}% · 선을 따라 이동`;
     if (state.day_ended) task = "밤입니다. 침대를 선택하세요";
     if (state.paused) task = "일시정지 · F4로 계속하기";
@@ -597,7 +574,7 @@ document.getElementById("mute-button").addEventListener("click",event=>{
     speechEnabled=!speechEnabled;
     event.currentTarget.textContent=speechEnabled?"음성 켜짐":"음성 꺼짐";
     event.currentTarget.setAttribute("aria-pressed",String(!speechEnabled));
-    if (!speechEnabled && "speechSynthesis" in window) {speechSequence++;speechSynthesis.cancel();actionSpeaking=false;gameAudio.setDucked(false);ttsText.textContent="꺼짐";}
+    if (!speechEnabled && "speechSynthesis" in window) {speechSequence++;pendingSpeech=null;activeUtterance=null;speechSynthesis.cancel();actionSpeaking=false;gameAudio.setDucked(false);ttsText.textContent="꺼짐";}
 });
 document.getElementById("speech-rate").addEventListener("input",event=>{document.getElementById("rate-label").textContent=event.target.value+"×"});
 for(const [id,direction] of [["nav-prev",-1],["nav-next",1]]){
