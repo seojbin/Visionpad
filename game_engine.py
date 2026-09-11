@@ -42,6 +42,8 @@ class GameEngine:
     def reset(self):
         self.sleep_until = None
         self.pending_visual_completion = None
+        self.shop_page = 0
+        self._pickaxe_hits = 0
         self.inventory_page = 0
         self.inventory_page_count = 1
         self.day = int(self.config.get("game", {}).get("start_day", 1))
@@ -61,6 +63,10 @@ class GameEngine:
             "foods": dict(resource_config.get("foods", {}))
         }
 
+        for mineral in ("copper", "iron", "diamond"):
+            self.resources[mineral] = int(resource_config.get(mineral, 0))
+        self.resources["pickaxe"] = min(1, max(0, int(resource_config.get("pickaxe", 0))))
+
         for seed_id in self.config.get("seeds", {}):
             self.resources["seeds"].setdefault(seed_id, 0)
             self.resources["crops"].setdefault(seed_id, 0)
@@ -70,7 +76,7 @@ class GameEngine:
 
         research = self.config.get("research", {})
         expansion = research.get("field_expansion", {})
-        self.research_levels = {"seed_return": 0}
+        self.research_levels = {"seed_return": 0, "harvest_yield": 0, "mineral_luck": 0}
         self.unlocked_plot_count = int(expansion.get("initial_plot_count", 2))
 
         self.farm_plots = {}
@@ -118,6 +124,7 @@ class GameEngine:
         time_config = self.config.get("time", {})
         self.time_total_cells = int(time_config.get("total_cells", 20))
         self.time_used_cells = 0
+        self.regenerate_mine()
 
         self.render()
 
@@ -211,7 +218,7 @@ class GameEngine:
         if action_name == "travel":
             return 0
         defaults = {"plant": 2, "water": 2, "fertilize": 2, "harvest": 3,
-                    "research": 3, "cook": 3}
+                    "research": 3, "cook": 3, "mine": 2}
         configured = self.config.get("time", {}).get("action_costs", {})
         return max(defaults.get(action_name, 0), int(configured.get(action_name, 0)))
 
@@ -314,6 +321,7 @@ class GameEngine:
             state["fertilized"] = False
 
         self.day += 1
+        self.regenerate_mine()
         self.time_used_cells = 0
         self.day_ended = False
         self.current_location = "home"
@@ -372,6 +380,7 @@ class GameEngine:
             "home": self.get_home_objects,
             "farm": self.get_farm_objects,
             "town": self.get_town_objects,
+            "mine": self.get_mine_objects,
             "minimap": self.get_minimap_objects,
             "seed_select": self.get_seed_select_objects,
             "inventory": self.get_inventory_objects,
@@ -585,7 +594,7 @@ class GameEngine:
 
         for index, (seed_id, seed_config, count) in enumerate(available[:len(positions)]):
             x, y = positions[index]
-            yield_count = int(seed_config.get("yield", 1))
+            yield_count = self.get_harvest_base_yield(seed_id)
             growth_days = int(seed_config.get("growth_days", 3))
             chance = self.get_effective_seed_return_chance(seed_id)
             objects.append({
@@ -605,8 +614,10 @@ class GameEngine:
             {"id": "coin", "label": "골드", "count": int(self.resources.get("coin", 0)), "kind": "coin", "action": ""},
             {"id": "fertilizer", "label": "비료", "count": int(self.resources.get("fertilizer", 0)), "kind": "fertilizer", "action": ""},
             {"id": "wood", "label": "나무", "count": int(self.resources.get("wood", 0)), "kind": "material", "action": ""},
-            {"id": "stone", "label": "돌", "count": int(self.resources.get("stone", 0)), "kind": "material", "action": ""}
+            {"id": "stone", "label": "돌", "count": int(self.resources.get("stone", 0)), "kind": "stone", "action": ""}
         ]
+        for item_id, label in [("pickaxe", "곡괭이"), ("copper", "구리"), ("iron", "철"), ("diamond", "다이아몬드")]:
+            entries.append({"id": item_id, "label": label, "count": self.resources[item_id], "kind": item_id, "action": ""})
         for seed_id, seed_config in self.config.get("seeds", {}).items():
             entries.append({"id": f"seed_{seed_id}", "label": f"{seed_config.get('label', seed_id)} 씨앗", "count": int(self.resources["seeds"].get(seed_id, 0)), "kind": "seed", "seed_id": seed_id, "action": ""})
         for seed_id, seed_config in self.config.get("seeds", {}).items():
@@ -717,7 +728,8 @@ class GameEngine:
             expand_action = ""
         else:
             cost = int(costs[expansion_index]) if expansion_index < len(costs) else 999999
-            expand_tts = f"밭 {self.unlocked_plot_count}개. {cost}골드로 1개 확장. 보유 {coin}골드"
+            material_cost = int(expand_cfg.get("stone_costs", [5, 10])[expansion_index])
+            expand_tts = f"밭 {self.unlocked_plot_count}개. {cost}골드, 돌 {material_cost}개로 1개 확장. 보유 {coin}골드"
             expand_action = "research:field_expand"
 
         objects.append({
@@ -725,6 +737,14 @@ class GameEngine:
             "x": 41, "y": 18, "width": 18, "height": 12, "hit_width": 20, "hit_height": 14,
             "label": "밭 확장 연구", "tts": expand_tts, "action": expand_action
         })
+        for kind, label, mineral in [("harvest_yield", "수확량 증가", "copper"), ("mineral_luck", "광물 획득 확률 증가", "iron")]:
+            cfg = self.config.get("research", {}).get(kind, {})
+            level = self.research_levels.get(kind, 0)
+            action = "" if level >= int(cfg.get("max_level", 2)) else f"research:{kind}"
+            text = f"{label}. 최대 단계" if not action else f"{label}. {cfg.get('costs', [20, 40])[level]}골드, {self.MINERAL_LABELS[mineral]} {cfg.get(mineral + '_costs', [3, 6])[level]}개 필요"
+            objects.append({"id": f"research_{kind}", "type": "research", "research_kind": kind, "label": label, "tts": text, "action": action})
+        for i, obj in enumerate(objects):
+            obj.update(x=(16, 44)[i % 2], y=(9, 24)[i // 2], width=20, height=10, hit_width=24, hit_height=12)
         objects.append(self.back_arrow("research_back", "집으로 돌아가기", "return_scene"))
         return objects
 
@@ -825,64 +845,23 @@ class GameEngine:
         ]
 
     def get_shop_buy_objects(self):
-        objects = []
-        positions = [(9, 16), (23, 16), (37, 16), (51, 16)]
-        index = 0
-        for seed_id, seed in self.config.get("seeds", {}).items():
-            if index >= len(positions):
-                break
-            x, y = positions[index]
-            price = int(seed.get("seed_price", max(1, round(int(seed.get("crop_price", 1)) * 0.8))))
-            count = int(self.resources["seeds"].get(seed_id, 0))
-            objects.append({
-                "id": f"shop_buy_seed_{seed_id}", "type": "shop_item", "shop_kind": "seed", "item_id": seed_id,
-                "x": x, "y": y, "width": 10, "height": 8, "hit_width": 13, "hit_height": 11,
-                "label": f"{self.get_seed_label(seed_id)} 씨앗",
-                "tts": f"{self.get_seed_label(seed_id)} 씨앗, {price}골드. 보유 {count}개",
-                "action": f"buy:seed:{seed_id}"
-            })
-            index += 1
-
-        x, y = positions[min(index, len(positions) - 1)]
-        fertilizer_price = int(self.config.get("fertilizer", {}).get("shop_price", 12))
-        objects.append({
-            "id": "shop_buy_fertilizer", "type": "shop_item", "shop_kind": "fertilizer", "item_id": "fertilizer",
-            "x": x, "y": y, "width": 10, "height": 8, "hit_width": 13, "hit_height": 11,
-            "label": "비료", "tts": f"비료, {fertilizer_price}골드. 보유 {self.resources.get('fertilizer', 0)}개",
-            "action": "buy:fertilizer:fertilizer"
-        })
-        objects.append(self.back_arrow("shop_buy_back", "마을로 돌아가기", "return_scene"))
-        return objects
+        entries = [("seed", seed_id, f"{self.get_seed_label(seed_id)} 씨앗", self.resources["seeds"].get(seed_id, 0),
+                    int(seed.get("seed_price", max(1, round(int(seed.get("crop_price", 1)) * .8)))))
+                   for seed_id, seed in self.config.get("seeds", {}).items()]
+        entries += [("fertilizer", "fertilizer", "비료", self.resources["fertilizer"], self.get_fertilizer_price()),
+                    ("pickaxe", "pickaxe", "곡괭이", self.resources["pickaxe"], self.get_pickaxe_price())]
+        entries += [("mineral", key, self.MINERAL_LABELS[key], self.resources[key], self.get_mineral_price(key, buying=True))
+                    for key in ("stone", "copper", "iron")]
+        return self.build_shop_objects(entries, "buy")
 
     def get_shop_sell_objects(self):
-        sellables = []
-        for seed_id, seed in self.config.get("seeds", {}).items():
-            count = int(self.resources["crops"].get(seed_id, 0))
-            if count > 0:
-                sellables.append(("crop", seed_id, f"{self.get_seed_label(seed_id)} 작물", count, int(seed.get("crop_price", 1))))
-        for recipe_id, recipe in self.config.get("recipes", {}).items():
-            count = int(self.resources["foods"].get(recipe_id, 0))
-            if count > 0:
-                sellables.append(("food", recipe_id, recipe.get("label", recipe_id), count, self.get_food_sell_price(recipe_id)))
-
-        positions = [(9, 12), (23, 12), (37, 12), (51, 12), (9, 25), (23, 25), (37, 25), (51, 25)]
-        objects = []
-        for index, (kind, item_id, label, count, price) in enumerate(sellables[:len(positions)]):
-            x, y = positions[index]
-            objects.append({
-                "id": f"shop_sell_{kind}_{item_id}", "type": "shop_item", "shop_kind": kind, "item_id": item_id,
-                "x": x, "y": y, "width": 10, "height": 8, "hit_width": 13, "hit_height": 11,
-                "label": label, "tts": f"{label}, 보유 {count}개. 판매 {price}골드",
-                "action": f"sell:{kind}:{item_id}"
-            })
-        if not sellables:
-            objects.append({
-                "id": "shop_nothing_to_sell", "type": "box", "x": 30, "y": 18,
-                "width": 22, "height": 10, "hit_width": 24, "hit_height": 12,
-                "label": "판매할 물건 없음", "tts": "현재 판매할 수 있는 작물이나 요리가 없습니다", "action": ""
-            })
-        objects.append(self.back_arrow("shop_sell_back", "마을로 돌아가기", "return_scene"))
-        return objects
+        entries = [("crop", key, f"{self.get_seed_label(key)} 작물", self.resources["crops"].get(key, 0), int(seed.get("crop_price", 1)))
+                   for key, seed in self.config.get("seeds", {}).items() if self.resources["crops"].get(key, 0) > 0]
+        entries += [("food", key, recipe.get("label", key), self.resources["foods"].get(key, 0), self.get_food_sell_price(key))
+                    for key, recipe in self.config.get("recipes", {}).items() if self.resources["foods"].get(key, 0) > 0]
+        entries += [("mineral", key, label, self.resources[key], self.get_mineral_price(key))
+                    for key, label in self.MINERAL_LABELS.items() if self.resources[key] > 0]
+        return self.build_shop_objects(entries, "sell")
 
     def back_arrow(self, object_id, label, action):
         return {
@@ -918,7 +897,12 @@ class GameEngine:
             return
         for obj in self.get_objects():
             obj_type = obj.get("type")
-            if obj_type == "arrow":
+            if obj_type == "mine_rock":
+                left, top = obj["x"] - obj["width"] // 2, obj["y"] - obj["height"] // 2
+                for y in range(top, top + obj["height"]):
+                    for x in range(left, left + obj["width"]):
+                        self.dotpad.set_dot(x, y)
+            elif obj_type == "arrow":
                 self.dotpad.draw_arrow(obj["x"], obj["y"], obj["direction"], obj.get("size", 2))
             elif obj_type == "box":
                 self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 6), obj.get("height", 5))
@@ -1063,6 +1047,10 @@ class GameEngine:
                     self.dotpad.set_dot(x + i - 2, y + j - 2)
 
     def draw_resource(self, obj):
+        if obj.get("resource_kind") in ("pickaxe", "stone", "copper", "iron", "diamond"):
+            self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 10), obj.get("height", 6))
+            self.draw_mine_item(obj["x"], obj["y"], obj["resource_kind"])
+            return
         x, y = int(obj["x"]), int(obj["y"])
         self.dotpad.draw_box(x, y, obj.get("width", 10), obj.get("height", 7))
         kind = obj.get("resource_kind")
@@ -1084,10 +1072,8 @@ class GameEngine:
         x, y = int(obj["x"]), int(obj["y"])
         self.dotpad.draw_box(x, y, 7, 7)
         if obj.get("current", False):
-            self.dotpad.set_dot(x - 4, y)
-            self.dotpad.set_dot(x + 4, y)
-            self.dotpad.set_dot(x, y - 4)
-            self.dotpad.set_dot(x, y + 4)
+            self.dotpad.draw_line(x - 2, y, x + 2, y)
+            self.dotpad.draw_line(x, y - 2, x, y + 2)
 
     def draw_research(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
@@ -1280,6 +1266,10 @@ class GameEngine:
             self.dotpad.draw_arrow(x, y, "right", 3)
 
     def draw_shop_item(self, obj):
+        if obj.get("shop_kind") in ("pickaxe", "mineral"):
+            self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 10), obj.get("height", 6))
+            self.draw_mine_item(obj["x"], obj["y"], obj["item_id"])
+            return
         x, y = int(obj["x"]), int(obj["y"])
         self.dotpad.draw_box(x, y, obj.get("width", 11), obj.get("height", 9))
         kind = obj.get("shop_kind")
@@ -1303,6 +1293,9 @@ class GameEngine:
         return ((px - nx) ** 2 + (py - ny) ** 2) ** 0.5
 
     def object_contains(self, obj, x, y):
+        if obj.get("type") == "mine_rock":
+            left, top = obj["x"] - obj["width"] // 2, obj["y"] - obj["height"] // 2
+            return left <= x < left + obj["width"] and top <= y < top + obj["height"]
         if obj.get("type") == "route":
             distance = self.point_to_segment_distance(x, y, obj["x1"], obj["y1"], obj["x2"], obj["y2"])
             return distance <= float(obj.get("hit_radius", 3.0))
@@ -1385,6 +1378,8 @@ class GameEngine:
         self.last_pointer = (x, y)
         if self.paused:
             return self.response()
+        if self.current_page == "mine" and self.pointer_pressed:
+            return self.response()
         if self.current_page == "cooking":
             return self.response()
         obj = self.find_object(x, y)
@@ -1401,6 +1396,8 @@ class GameEngine:
         if self.sleep_until is not None:
             return self.response()
         if self.pending_visual_completion:
+            return self.response()
+        if self.current_page == "mine" and self.pointer_pressed:
             return self.response()
         self.pointer_pressed = True
         self.last_pointer = (x, y)
@@ -1533,8 +1530,25 @@ class GameEngine:
         return result
 
     def perform_action(self, action, obj):
+        before = (self.current_page, self.current_location, self.inventory_page, self.shop_page)
+        result = self._perform_action(action, obj)
+        after = (self.current_page, self.current_location, self.inventory_page, self.shop_page)
+        if obj.get("type") == "arrow" and before != after:
+            result.setdefault("sound_events", []).append({"kind": "one_shot", "sound": "step"})
+        return result
+
+    def _perform_action(self, action, obj):
         if self.day_ended and action != "rest":
             return self.night_only_response()
+        if action.startswith("mine_hit:"):
+            return self.hit_mine_rock(action.split(":", 1)[1])
+        if action.startswith("shop_page:"):
+            if self.current_page not in ("shop_buy", "shop_sell"):
+                return self.response()
+            self.shop_page += int(action.split(":", 1)[1])
+            self.clear_hover()
+            self.render()
+            return self.response(tts="다음 페이지입니다" if action.endswith(":1") else "이전 페이지입니다")
         if action.startswith("inventory_page:"):
             if self.current_page != "inventory":
                 return self.response()
@@ -1596,7 +1610,7 @@ class GameEngine:
     def travel_to(self, location):
         if self.day_ended:
             return self.night_only_response()
-        if location not in ("home", "farm", "town"):
+        if location not in ("home", "farm", "town", "mine"):
             return self.response(tts="아직 이동할 수 없는 장소입니다")
         changed = location != self.current_location
         self.current_location = location
@@ -1613,6 +1627,9 @@ class GameEngine:
         self.render()
         name = self.get_page_name(location)
         particle = self.ro_particle(name)
+        if location == "mine":
+            text = "광산. 돌을 터치해서 깨세요" if self.resources["pickaxe"] else "광산. 곡괭이가 필요합니다. 상점에서 구매하세요"
+            return self.response(tts=text, sfx="travel")
         return self.response(tts=f"{name}", sfx="travel")
 
     def open_minimap(self):
@@ -1905,6 +1922,8 @@ class GameEngine:
         return min(0.95, max(0.0, base + bonus))
 
     def buy_research(self, research_kind):
+        if research_kind in ("harvest_yield", "mineral_luck"):
+            return self.buy_mineral_research(research_kind)
         if research_kind == "seed_return":
             cfg = self.config.get("research", {}).get("seed_return", {})
             level = int(self.research_levels.get("seed_return", 0))
@@ -1933,9 +1952,13 @@ class GameEngine:
                 return self.response(tts="밭은 이미 최대 크기입니다", sfx="error")
             index = max(0, self.unlocked_plot_count - initial)
             cost = int(costs[index]) if index < len(costs) else 999999
+            material_cost = int(cfg.get("stone_costs", [5, 10])[index])
+            if self.resources["stone"] < material_cost:
+                return self.response(tts=f"돌 {material_cost}개 필요", sfx="error")
             if int(self.resources.get("coin", 0)) < cost:
                 return self.response(tts=f"골드가 부족합니다. 밭 확장에는 골드 {cost}개가 필요합니다", sfx="error")
             self.resources["coin"] -= cost
+            self.resources["stone"] -= material_cost
             self.unlocked_plot_count += 1
             result = self.consume_time("research")
             text = f"밭을 확장했습니다. 이제 밭 {self.unlocked_plot_count}개를 사용할 수 있습니다. 골드 {cost}개를 사용했습니다"
@@ -1995,7 +2018,7 @@ class GameEngine:
         seed_id = state["seed_id"]
         seed_config = self.get_seed_config(seed_id)
         seed_label = self.get_seed_label(seed_id)
-        base_yield = int(seed_config.get("yield", 1))
+        base_yield = self.get_harvest_base_yield(seed_id)
         buff_multiplier = 1.0
         buff_applied = False
         if int(self.active_buff.get("remaining_ticks", 0)) > 0:
@@ -2265,6 +2288,7 @@ class GameEngine:
         return self.response(tts="상점입니다. 왼쪽 판매, 오른쪽 구매", sfx="shop_open", sound_events=[{"kind": "one_shot", "sound": "door"}])
 
     def open_shop_mode(self, mode):
+        self.shop_page = 0
         if mode == "sell":
             self.current_page = "shop_sell"
             text = "판매 목록."
@@ -2276,6 +2300,8 @@ class GameEngine:
         return self.response(tts=text, sfx="open_page")
 
     def buy_shop_item(self, kind, item_id):
+        if kind in ("pickaxe", "mineral"):
+            return self.buy_mine_item(kind, item_id)
         if kind == "seed":
             seed = self.get_seed_config(item_id)
             if not seed:
@@ -2283,7 +2309,7 @@ class GameEngine:
             price = int(seed.get("seed_price", max(1, round(int(seed.get("crop_price", 1)) * 0.8))))
             label = f"{self.get_seed_label(item_id)} 씨앗"
         elif kind == "fertilizer":
-            price = int(self.config.get("fertilizer", {}).get("shop_price", 12))
+            price = self.get_fertilizer_price()
             label = "비료"
         else:
             return self.response(tts="구매할 수 없는 물건입니다", sfx="error")
@@ -2301,7 +2327,12 @@ class GameEngine:
         return self.response(tts=f"{label} 구매, 잔액 {self.resources['coin']}골드", sfx="shop_buy", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
 
     def sell_shop_item(self, kind, item_id):
-        if kind == "crop":
+        if kind == "mineral" and item_id in self.MINERAL_LABELS:
+            if self.resources[item_id] < 1:
+                return self.response(tts="판매할 광물이 없습니다", sfx="error")
+            price, label = self.get_mineral_price(item_id), self.MINERAL_LABELS[item_id]
+            self.resources[item_id] -= 1
+        elif kind == "crop":
             count = int(self.resources["crops"].get(item_id, 0))
             if count <= 0:
                 return self.response(tts="판매할 작물이 없습니다", sfx="error")
@@ -2366,7 +2397,7 @@ class GameEngine:
                          "type": o.get("type"), "x": o.get("x"), "y": o.get("y"),
                          "description": self.get_object_tts(o), "actionable": bool(o.get("action"))}
                         for o in self.get_objects() if o.get("type") != "route"],
-            "action_costs": {k: self.get_action_cost(k) for k in ("travel", "plant", "water", "fertilize", "harvest", "research", "cook")},
+            "action_costs": {k: self.get_action_cost(k) for k in ("travel", "plant", "water", "fertilize", "harvest", "research", "cook", "mine")},
             "sleeping": self.sleep_until is not None,
             "client_settings": self.client_settings,
             "page": self.current_page,
@@ -2427,3 +2458,194 @@ class GameEngine:
             "hover_object": self.hover_object_id,
             "controls": {"F1": "미니맵", "F2": "현재 씬", "F3": "인벤토리", "F4": "일시정지"}
         }
+
+    MINERAL_LABELS = {"stone": "돌", "copper": "구리", "iron": "철", "diamond": "다이아몬드"}
+
+    def get_fertilizer_price(self):
+        cfg = self.config.get("fertilizer", {})
+        return int(cfg.get("shop_price", cfg.get("price", self.config.get("shop", {}).get("fertilizer_price", 12))))
+
+    def get_pickaxe_price(self):
+        return int(math.ceil(self.get_fertilizer_price() * float(self.config.get("mine", {}).get("pickaxe_price_multiplier", 5))))
+
+    def get_mineral_price(self, mineral, buying=False):
+        prices = sorted(float(s.get("crop_price", 1)) for s in self.config.get("seeds", {}).values()) or [1]
+        mid = len(prices) // 2
+        base = prices[mid] if len(prices) % 2 else (prices[mid - 1] + prices[mid]) / 2
+        cfg = self.config.get("mine", {})
+        price = int(math.ceil(base * float(cfg.get("mineral_sell_multipliers", {}).get(mineral, 1))))
+        price += int(cfg.get("mineral_sell_price_bonus", 3))
+        return int(math.ceil(price * float(cfg.get("mineral_buy_multiplier", 2)))) if buying else price
+
+    def regenerate_mine(self):
+        cfg = self.config.get("mine", {})
+        width, height = self.dotpad.width, self.dotpad.height
+        rw, rh = int(cfg.get("rock_width", 10)), int(cfg.get("rock_height", 10))
+        gap = max(5, int(cfg.get("rock_gap", 5)))
+        if rw < 1 or rh < 1 or rw > width or rh > height:
+            raise ValueError("광산 돌 크기는 패드 크기 안의 양수여야 합니다")
+        columns, rows = (width + gap) // (rw + gap), (height + gap) // (rh + gap)
+        slack_x = width - (columns * rw + (columns - 1) * gap)
+        slack_y = height - (rows * rh + (rows - 1) * gap)
+        origin_y = random.randint(0, slack_y)
+        candidates = []
+        for row in range(rows):
+            origin_x = random.randint(0, slack_x)
+            top = origin_y + row * (rh + gap)
+            for col in range(columns):
+                left = origin_x + col * (rw + gap)
+                # Reserve the bottom-left exit and its touch area.
+                if left < 12 and top + rh > height - 10:
+                    continue
+                candidates.append((left, top))
+        random.shuffle(candidates)
+        limit = max(0, min(7, int(cfg.get("daily_rock_limit", 7))))
+        self.mine_rocks = [
+            {"id": f"mine_rock_{self.day}_{i}", "left": x, "top": y,
+             "width": rw, "height": rh, "hits": 0}
+            for i, (x, y) in enumerate(candidates[:limit])
+        ]
+
+    def get_mine_objects(self):
+        objects = []
+        for rock in self.mine_rocks:
+            objects.append({"id": rock["id"], "type": "mine_rock",
+                            "x": rock["left"] + rock["width"] // 2,
+                            "y": rock["top"] + rock["height"] // 2,
+                            "width": rock["width"], "height": rock["height"],
+                            "label": "광산 돌", "tts": "돌. 터치해서 깨세요" if self.resources["pickaxe"] else "곡괭이가 필요합니다",
+                            "action": f"mine_hit:{rock['id']}"})
+        exit_arrow = self.back_arrow("mine_exit", "마을로 이동", "travel:town")
+        exit_arrow.update(y=self.dotpad.height - 5, direction="down")
+        objects.append(exit_arrow)
+        return objects
+
+    def hit_mine_rock(self, rock_id):
+        if self.current_page != "mine" or self.paused or self.day_ended:
+            return self.response()
+        rock = next((r for r in self.mine_rocks if r["id"] == rock_id), None)
+        if rock is None:
+            return self.response()
+        self.hover_object_id = rock_id
+        if self.resources.get("pickaxe", 0) < 1:
+            return self.response(tts="곡괭이가 필요합니다. 상점에서 구매하세요", sfx="error")
+        cfg = self.config.get("mine", {})
+        rock["hits"] += 1
+        self._pickaxe_hits += 1
+        destroyed = rock["hits"] >= int(cfg.get("hits_to_break", 3))
+        text = ""
+        events = []
+        if destroyed:
+            level = self.research_levels.get("mineral_luck", 0)
+            research = self.config.get("research", {}).get("mineral_luck", {})
+            weights = dict(cfg.get("loot_weights", {"diamond": 1, "iron": 15, "copper": 34, "stone": 50}))
+            bonus = float(research.get("diamond_weight_per_level", 1)) * level
+            weights["diamond"] += bonus
+            weights["stone"] = max(0, weights["stone"] - bonus)
+            mineral = random.choices(list(weights), weights=list(weights.values()), k=1)[0]
+            doubled = random.random() < min(1, level * float(research.get("double_drop_chance_per_level", .15)))
+            amount = 2 if doubled else 1
+            self.resources[mineral] += amount
+            self.mine_rocks.remove(rock)
+            text = f"{self.MINERAL_LABELS[mineral]} {amount}개 획득" + (". 보너스" if doubled else "")
+        else:
+            events.append({"kind": "one_shot", "sound": "pickaxe"})
+        safe_hits = int(cfg.get("pickaxe_safe_hits", 9))
+        break_chance = min(1, max(0, self._pickaxe_hits - safe_hits) * float(cfg.get("pickaxe_break_increment", .05)))
+        if break_chance > 0 and random.random() < break_chance:
+            self.resources["pickaxe"] = 0
+            self._pickaxe_hits = 0
+            text += (". " if text else "") + "곡괭이가 부서졌습니다. 상점에서 다시 구매하세요"
+        if destroyed:
+            fatigue = self.consume_time("mine")
+            if fatigue["night"]:
+                text += ". 밤이 되어 집에 도착했습니다. 침대를 눌러 주무세요"
+        self.render()
+        if destroyed:
+            events.append({"kind": "mining_loot", "sound": "shine" if mineral == "diamond" else "correct", "tts": text})
+            return self.response(sound_events=events)
+        return self.response(tts=text or None, sound_events=events)
+
+    def get_harvest_base_yield(self, seed_id):
+        cfg = self.config.get("research", {}).get("harvest_yield", {})
+        return int(self.get_seed_config(seed_id).get("yield", 1)) + self.research_levels.get("harvest_yield", 0) * int(cfg.get("bonus_per_level", 1))
+
+    def build_shop_objects(self, entries, mode):
+        page_size = 12
+        pages = max(1, math.ceil(len(entries) / page_size))
+        self.shop_page = max(0, min(self.shop_page, pages - 1))
+        objects = []
+        for i, (kind, item_id, label, count, price) in enumerate(entries[self.shop_page * page_size:(self.shop_page + 1) * page_size]):
+            x, y = (9, 23, 37, 51)[i % 4], (5, 15, 25)[i // 4]
+            text = f"{label}, {price}골드. 보유 {count}개" if mode == "buy" else f"{label}, 보유 {count}개. 판매 {price}골드"
+            if kind == "pickaxe" and count:
+                text = "곡괭이 보유 중. 1개만 보유 가능"
+            objects.append({"id": f"shop_{mode}_{kind}_{item_id}", "type": "shop_item", "shop_kind": kind, "item_id": item_id,
+                            "x": x, "y": y, "width": 10, "height": 6, "hit_width": 13, "hit_height": 9,
+                            "label": label, "tts": text, "action": f"{mode}:{kind}:{item_id}"})
+        objects.append(self.back_arrow(f"shop_{mode}_back", "마을로 돌아가기", "return_scene"))
+        for delta, x, direction, label in [(-1, 30, "left", "이전 페이지입니다"), (1, 51, "right", "다음 페이지입니다")]:
+            if 0 <= self.shop_page + delta < pages:
+                objects.append({"id": f"shop_page_{direction}", "type": "arrow", "x": x, "y": 35, "direction": direction,
+                                "size": 2, "hit_width": 11, "hit_height": 7, "label": label, "action": f"shop_page:{delta}"})
+        if not entries:
+            objects.append({"id": "shop_empty", "type": "box", "x": 30, "y": 16, "width": 20, "height": 8,
+                            "label": "판매할 물건 없음", "tts": "판매할 물건이 없습니다", "action": ""})
+        return objects
+
+    def buy_mine_item(self, kind, item_id):
+        if kind == "pickaxe":
+            if self.resources["pickaxe"] >= 1:
+                return self.response(tts="곡괭이는 1개만 보유할 수 있습니다", sfx="error")
+            price, label = self.get_pickaxe_price(), "곡괭이"
+        elif kind == "mineral" and item_id in ("stone", "copper", "iron"):
+            price, label = self.get_mineral_price(item_id, buying=True), self.MINERAL_LABELS[item_id]
+        else:
+            return self.response(tts="구매할 수 없는 물건입니다", sfx="error")
+        if self.resources["coin"] < price:
+            return self.response(tts=f"골드 부족. {label} {price}골드", sfx="error")
+        self.resources["coin"] -= price
+        if kind == "pickaxe":
+            self.resources["pickaxe"] = 1
+            self._pickaxe_hits = 0
+        else:
+            self.resources[item_id] += 1
+        self.clear_hover()
+        self.render()
+        return self.response(tts=f"{label} 1개 구매. 잔액 {self.resources['coin']}골드", sound_events=[{"kind": "one_shot", "sound": "coin"}])
+
+    def buy_mineral_research(self, kind):
+        cfg = self.config.get("research", {}).get(kind, {})
+        level = self.research_levels.get(kind, 0)
+        maximum = int(cfg.get("max_level", 2))
+        if level >= maximum:
+            return self.response(tts="최대 연구 단계입니다", sfx="error")
+        mineral = "copper" if kind == "harvest_yield" else "iron"
+        costs, materials = cfg.get("costs", [20, 40]), cfg.get(f"{mineral}_costs", [3, 6])
+        cost, material_cost = int(costs[level]), int(materials[level])
+        if self.resources["coin"] < cost or self.resources[mineral] < material_cost:
+            return self.response(tts=f"재료 부족. {cost}골드, {self.MINERAL_LABELS[mineral]} {material_cost}개 필요", sfx="error")
+        self.resources["coin"] -= cost
+        self.resources[mineral] -= material_cost
+        self.research_levels[kind] = level + 1
+        text = "수확량 증가" if kind == "harvest_yield" else "광물 획득 확률 증가"
+        result = self.consume_time("research")
+        events = [{"kind": "one_shot", "sound": "coin"}]
+        if result["night"]:
+            return self.night_response(text, sound_events=events)
+        self.clear_hover()
+        self.render()
+        return self.response(tts=text, sound_events=events)
+
+    def draw_mine_item(self, x, y, kind):
+        x, y = int(x), int(y)
+        if kind == "pickaxe":
+            self.dotpad.draw_line(x - 3, y - 2, x + 3, y - 2)
+            self.dotpad.draw_line(x, y - 2, x, y + 2)
+        elif kind == "diamond":
+            for a, b in [((-3, 0), (0, -2)), ((0, -2), (3, 0)), ((3, 0), (0, 2)), ((0, 2), (-3, 0))]:
+                self.dotpad.draw_line(x+a[0], y+a[1], x+b[0], y+b[1])
+        else:
+            for row in range({"stone": 1, "copper": 2, "iron": 3}.get(kind, 1)):
+                self.dotpad.draw_line(x-2, y-1+row, x+2, y-1+row)
+

@@ -23,7 +23,7 @@
 <section class="card"><h2>오늘의 상태</h2><div id="score-feedback" style="color:var(--mint);font-size:12px;min-height:22px"></div><div id="buff-text">버프 없음</div><div class="progress-track"><div id="activity-fill"></div></div><div class="metrics"><div>비료<strong id="fertilizer-text">2</strong></div><div>사용 가능한 밭<strong id="plot-text">2</strong></div><div>씨앗 회수 연구<strong id="research-text">0단계</strong></div><div>남은 활동<strong id="remaining-text">20틱</strong></div></div></section>
 <section class="card"><h2>현재 위치의 상호작용 오브젝트</h2><div class="scene-sub" style="margin-bottom:12px">버튼으로도 같은 동작을 실행할 수 있습니다.</div><div id="object-list"></div></section>
 <section class="card"><h2>실물 패드와 손 추적</h2><div class="toolbar"><button id="usb-button">USB 패드 연결</button></div><p class="scene-sub" id="hardware-status">USB 연결 전 · 웹 시뮬레이터</p><label class="setting" for="tracking-url">손 추적 서버</label><input id="tracking-url" value="ws://127.0.0.1:8765" aria-label="손 추적 WebSocket 주소" style="width:100%;padding:9px;background:#111b13;border:1px solid #41543b;color:#dcead4;border-radius:6px;margin:8px 0"><div class="toolbar"><button id="tracking-button">손 추적 서버 연결</button><button id="tracking-hold" aria-pressed="false" disabled>누르기 시작</button></div><p id="tracking-status" class="scene-sub">연결 전</p><p class="scene-sub" style="line-height:1.6">원본 서버는 손 좌표만 전송합니다. 누르기 버튼으로 선택·드래그를 시작하고, 다시 눌러 손을 뗍니다.</p><a href="https://github.com/eun022/hand_drawing" target="_blank" rel="noopener noreferrer" style="color:#cbe8b8;font-size:12px">연결 프로그램과 실행 방법 ↗</a></section><details class="card"><summary>연결 진단 및 초기화</summary><p>현재 화면은 웹 시뮬레이터입니다. 실물 USB 패드는 Chrome·Edge의 localhost에서 연결할 수 있습니다. 손 추적은 참조 저장소의 서버를 먼저 실행하세요. 게임 상태는 서버 메모리에 보관되며 서버 재시작 시 초기화됩니다.</p><div id="status"></div><button class="text-button" id="reset-button">새 게임 시작</button></details>
-</aside></div></div><script src="/static/game-audio.js?v=16"></script><script>
+</aside></div></div><script src="/static/game-audio.js?v=18"></script><script>
 
 const canvas = document.getElementById("dotpad");
 const ctx = canvas.getContext("2d");
@@ -53,7 +53,7 @@ let pointerInside = false;
 let pointerPressed = false;
 let currentState = null;
 let audioContext = null;
-const gameAudio = new GameAudio({onStatus:text=>document.getElementById("sound-text").textContent=text});
+const gameAudio = new GameAudio({onNarration:text=>announce(text),onStatus:text=>document.getElementById("sound-text").textContent=text});
 gameAudio.preload();
 let koreanVoice = null;
 let lastSpokenText = "";
@@ -369,7 +369,7 @@ function drawState(state) {
         button.classList.toggle("active", active);
         button.setAttribute("aria-pressed", String(active));
     }
-    const tasks = {home:"침대 · 연구 · 주방",farm:"밭을 골라 작물을 관리하세요",town:"상점에서 사고팔 수 있습니다",shop_choice:"왼쪽 판매 · 오른쪽 구매",cooking:"사각형 시작점부터 선을 따라 드래그",inventory:"요리를 선택하면 수확 버프가 적용됩니다"};
+    const tasks = {mine:"돌을 터치해서 채굴하세요",home:"침대 · 연구 · 주방",farm:"밭을 골라 작물을 관리하세요",town:"상점에서 사고팔 수 있습니다",shop_choice:"왼쪽 판매 · 오른쪽 구매",cooking:"사각형 시작점부터 선을 따라 드래그",inventory:"요리를 선택하면 수확 버프가 적용됩니다"};
     let task = tasks[state.page] || "오브젝트를 선택해 진행하세요";
     if (state.page === "plot_detail") task = (state.objects || []).find(o=>o.type === "plot_detail_field")?.description || task;
     if (state.care?.mode) task = `뿌리기 ${state.care.collected_targets} / ${state.care.total_targets} · 65% 이상 성공`;
@@ -424,6 +424,7 @@ async function handleResponse(response) {
         drawState(data.state);
     }
 
+    if (data.tts) gameAudio.miningNarrationToken++;
     gameAudio.handle(data.state, data.sound_events || []);
     const score = (data.sound_events || []).filter(e=>e.kind === "correct").reduce((n,e)=>n+e.count,0);
     if(score) {
@@ -433,7 +434,7 @@ async function handleResponse(response) {
         document.getElementById("score-feedback").animate([{opacity:1},{opacity:0.25}],{duration:600});
     }
     const recordedEvents = ["care_spray","harvest_collect","cooking_trace","cooking_wait","shop_open","shop_buy","shop_sell","research","water","fertilize"];
-    if (data.sfx && !recordedEvents.includes(data.sfx) && !(data.sound_events?.length && data.sfx === "tool_pickup")) playSfx(data.sfx);
+    if (data.sfx && !(data.sound_events || []).some(e=>e.sound === "step") && !recordedEvents.includes(data.sfx) && !(data.sound_events?.length && data.sfx === "tool_pickup")) playSfx(data.sfx);
 
     if (data.tts) {
         announce(data.tts, data.priority || "action");

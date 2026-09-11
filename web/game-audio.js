@@ -3,13 +3,16 @@ class GameAudio {
     constructor(options = {}) {
         this.contextFactory = options.contextFactory || (() => new (window.AudioContext || window.webkitAudioContext)());
         this.fetcher = options.fetcher || (url => fetch(url));
+        this.onNarration = options.onNarration || (() => {});
+        this.miningNarrationToken = 0;
         this.onStatus = options.onStatus || (() => {});
         this.now = options.now || (() => performance.now());
         // Fallbacks support old configs; game_config.json overrides these via state.
         this.settings = {
             default_volume:0.7,
             bgm_gain:{basic:0.22,minigame:0.10,shop:0.40},
-            one_shot_gain:{sleep:0.8,door:0.7,coin:0.65},
+            one_shot_gain:{sleep:0.8,door:0.7,coin:0.65,pickaxe:0.8,break:0.8,shine:0.8},
+            one_shot_gain_links:{step:'door'},
             bgm_minigame_pages:['seed_select','water_minigame','fertilizer_minigame','harvest','recipe_select','ingredient_select','cooking'],
             bgm_shop_pages:['shop_choice','shop_buy','shop_sell'],
             work_gain:{water:0.75,soil:0.75,crop:0.75,cut:0.95,cook:0.95},
@@ -26,13 +29,14 @@ class GameAudio {
         this.buffers = new Map(); this.raw = new Map(); this.rewardSources = new Set();
         this.clickSources = new Set(); this.clickToken = 0;
         this.effectToken = 0; this.lastPosition = null; this.lastCorrectAt = -Infinity; this.lastMotion = 0;
-        this.urls = Object.fromEntries(['water','soil','cut','cook','crop','correct','sleep','door','coin','background-basic','background-minigame','background-shop'].map(n => [n, `/static/audio/${n}.mp3`]));
+        this.urls = Object.fromEntries(['water','soil','cut','cook','crop','correct','sleep','door','coin','background-basic','background-minigame','background-shop','step','pickaxe','break','shine'].map(n => [n, `/static/audio/${n}.mp3`]));
     }
     configure(settings = {}) {
         this.settings = {
             ...this.settings, ...settings,
             bgm_gain:{...this.settings.bgm_gain,...settings.bgm_gain},
             one_shot_gain:{...this.settings.one_shot_gain,...settings.one_shot_gain},
+            one_shot_gain_links:{...this.settings.one_shot_gain_links,...settings.one_shot_gain_links},
             work_gain:{...this.settings.work_gain,...settings.work_gain},
             work_gain_during_tts:{...this.settings.work_gain_during_tts,...settings.work_gain_during_tts}
         };
@@ -156,7 +160,11 @@ class GameAudio {
     syncWork(state) {
         // Reward-only responses never own the task channel's lifecycle.
         if (!state) return;
-        if (state.paused || state.day_ended || state.sleeping) {this.stopTasks();return;}
+        if (state.paused || state.day_ended || state.sleeping) {
+            // Repeated night snapshots must not cancel pending loot narration.
+            if (this.held || this.workName || this.clickSources.size || this.rewardSources.size) this.stopTasks();
+            return;
+        }
         const carePage = ['water_minigame','fertilizer_minigame','harvest'].includes(state.page);
         // Local press/release is authoritative for sprinkling. A queued hover
         // snapshot can still say dragging=false after a newer local press.
@@ -172,6 +180,7 @@ class GameAudio {
         this.syncBackground(state);
         // Layer 2 only: never stop, restart, pulse, or change gain of layer 1.
         for (const event of events) {
+            if(event.kind==='mining_loot') this.miningLoot(event);
             if(event.kind==='one_shot') this.oneShot(event.sound);
             if(event.kind==='correct' && event.count>0) this.correct(event.count, event.activity === 'cooking' || state?.page === 'cooking' || ['cut','cook'].includes(this.workName));
         }
@@ -206,21 +215,34 @@ class GameAudio {
         if (this.bgm) { try { this.bgm.stop(); } catch {} this.bgm = null; }
     }
     async oneShot(name) {
-        if (!this.enabled || !['sleep','door','coin'].includes(name)) return;
+        if (!this.enabled || !['sleep','door','coin','step','pickaxe','break','shine'].includes(name)) return;
         this.unlock();
         const token = this.oneShotToken;
         const buffer = await this.load(name);
         if (!buffer || token !== this.oneShotToken || !this.enabled) return;
         const gain = this.context.createGain();
-        gain.gain.value = this.settings.one_shot_gain[name]; gain.connect(this.master);
+        gain.gain.value = this.settings.one_shot_gain[this.settings.one_shot_gain_links[name] || name]; gain.connect(this.master);
         const source = this.context.createBufferSource();
         source.buffer = buffer; source.connect(gain);
         this.oneShotSources.add(source);
-        source.onended = () => {
-            this.oneShotSources.delete(source); source.disconnect(); gain.disconnect?.();
-        };
+        const completed = new Promise(resolve => {
+            source.onended = () => {
+                this.oneShotSources.delete(source); source.disconnect(); gain.disconnect?.();
+                resolve();
+            };
+        });
         // Independent of task/page transitions: sleep continues into the morning.
         source.start();
+        return completed;
+    }
+    async miningLoot(event) {
+        if (!this.enabled) { this.onNarration(event.tts || ''); return; }
+        const token = this.miningNarrationToken;
+        await this.oneShot('break');
+        if (token !== this.miningNarrationToken || !this.enabled) return;
+        this.onNarration(event.tts || '');
+        if (event.sound === 'shine') this.oneShot('shine');
+        else this.correct(1);
     }
     stopAll() {
         this.stopTasks(); this.stopBackground(); this.oneShotToken++;
@@ -228,6 +250,7 @@ class GameAudio {
         this.oneShotSources.clear();
     }
     stopTasks() {
+        this.miningNarrationToken++;
         this.effectToken++; this.clickToken++;
         for (const source of this.clickSources) {try {source.stop();} catch {}}
         this.clickSources.clear();

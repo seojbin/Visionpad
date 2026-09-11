@@ -15,7 +15,8 @@
       "fertilize": 2,
       "harvest": 3,
       "research": 3,
-      "cook": 3
+      "cook": 3,
+      "mine": 2
     },
     "bar": {
       "panel_width": 40,
@@ -55,7 +56,8 @@
     "cooking": "조리",
     "shop_choice": "상점",
     "shop_buy": "구매",
-    "shop_sell": "판매"
+    "shop_sell": "판매",
+    "mine": "광산"
   },
   "fertilizer": {
     "growth_day_bonus": 1,
@@ -79,7 +81,36 @@
       "costs": [
         30,
         50
+      ],
+      "stone_costs": [
+        5,
+        10
       ]
+    },
+    "harvest_yield": {
+      "max_level": 2,
+      "costs": [
+        20,
+        40
+      ],
+      "copper_costs": [
+        3,
+        6
+      ],
+      "bonus_per_level": 1
+    },
+    "mineral_luck": {
+      "max_level": 2,
+      "costs": [
+        20,
+        40
+      ],
+      "iron_costs": [
+        3,
+        6
+      ],
+      "diamond_weight_per_level": 1,
+      "double_drop_chance_per_level": 0.15
     }
   },
   "seeds": {
@@ -820,6 +851,19 @@
         "size": 3,
         "hit_width": 9,
         "hit_height": 9
+      },
+      {
+        "id": "town_mine",
+        "type": "arrow",
+        "x": 52,
+        "y": 6,
+        "label": "광산으로 이동",
+        "tts": "광산으로 이동",
+        "action": "travel:mine",
+        "direction": "up",
+        "size": 3,
+        "hit_width": 9,
+        "hit_height": 9
       }
     ]
   },
@@ -866,6 +910,18 @@
         "height": 6,
         "hit_width": 12,
         "hit_height": 10
+      },
+      {
+        "id": "map_mine",
+        "type": "node",
+        "x": 44,
+        "y": 30,
+        "label": "광산",
+        "location": "mine",
+        "width": 8,
+        "height": 6,
+        "hit_width": 12,
+        "hit_height": 10
       }
     ],
     "routes": [
@@ -884,6 +940,14 @@
         "x2": 18,
         "y2": 26,
         "label": "마을 길"
+      },
+      {
+        "id": "town_mine_route",
+        "x1": 22,
+        "y1": 30,
+        "x2": 40,
+        "y2": 30,
+        "label": "광산 길"
       }
     ]
   },
@@ -1054,7 +1118,10 @@
       "one_shot_gain": {
         "sleep": 1.0,
         "door": 0.8,
-        "coin": 0.7
+        "coin": 0.7,
+        "pickaxe": 0.8,
+        "break": 0.8,
+        "shine": 0.8
       },
       "bgm_minigame_pages": [
         "seed_select",
@@ -1069,10 +1136,37 @@
         "shop_choice",
         "shop_buy",
         "shop_sell"
-      ]
+      ],
+      "one_shot_gain_links": {
+        "step": "door"
+      }
     },
     "sleep": {
       "blackout_ms": 2000
     }
+  },
+  "mine": {
+    "daily_rock_limit": 7,
+    "rock_width": 10,
+    "rock_height": 10,
+    "rock_gap": 5,
+    "hits_to_break": 3,
+    "pickaxe_price_multiplier": 5,
+    "pickaxe_safe_hits": 9,
+    "pickaxe_break_increment": 0.05,
+    "loot_weights": {
+      "diamond": 1,
+      "iron": 15,
+      "copper": 34,
+      "stone": 50
+    },
+    "mineral_sell_multipliers": {
+      "stone": 1,
+      "copper": 1.5,
+      "iron": 2,
+      "diamond": 20
+    },
+    "mineral_buy_multiplier": 2,
+    "mineral_sell_price_bonus": 3
   }
 }

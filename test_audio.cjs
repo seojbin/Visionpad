@@ -90,3 +90,24 @@ test('cold stale BGM load cannot replace newer background',async()=>{
 test('config sets independent background and one-shot gains',async()=>{
  const {audio}=fixture();audio.configure({bgm_gain:{shop:.55},one_shot_gain:{door:.44}});audio.unlock();audio.handle({page:'shop_buy'},[{kind:'one_shot',sound:'door'}]);await flush();assert.equal(audio.bgmGain.gain.value,.55);assert.equal([...audio.oneShotSources][0].destination.gain.value,.44);audio.stopAll();
 });
+
+test('step follows door gain even after config changes',async()=>{
+ const {audio}=fixture();audio.configure({one_shot_gain:{door:.83}});audio.handle({page:'town'},[{kind:'one_shot',sound:'step'}]);await flush();assert.equal([...audio.oneShotSources][0].destination.gain.value,.83);audio.stopAll();
+});
+test('mining break completes before loot narration and reward',async()=>{
+ const {audio}=fixture();const said=[];audio.onNarration=t=>said.push(t);
+ audio.handle({page:'mine'},[{kind:'mining_loot',sound:'correct',tts:'구리 1개 획득'}]);await flush();assert.deepEqual(said,[]);const breaking=[...audio.oneShotSources][0];assert(breaking?.started);
+ breaking.onended();await flush();assert.deepEqual(said,['구리 1개 획득']);assert.equal(audio.rewardSources.size,1);audio.stopAll();
+});
+test('diamond reward uses shine after break',async()=>{
+ const {audio}=fixture();const said=[];audio.onNarration=t=>said.push(t);
+ audio.handle({page:'mine'},[{kind:'mining_loot',sound:'shine',tts:'다이아몬드 2개 획득. 보너스'}]);await flush();[...audio.oneShotSources][0].onended();await flush();assert.equal(said.length,1);assert.equal(audio.rewardSources.size,0);assert.equal(audio.oneShotSources.size,1);audio.stopAll();
+});
+test('muted effects still narrate mining loot',()=>{
+ const {audio}=fixture();const said=[];audio.onNarration=t=>said.push(t);audio.setEnabled(false);audio.handle({page:'mine'},[{kind:'mining_loot',sound:'shine',tts:'다이아몬드 1개 획득'}]);assert.deepEqual(said,['다이아몬드 1개 획득']);audio.stopAll();
+});
+test('navigation cancels stale delayed mining narration',async()=>{
+ const {audio}=fixture();const said=[];audio.onNarration=t=>said.push(t);audio.handle({page:'mine'},[{kind:'mining_loot',sound:'correct',tts:'돌 1개 획득'}]);await flush();const breaking=[...audio.oneShotSources][0];audio.stopTasks();audio.handle({page:'town'});breaking.onended();await flush();assert.deepEqual(said,[]);audio.stopAll();
+});
+
+test('night snapshots preserve final mining loot narration',async()=>{const {audio}=fixture();const said=[];audio.onNarration=t=>said.push(t);audio.held=true;audio.handle({page:'home',day_ended:true},[{kind:'mining_loot',sound:'correct',tts:'돌 1개 획득. 집에 도착'}]);await flush();const breaking=[...audio.oneShotSources][0];audio.handle({page:'home',day_ended:true});breaking.onended();await flush();assert.equal(said.length,1);audio.stopAll();});
