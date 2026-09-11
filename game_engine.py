@@ -9,6 +9,7 @@ class GameEngine:
 
     def __init__(self, config):
         self.config = config
+        self.sleep_blackout_seconds = max(0, float(config.get("interaction", {}).get("sleep", {}).get("blackout_ms", 2000))) / 1000
         interaction = config.get("interaction", {})
         feedback = interaction.get("feedback", {})
         cooking = interaction.get("cooking", {})
@@ -39,6 +40,7 @@ class GameEngine:
         self.reset()
 
     def reset(self):
+        self.sleep_until = None
         self.pending_visual_completion = None
         self.inventory_page = 0
         self.inventory_page_count = 1
@@ -277,13 +279,26 @@ class GameEngine:
         self.clear_hover()
         self.render()
 
-    def night_response(self, prefix=None):
+    def night_response(self, prefix=None, sound_events=None):
         narration = "밤이 되어 집에 도착했습니다. 침대를 눌러 주무세요"
         if prefix:
             narration = f"{prefix}. {narration}"
-        return self.response(tts=narration, sfx="day_end")
+        return self.response(tts=narration, sfx="day_end", sound_events=sound_events)
 
     def next_day(self):
+        if self.sleep_until is not None:
+            return self.response()
+        self.sleep_until = time.monotonic() + self.sleep_blackout_seconds
+        self.pointer_pressed = False
+        self.clear_care()
+        self.clear_harvest()
+        self.clear_cooking()
+        self.clear_hover()
+        self.render()
+        return self.response(tts="잠듭니다", sound_events=[{"kind": "one_shot", "sound": "sleep"}])
+
+    def finish_sleep(self):
+        self.sleep_until = None
         matured = []
         for state in self.farm_plots.values():
             if state["seed_id"] is not None and not state["mature"] and state["watered"]:
@@ -351,6 +366,8 @@ class GameEngine:
         return max(1, int(math.ceil(ingredient_total * 1.2)))
 
     def get_objects(self):
+        if self.sleep_until is not None:
+            return []
         pages = {
             "home": self.get_home_objects,
             "farm": self.get_farm_objects,
@@ -896,6 +913,9 @@ class GameEngine:
 
     def render(self):
         self.dotpad.clear()
+        if self.sleep_until is not None:
+            self.timepad.clear()
+            return
         for obj in self.get_objects():
             obj_type = obj.get("type")
             if obj_type == "arrow":
@@ -1193,6 +1213,10 @@ class GameEngine:
         return True
 
     def visual_tick(self):
+        if self.sleep_until is not None:
+            if time.monotonic() >= self.sleep_until:
+                return self.finish_sleep()
+            return self.response()
         # Browser polling keeps physical output current even without movement.
         if not self.paused and self.pending_visual_completion:
             deadline, kind = self.pending_visual_completion
@@ -1356,6 +1380,8 @@ class GameEngine:
         return mapping.get(obj.get("type"), "hover_object")
 
     def pointer_move(self, x, y):
+        if self.sleep_until is not None:
+            return self.response()
         self.last_pointer = (x, y)
         if self.paused:
             return self.response()
@@ -1372,6 +1398,8 @@ class GameEngine:
         return self.response()
 
     def pointer_down(self, x, y):
+        if self.sleep_until is not None:
+            return self.response()
         if self.pending_visual_completion:
             return self.response()
         self.pointer_pressed = True
@@ -1423,6 +1451,8 @@ class GameEngine:
         return self.perform_action(action, obj)
 
     def pointer_drag(self, x, y):
+        if self.sleep_until is not None:
+            return self.response()
         if self.pending_visual_completion:
             return self.response()
         previous_x, previous_y = self.last_pointer
@@ -1472,6 +1502,8 @@ class GameEngine:
         return self.response()
 
     def pointer_up(self, x, y):
+        if self.sleep_until is not None:
+            return self.response()
         if self.paused:
             self.pointer_pressed = False
             self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
@@ -1888,9 +1920,9 @@ class GameEngine:
             result = self.consume_time("research")
             text = f"씨앗 회수 연구를 {level + 1}단계로 올렸습니다. 골드 {cost}개를 사용했습니다"
             if result["night"]:
-                return self.night_response(text)
+                return self.night_response(text, sound_events=[{"kind": "one_shot", "sound": "coin"}] if cost > 0 else [])
             self.render()
-            return self.response(tts=text, sfx="research")
+            return self.response(tts=text, sfx="research", sound_events=[{"kind": "one_shot", "sound": "coin"}] if cost > 0 else [])
 
         if research_kind == "field_expand":
             cfg = self.config.get("research", {}).get("field_expansion", {})
@@ -1908,9 +1940,9 @@ class GameEngine:
             result = self.consume_time("research")
             text = f"밭을 확장했습니다. 이제 밭 {self.unlocked_plot_count}개를 사용할 수 있습니다. 골드 {cost}개를 사용했습니다"
             if result["night"]:
-                return self.night_response(text)
+                return self.night_response(text, sound_events=[{"kind": "one_shot", "sound": "coin"}] if cost > 0 else [])
             self.render()
-            return self.response(tts=text, sfx="research")
+            return self.response(tts=text, sfx="research", sound_events=[{"kind": "one_shot", "sound": "coin"}] if cost > 0 else [])
         return self.response()
 
     def start_harvest_minigame(self, plot_id):
@@ -2230,7 +2262,7 @@ class GameEngine:
         self.current_page = "shop_choice"
         self.clear_hover()
         self.render()
-        return self.response(tts="상점입니다. 왼쪽 판매, 오른쪽 구매", sfx="shop_open")
+        return self.response(tts="상점입니다. 왼쪽 판매, 오른쪽 구매", sfx="shop_open", sound_events=[{"kind": "one_shot", "sound": "door"}])
 
     def open_shop_mode(self, mode):
         if mode == "sell":
@@ -2266,7 +2298,7 @@ class GameEngine:
             count = self.resources["fertilizer"]
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{label} 1개 구매, {price}골드. 보유 {count}개, 잔액 {self.resources['coin']}골드", sfx="shop_buy")
+        return self.response(tts=f"{label} 1개 구매, {price}골드. 보유 {count}개, 잔액 {self.resources['coin']}골드", sfx="shop_buy", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
 
     def sell_shop_item(self, kind, item_id):
         if kind == "crop":
@@ -2288,9 +2320,11 @@ class GameEngine:
         self.resources["coin"] += price
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{label} 1개 판매, +{price}골드. 잔액 {self.resources['coin']}골드", sfx="shop_sell")
+        return self.response(tts=f"{label} 1개 판매, +{price}골드. 잔액 {self.resources['coin']}골드", sfx="shop_sell", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
 
     def handle_command(self, command):
+        if self.sleep_until is not None:
+            return self.response()
         command = str(command).lower().strip()
         if command == "pause":
             self.paused = not self.paused
@@ -2333,6 +2367,7 @@ class GameEngine:
                          "description": self.get_object_tts(o), "actionable": bool(o.get("action"))}
                         for o in self.get_objects() if o.get("type") != "route"],
             "action_costs": {k: self.get_action_cost(k) for k in ("travel", "plant", "water", "fertilize", "harvest", "research", "cook")},
+            "sleeping": self.sleep_until is not None,
             "client_settings": self.client_settings,
             "page": self.current_page,
             "page_name": self.get_page_name(self.current_page),
