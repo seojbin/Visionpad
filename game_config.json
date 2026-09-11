@@ -1010,7 +1010,7 @@
   },
   "interaction": {
     "feedback": {
-      "disappear_delay_ms": 1000,
+      "disappear_delay_ms": 500,
       "visual_refresh_interval_ms": 100
     },
     "cooking": {

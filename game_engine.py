@@ -2178,7 +2178,7 @@ class GameEngine:
         percent = int(round((progress / total) * 100)) if total else 0
         self.cooking_resume_marker = progress > 0
         self.render()
-        return self.response(tts=f"진행 {percent}퍼센트. 네모에서 이어가세요. 재료 소모 없음")
+        return self.response(tts=f"진행 {percent}퍼센트.")
 
     def finish_cooking_success(self):
         recipe_id = self.selected_recipe_id
