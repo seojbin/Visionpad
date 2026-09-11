@@ -330,7 +330,7 @@ class GameEngine:
         text = f"{self.day}일차 아침입니다"
         if matured:
             names = ", ".join(dict.fromkeys(matured))
-            text += f". {names} 작물이 밤사이 다 자랐습니다"
+            text += f". {names} 작물이 다 자랐습니다"
         return self.response(tts=text, sfx="morning")
 
     def draw_time_bar(self):
@@ -421,7 +421,7 @@ class GameEngine:
                 seed_label = self.get_seed_label(seed_id)
                 needed = int(self.get_seed_config(seed_id).get("growth_days", 3))
                 if state["mature"]:
-                    obj["tts"] = f"{plot['label']}입니다. {seed_label}가 다 자랐습니다. 선택하면 상세 밭 관리 화면으로 들어갑니다"
+                    obj["tts"] = f"{plot['label']}입니다. {seed_label}가 다 자랐습니다."
                 else:
                     water_text = "물을 줬습니다" if state["watered"] else "물이 부족합니다"
                     fertilizer_text = "비료를 줬습니다" if state["fertilized"] else "비료가 부족합니다"
@@ -452,7 +452,7 @@ class GameEngine:
                     "x": 30, "y": 17, "width": 44, "height": 18,
                     "hit_width": 48, "hit_height": 18,
                     "label": f"{plot_label} 상세",
-                    "tts": f"{plot_label} 상세 관리입니다. 현재 비어 있습니다. 씨앗 심기를 선택해 작물을 심을 수 있습니다",
+                    "tts": f"{plot_label} 상세 관리입니다. 현재 비어 있습니다.",
                     "action": ""
                 },
                 {
@@ -460,7 +460,7 @@ class GameEngine:
                     "x": 30, "y": 31, "width": 18, "height": 6,
                     "hit_width": 22, "hit_height": 10,
                     "label": "씨앗 심기",
-                    "tts": "씨앗 심기입니다. 선택하면 현재 보유한 씨앗 목록을 엽니다",
+                    "tts": "씨앗 심기. 선택하면 현재 보유한 씨앗 목록을 엽니다",
                     "action": f"open_seed_select:{plot_id}"
                 },
                 self.back_arrow("plot_detail_back", "농장으로 돌아가기", "return_scene")
@@ -693,7 +693,7 @@ class GameEngine:
         costs = list(seed_cfg.get("costs", []))
 
         if level >= max_level:
-            seed_tts = f"씨앗 회수 연구입니다. 현재 {level}단계로 최대 단계입니다"
+            seed_tts = f"씨앗 회수 연구. 현재 {level}단계로 최대 단계입니다"
             seed_action = ""
         else:
             cost = int(costs[level]) if level < len(costs) else 999999
@@ -713,7 +713,7 @@ class GameEngine:
         initial = int(expand_cfg.get("initial_plot_count", 2))
         expansion_index = max(0, self.unlocked_plot_count - initial)
         if self.unlocked_plot_count >= len(all_plots):
-            expand_tts = f"밭 확장 연구입니다. 현재 밭 {self.unlocked_plot_count}개를 사용하며 최대 확장 상태입니다"
+            expand_tts = f"밭 확장 연구. 현재 밭 {self.unlocked_plot_count}개"
             expand_action = ""
         else:
             cost = int(costs[expansion_index]) if expansion_index < len(costs) else 999999
@@ -742,7 +742,7 @@ class GameEngine:
             "width": int(field.get("width", 46)), "height": int(field.get("height", 30)),
             "hit_width": int(field.get("width", 46)), "hit_height": int(field.get("height", 30)),
             "label": "확대된 밭",
-            "tts": f"확대된 {seed_label} 밭입니다. 손가락을 누른 채 작물들을 채집하세요",
+            "tts": f"손가락을 누른 채 작물들을 채집하세요",
             "action": ""
         }]
         for target in self.harvest_targets:
@@ -801,7 +801,7 @@ class GameEngine:
             "id": "ingredient_start", "type": "cooking_start", "x": 30, "y": 31,
             "width": 18, "height": 6, "hit_width": 20, "hit_height": 9,
             "label": "조리 시작",
-            "tts": "조리 시작입니다." if ready else "조리 시작입니다. 필요한 재료를 모두 먼저 선택하세요",
+            "tts": "조리 시작." if ready else "필요한 재료를 모두 먼저 선택하세요",
             "action": "start_cooking" if ready else ""
         })
         objects.append(self.back_arrow("ingredient_back", "레시피로 돌아가기", "open_recipes"))
@@ -815,12 +815,12 @@ class GameEngine:
             {
                 "id": "shop_sell_choice", "type": "shop_choice", "choice": "sell",
                 "x": 15, "y": 20, "width": 28, "height": 34, "hit_width": 30, "hit_height": 38,
-                "label": "판매", "tts": "판매입니다. 왼쪽 영역을 선택하면 보유한 작물과 요리를 팝니다", "action": "shop_mode:sell"
+                "label": "판매", "tts": "판매. 왼쪽 영역을 선택하면 보유한 작물과 요리를 팝니다", "action": "shop_mode:sell"
             },
             {
                 "id": "shop_buy_choice", "type": "shop_choice", "choice": "buy",
                 "x": 45, "y": 20, "width": 28, "height": 34, "hit_width": 30, "hit_height": 38,
-                "label": "구매", "tts": "구매입니다. 오른쪽 영역을 선택하면 씨앗과 비료를 삽니다", "action": "shop_mode:buy"
+                "label": "구매", "tts": "구매. 오른쪽 영역을 선택하면 씨앗과 비료를 삽니다", "action": "shop_mode:buy"
             }
         ]
 
