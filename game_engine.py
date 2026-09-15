@@ -4,11 +4,13 @@ import random
 import time
 
 from dotpad import DotPad
+from pathlib import Path
+from game_saves import SaveMixin
 
 
-class GameEngine:
+class GameEngine(SaveMixin):
 
-    def __init__(self, config):
+    def __init__(self, config, save_dir=None):
         config = self.prepare_display_config(config)
         self.config = config
         self.sleep_blackout_seconds = max(0, float(config.get("interaction", {}).get("sleep", {}).get("blackout_ms", 2000))) / 1000
@@ -39,6 +41,8 @@ class GameEngine:
             height=int(time_bar.get("panel_height", 4))
         )
 
+        self.save_dir = Path(save_dir) if save_dir is not None else Path(__file__).resolve().parent / "saves"
+        self._static_fields = set(vars(self))
         self.reset()
 
     @staticmethod
@@ -78,6 +82,8 @@ class GameEngine:
     def compact_objects(self, objects):
         """Pack menu objects in reading order, using the same geometry for touch and output."""
         page = self.current_page
+        if page == "load_game":
+            return objects
         if page == "inventory":
             objects = [dict(o) for o in objects]
             items = [o for o in objects if o.get("type") == "resource"]
@@ -142,6 +148,8 @@ class GameEngine:
         return items+arrows
 
     def reset(self):
+        self._load_return = None
+        self._save_slots = []
         self.sleep_until = None
         self.pending_visual_completion = None
         self.shop_page = 0
@@ -295,6 +303,7 @@ class GameEngine:
         return " "
 
     def get_page_name(self, page_id):
+        if page_id == "load_game": return "Load game"
         return self.config.get("pages", {}).get(page_id, page_id)
 
     def get_seed_config(self, seed_id):
@@ -480,6 +489,7 @@ class GameEngine:
         if self.sleep_until is not None:
             return []
         pages = {
+            "load_game": self.get_load_objects,
             "home": self.get_home_objects,
             "farm": self.get_farm_objects,
             "town": self.get_town_objects,
@@ -501,8 +511,16 @@ class GameEngine:
         }
         getter = pages.get(self.current_page)
         objects = self.compact_objects(getter()) if getter else []
+        # Normalize after layout so rendering and touch share the same anchors.
         for obj in objects:
             if obj.get("type") == "arrow":
+                if obj.get("action", "").startswith("shop_page:"):
+                    obj.update(x=15 if obj["direction"] == "left" else 25, y=self.dotpad.height-6)
+                elif obj.get("direction") == "up" or (
+                self.current_page == "home" and obj.get("direction") == "right"):
+                    obj.update(direction="right", x=self.dotpad.width-4, y=5)
+                elif obj.get("direction") == "left" or (self.current_page == "home" and obj.get("direction") == "down"):
+                    obj.update(direction="left", x=3, y=self.dotpad.height-6)
                 w,h=(5,9) if obj.get("direction") in ("left","right") else (9,5)
                 obj["hit_width"],obj["hit_height"]=w,h
         return objects
@@ -1037,7 +1055,10 @@ class GameEngine:
             return
         for obj in self.get_objects():
             obj_type = obj.get("type")
-            if obj_type == "mine_rock":
+            if obj_type == "save_slot":
+                self.dotpad.draw_box(obj["x"], obj["y"], obj["width"], obj["height"])
+                self.dotpad.draw_box(obj["x"], obj["y"], 4, 4)
+            elif obj_type == "mine_rock":
                 left, top = obj["x"] - obj["width"] // 2, obj["y"] - obj["height"] // 2
                 for y in range(top, top + obj["height"]):
                     for x in range(left, left + obj["width"]):
@@ -1364,6 +1385,7 @@ class GameEngine:
         return True
 
     def visual_tick(self):
+        if self.current_page == "load_game": return self.response()
         if self.sleep_until is not None:
             if time.monotonic() >= self.sleep_until:
                 return self.finish_sleep()
@@ -1699,6 +1721,8 @@ class GameEngine:
         return result
 
     def _perform_action(self, action, obj):
+        if action == "close_load": return self.close_load_game()
+        if action.startswith("load_slot:"): return self.load_game(action.split(":", 1)[1])
         if self.day_ended and action != "rest":
             return self.night_only_response()
         if action.startswith("mine_hit:"):
@@ -2531,6 +2555,12 @@ class GameEngine:
         return self.response(tts=f"{label} sold. Gold left: {self.resources['coin']} gold", sfx="shop_sell", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
 
     def handle_command(self, command):
+        command = str(command).lower().strip()
+        if command == "save": return self.save_game()
+        if command == "load": return self.open_load_game()
+        if self.current_page == "load_game":
+            if command == "scene": return self.close_load_game()
+            return self.response(tts="Choose a save, or go back.")
         if self.sleep_until is not None:
             return self.response()
         command = str(command).lower().strip()
@@ -2674,8 +2704,8 @@ class GameEngine:
             top = origin_y + row * (rh + gap)
             for col in range(columns):
                 left = origin_x + col * (rw + gap)
-                # Keep the top-left triangle and its touch area clear.
-                if left < 12 and top < 12:
+                # Keep the bottom-left triangle and its touch area clear.
+                if left < 11 and top + rh > height - 15:
                     continue
                 candidates.append((left, top))
         random.shuffle(candidates)
@@ -2696,7 +2726,7 @@ class GameEngine:
                             "label": "Rock", "tts": "Rock. Tap to break." if self.resources["pickaxe"] else "Pickaxe required.",
                             "action": f"mine_hit:{rock['id']}"})
         exit_arrow = self.back_arrow("mine_exit", "Village", "travel:town")
-        exit_arrow.update(x=5, y=5, direction="left", size=3, hit_width=7, hit_height=7)
+        exit_arrow.update(x=3, y=self.dotpad.height-6, direction="left", size=3, hit_width=7, hit_height=7)
         objects.append(exit_arrow)
         return objects
 
@@ -2772,7 +2802,7 @@ class GameEngine:
             if kind == "pickaxe" and count:
                 text = "Pickaxe owned. Limit one."
             objects.append({"id": f"shop_{mode}_{kind}_{item_id}", "type": "shop_item", "shop_kind": kind, "item_id": item_id,
-                            "x": x, "y": y, "width": 10, "height": 6, "hit_width": 13, "hit_height": 9,
+                            "x": x, "y": y, "width": 10, "height": 6, "hit_width": 10, "hit_height": 6,
                             "label": label, "tts": text, "action": f"{mode}:{kind}:{item_id}"})
         objects.append(self.back_arrow(f"shop_{mode}_back", "Back to village", "return_scene"))
         for delta, x, direction, label in [(-1, 30, "left", "Previous page"), (1, 51, "right", "Next page")]:

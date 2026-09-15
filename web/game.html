@@ -13,13 +13,13 @@
 <div class="top-info"><div class="info-box">Day<strong id="day-text">Day 1</strong></div><div class="info-box">Location<strong id="location-text">Home</strong></div><div class="info-box">Gold<strong id="coin-text">60</strong></div><div class="info-box">Activity time<strong id="time-text">0 / 20</strong></div></div>
 <div class="pad-panel" id="pad-panel"><div class="device-top"><b>dot<span style="font-weight:300"> pad</span></b><span>TACTILE GAME SIMULATOR</span><span>60 × 40</span></div>
 <div class="hardware-layout"><div class="screen"><canvas id="dotpad" width="900" height="600" tabindex="0" aria-label="Tactile game pad. Arrow keys move the pointer, Enter selects, and Space presses or releases."></canvas></div></div>
-<div class="hardware-controls"><button id="nav-prev" class="physical-arrow" aria-label="Previous object"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4L6 12l10 8Z"/></svg></button><div class="controls"><button data-command="minimap">F1<span>Map</span></button><button data-command="scene">F2<span>Location</span></button><button data-command="resources">F3<span>Inventory</span></button><button data-command="pause">F4<span>Pause</span></button></div><button id="nav-next" class="physical-arrow" aria-label="Next object"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l10 8L8 20Z"/></svg></button></div>
+<div class="hardware-controls"><button id="nav-prev" class="physical-arrow" aria-label="Load game" title="Load game"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4L6 12l10 8Z"/></svg></button><div class="controls"><button data-command="minimap">F1<span>Map</span></button><button data-command="scene">F2<span>Location</span></button><button data-command="resources">F3<span>Inventory</span></button><button data-command="pause">F4<span>Pause</span></button></div><button id="nav-next" class="physical-arrow" aria-label="Save game" title="Save game"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l10 8L8 20Z"/></svg></button></div>
 <div class="device-leds" aria-hidden="true"><i></i><i></i></div><div class="braille-bezel"><canvas id="timepad" width="600" height="60" aria-label="Activity time used, shown in the lower 20 cells"></canvas></div><div class="time-label">Activity time · 20 cells · Travel is free</div>
 <div class="device-bottom"><span>DOTDEW VALLEY</span><span id="pointer-info">TOUCH · DRAG · RELEASE</span></div></div>
 <div class="support-line"><span>Explore the same dot patterns and controls before connecting a physical pad.</span><a href="https://dot-canvas-esy-0910.ey55616.chatgpt.site/" target="_blank" rel="noopener noreferrer">Open reference pad ↗</a></div>
-<details class="card"><summary>Controls and game time</summary><p>Select an object with a mouse or touch, then hold and move to interact. With the pad focused, use the arrow keys to move one dot (Shift: three dots), Enter to select, and Space to press or release.<br>Travel and opening menus take no time. Planting, watering, and fertilizing take two hours; harvesting, research, and cooking take three. Water crops before sleeping to help them grow. Fertilizer advances growth immediately.<br>Hold and drag over targets to water, fertilize, or harvest. Collect every harvest target to finish. You can release and continue later. Food effects can improve your harvest or help with other activities.<br>Select all required ingredients to start cooking automatically, then follow each path in order. Release between stages and press the next filled square to continue. Minigames have no time limit.<br>When your daily activity time runs out, you return home. Select the bed to start the next day.</p></details>
+<details class="card"><summary>Controls and game time</summary><p>Select an object with a mouse or touch, then hold and move to interact. With the pad focused, use the arrow keys to move one dot (Shift: three dots), Enter to select, and Space to press or release.<br>The right device triangle saves a new slot; the left opens saved games. The newest 12 saves are kept. Select the lower-left triangle on the load screen to return without loading.<br>Travel and opening menus take no time. Planting, watering, and fertilizing take two hours; harvesting, research, and cooking take three. Water crops before sleeping to help them grow. Fertilizer advances growth immediately.<br>Hold and drag over targets to water, fertilize, or harvest. Collect every harvest target to finish. You can release and continue later. Food effects can improve your harvest or help with other activities.<br>Select all required ingredients to start cooking automatically, then follow each path in order. Release between stages and press the next filled square to continue. Minigames have no time limit.<br>When your daily activity time runs out, you return home. Select the bed to start the next day.</p></details>
 </main><aside>
-<section class="card"><div class="section-tag">CURRENT SCENE</div><div class="scene-title" id="page-text">Home</div><div class="scene-sub" id="task-progress">Choose an activity to start your day.</div><h2 style="margin-top:22px">Voice guidance <small id="tts-text" class="section-tag">Loading</small></h2><div id="caption" role="status">Select an object on the pad.</div><div class="toolbar"><button id="repeat-button">Replay</button><button id="mute-button" aria-pressed="false">Speech on</button><button id="tts-test-button">Test</button></div><label class="setting">Speech rate <input id="speech-rate" type="range" min="0.8" max="1.5" step="0.1" value="1.1"><span id="rate-label">1.1×</span></label><label class="setting">Sound volume <input id="sfx-volume" type="range" min="0" max="1" step="0.1" value="0.7"><span id="volume-label">70%</span></label><div class="toolbar" style="margin-top:12px"><button id="sfx-toggle" aria-pressed="false">Sound on</button></div><p id="sound-text" class="scene-sub">Task and reward sounds ready</p></section>
+<section class="card"><div class="section-tag">CURRENT SCENE</div><div class="scene-title" id="page-text">Home</div><div class="scene-sub" id="task-progress">Choose an activity to start your day.</div><h2 style="margin-top:22px">Voice guidance <small id="tts-text" class="section-tag">Loading</small></h2><div id="caption" role="status">Select an object on the pad.</div><div class="toolbar"><button id="repeat-button">Replay</button><button id="mute-button" aria-pressed="false">Speech on</button><button id="tts-test-button">Test</button></div><p id="voice-info" class="scene-sub">Loading English voices…</p><label class="setting">Speech rate <input id="speech-rate" type="range" min="0.8" max="1.5" step="0.1" value="1.1"><span id="rate-label">1.1×</span></label><label class="setting">Sound volume <input id="sfx-volume" type="range" min="0" max="1" step="0.1" value="0.7"><span id="volume-label">70%</span></label><div class="toolbar" style="margin-top:12px"><button id="sfx-toggle" aria-pressed="false">Sound on</button></div><p id="sound-text" class="scene-sub">Task and reward sounds ready</p></section>
 <section class="card"><h2>Daily status</h2><div id="score-feedback" style="color:var(--mint);font-size:12px;min-height:22px"></div><div id="buff-text">No food effect</div><div class="progress-track"><div id="activity-fill"></div></div><div class="metrics"><div>Fertilizer<strong id="fertilizer-text">2</strong></div><div>Unlocked plots<strong id="plot-text">2</strong></div><div>Seed recovery<strong id="research-text">Level 0</strong></div><div>Time left<strong id="remaining-text">20 hours</strong></div></div></section>
 <section class="card"><h2>Objects nearby</h2><div class="scene-sub" style="margin-bottom:12px">These buttons perform the same actions as the tactile objects.</div><div id="object-list"></div></section>
 <section class="card"><h2>Physical pad and hand tracking</h2><div class="toolbar"><button id="usb-button">Connect USB pad</button></div><p class="scene-sub" id="hardware-status">Web simulator · USB not connected</p><label class="setting" for="tracking-url">Hand-tracking server</label><input id="tracking-url" value="ws://127.0.0.1:8765" aria-label="Hand-tracking WebSocket address" style="width:100%;padding:9px;background:#111b13;border:1px solid #41543b;color:#dcead4;border-radius:6px;margin:8px 0"><div class="toolbar"><button id="tracking-button">Connect hand tracking</button><button id="tracking-hold" aria-pressed="false" disabled>Press</button></div><p id="tracking-status" class="scene-sub">Not connected</p><p class="scene-sub" style="line-height:1.6">The reference server sends hand coordinates only. Use the press button to begin selecting or dragging, then press it again to release.</p><a href="https://github.com/eun022/hand_drawing" target="_blank" rel="noopener noreferrer" style="color:#cbe8b8;font-size:12px">Connection tools and setup ↗</a></section><details class="card"><summary>Diagnostics and reset</summary><p>This page simulates the tactile pad. Connect a USB pad using Chrome or Edge on localhost. Start the hand-tracking server before connecting. Progress is stored in server memory and resets when the server restarts.</p><div id="status"></div><button class="text-button" id="reset-button">New game</button></details>
@@ -84,8 +84,13 @@ function refreshVoices() {
         return;
     }
     const voices = speechSynthesis.getVoices();
-    englishVoice = voices.find(v => v.lang?.toLowerCase() === "en-us")
-        || voices.find(v => v.lang?.toLowerCase().startsWith("en")) || null;
+    const locale = voice => String(voice.lang || "").replace(/_/g, "-").toLowerCase();
+    englishVoice = voices.find(v => locale(v) === "en-us")
+        || voices.find(v => /^en(?:-|$)/.test(locale(v))) || null;
+    const voiceInfo = document.getElementById("voice-info");
+    if (voiceInfo) voiceInfo.textContent = englishVoice
+        ? `${englishVoice.name || "English"} (${englishVoice.lang})`
+        : "No English voice available. Enable an English system voice, then reload.";
     if (!activeUtterance) ttsText.textContent = englishVoice ? "Ready" : "English voice not found";
 }
 function playPendingSpeech() {
@@ -95,13 +100,19 @@ function playPendingSpeech() {
     // Invalidate old callbacks before cancel, including delayed start callbacks.
     speechSynthesis.cancel();
     gameAudio.setDucked(false);
+    activeUtterance = null;
+    actionSpeaking = false;
+    refreshVoices();
+    // Never let an unavailable English voice fall back to the system's Korean voice.
+    // Keep the latest message pending for voiceschanged or the next user input.
+    if (!englishVoice) return;
     speechSynthesis.resume();
     const utterance = new SpeechSynthesisUtterance(message.text);
     activeUtterance = utterance;
-    utterance.lang = englishVoice?.lang || "en-US";
+    utterance.lang = englishVoice.lang.replace(/_/g, "-");
     utterance.rate = Number(document.getElementById("speech-rate").value);
     utterance.volume = 1;
-    if (englishVoice) utterance.voice = englishVoice;
+    utterance.voice = englishVoice;
     utterance.onstart = () => {
         if (sequence !== speechSequence) return;
         pendingSpeech = null;
@@ -562,7 +573,7 @@ ttsTestButton.addEventListener("click", () => {
     unlockSpeech();
     ensureAudioContext();
     playSfx("hover_object");
-    speak("Voice guidance is ready.");
+    speak("Available recipes: 3.");
 });
 
 resetButton.addEventListener("click", () => {
@@ -578,15 +589,15 @@ document.getElementById("mute-button").addEventListener("click",event=>{
     if (!speechEnabled && "speechSynthesis" in window) {speechSequence++;pendingSpeech=null;activeUtterance=null;speechSynthesis.cancel();actionSpeaking=false;gameAudio.setDucked(false);ttsText.textContent="Off";}
 });
 document.getElementById("speech-rate").addEventListener("input",event=>{document.getElementById("rate-label").textContent=event.target.value+"×"});
-for(const [id,direction] of [["nav-prev",-1],["nav-next",1]]){
-    document.getElementById(id).addEventListener("click",()=>{
-        unlockSpeech();const objects=(currentState?.objects||[]).filter(o=>o.x!=null&&!['care_target','harvest_crop','care_field','harvest_field'].includes(o.type));
-        if(!objects.length){announce(document.getElementById("task-progress").textContent);return;}
-        const current=objects.findIndex(o=>o.id===currentState.hover_object);
-        const index=current<0?(direction>0?0:objects.length-1):(current+direction+objects.length)%objects.length;
-        const o=objects[index];pointerX=o.x;pointerY=o.y;pointerInside=true;
-        queuePointer("/api/pointer/move",o.x,o.y);
+for (const [id, command] of [["nav-prev", "load"], ["nav-next", "save"]]) {
+    const button = document.getElementById(id);
+    button.addEventListener("click", () => {
+        unlockSpeech();
+        pointerPressed = false;
+        gameAudio.inputUp();
+        sendCommand(command);
     });
+    button.addEventListener("pointerenter", () => announce(command === "save" ? "Save game." : "Load game.", "hover"));
 }
 document.getElementById("sfx-volume").addEventListener("input",event=>{
     gameAudio.unlock();gameAudio.setVolume(event.target.value);document.getElementById("volume-label").textContent=Math.round(event.target.value*100)+"%";
