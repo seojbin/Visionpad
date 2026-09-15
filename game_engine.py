@@ -78,6 +78,14 @@ class GameEngine:
     def compact_objects(self, objects):
         """Pack menu objects in reading order, using the same geometry for touch and output."""
         page = self.current_page
+        if page == "inventory":
+            objects = [dict(o) for o in objects]
+            items = [o for o in objects if o.get("type") == "resource"]
+            for i,o in enumerate(items):
+                o.update(x=8+14*(i%4), y=5+10*(i//4), width=12, height=8, hit_width=12, hit_height=8)
+            for o in objects:
+                if o.get("type") == "arrow": o.update(y=34)
+            return objects
         if page in ("home", "town"):
             return self.spatial_objects(objects)
         if page in ("shop_buy", "shop_sell"):
@@ -112,11 +120,7 @@ class GameEngine:
         gap, margin = 3, 2
         right = self.dotpad.width-margin
         if page == "shop_choice":
-            # These full-height tiles cannot wrap vertically; narrow only their
-            # width to leave room for the right-hand back triangle.
-            right = self.dotpad.width-10
-            tile_width = (right-margin-gap)//max(1,len(items))
-            for o in items: o["width"] = min(o.get("width",28), tile_width)
+            for o in items: o.update(width=12,height=12)
         x, top, row_height, bottom = margin, margin, 0, margin
         for o in items:
             w = min(o.get("width",10), right-margin)
@@ -133,7 +137,7 @@ class GameEngine:
             o.update(x=5+i*10, y=min(self.dotpad.height-6, bottom+5), hit_width=7, hit_height=9)
         if page == "shop_choice":
             back = self.back_arrow("shop_choice_back", "Back to village", "return_scene")
-            back.update(x=55, y=8, size=3, hit_width=7, hit_height=7)
+            back.update(x=5, y=bottom+5, size=3, hit_width=5, hit_height=9)
             arrows.append(back)
         return items+arrows
 
@@ -960,15 +964,6 @@ class GameEngine:
                 "action": f"toggle_ingredient:{seed_id}"
             })
 
-        required = set(recipe.get("ingredients", {}).keys())
-        ready = required and required.issubset(self.selected_ingredients)
-        objects.append({
-            "id": "ingredient_start", "type": "cooking_start", "x": 30, "y": 31,
-            "width": 18, "height": 6, "hit_width": 20, "hit_height": 9,
-            "label": "Start cooking",
-            "tts": "Start cooking." if ready else "Select all ingredients first.",
-            "action": "start_cooking" if ready else ""
-        })
         objects.append(self.back_arrow("ingredient_back", "Back to recipes", "open_recipes"))
         return objects
 
@@ -1347,8 +1342,8 @@ class GameEngine:
         self.dotpad.draw_box(x, y, obj.get("width", 12), obj.get("height", 9))
         self.dotpad.set_dot(x, y)
         if obj.get("selected"):
-            self.dotpad.draw_line(x - 3, y + 2, x - 1, y + 4)
-            self.dotpad.draw_line(x - 1, y + 4, x + 4, y - 3)
+            self.dotpad.draw_line(x - 3, y + 1, x - 1, y + 3)
+            self.dotpad.draw_line(x - 1, y + 3, x + 3, y - 2)
 
     def draw_cooking_start(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
@@ -1424,10 +1419,10 @@ class GameEngine:
     def draw_shop_choice(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
         self.dotpad.draw_box(x, y, obj.get("width", 28), obj.get("height", 34))
-        if obj.get("choice") == "sell":
-            self.draw_triangle(x, y, "left", 3)
-        else:
-            self.draw_triangle(x, y, "right", 3)
+        glyph = (["01111","10000","10000","01110","00001","00001","11110"]
+                 if obj.get("choice") == "sell" else
+                 ["11110","10001","10001","11110","10001","10001","11110"])
+        self.draw_icon_pattern(x,y,glyph)
 
     def draw_shop_item(self, obj):
         if obj.get("shop_kind") == "food":
@@ -1832,6 +1827,7 @@ class GameEngine:
         return self.response(tts="Research.", sfx="open_page")
 
     def return_to_scene(self):
+        self.pointer_pressed = False
         self.current_page = "home" if self.day_ended else self.current_location
         self.seed_select_plot_id = None
         self.drag_tool = None
@@ -2243,9 +2239,11 @@ class GameEngine:
         self.current_page = "ingredient_select"
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{self.get_recipe_label(recipe_id)}. {self.recipe_ingredient_text(recipe_id)}. Select ingredients, then start.", sfx="open_page")
+        return self.response(tts=f"{self.get_recipe_label(recipe_id)}. {self.recipe_ingredient_text(recipe_id)}. Select all ingredients to start cooking.", sfx="open_page")
 
     def toggle_ingredient(self, seed_id):
+        if self.current_page != "ingredient_select":
+            return self.response()
         recipe = self.get_recipe_config(self.selected_recipe_id)
         if seed_id not in recipe.get("ingredients", {}):
             return self.response(tts="Ingredient not required.", sfx="error")
@@ -2256,12 +2254,13 @@ class GameEngine:
             self.selected_ingredients.add(seed_id)
             label = self.get_seed_label(seed_id)
             particle = self.josa(label, " ", " ")
-            text = f"{label}{particle} ingredient  Selected"
+            text = f"{label} selected."
         self.clear_hover()
         self.render()
         required = set(recipe.get("ingredients", {}).keys())
-        if required.issubset(self.selected_ingredients):
-            text += ". All ingredients selected."
+        if required and required.issubset(self.selected_ingredients):
+            self.pointer_pressed = False
+            return self.open_cooking_minigame()
         return self.response(tts=text, sfx="ingredient_select")
 
     def get_cooking_steps(self):
@@ -2551,6 +2550,8 @@ class GameEngine:
         if command == "minimap":
             return self.open_minimap()
         if command == "scene":
+            if self.current_page in ("home", "farm", "town", "mine"):
+                return self.response(tts=f"{self.get_page_name(self.current_location)}.")
             return self.return_to_scene()
         if command == "resources":
             return self.open_inventory()

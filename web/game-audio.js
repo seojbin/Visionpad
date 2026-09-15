@@ -46,7 +46,7 @@ class GameAudio {
     preload() {
         for (const [name,url] of Object.entries(this.urls)) {
             this.raw.set(name, this.fetcher(url).then(r => {
-                if (!r.ok) throw new Error(`${name} 음원 로드 실패`);
+                if (!r.ok) throw new Error(`${name} audio failed to load`);
                 return r.arrayBuffer();
             }).catch(error => {this.onStatus(error.message);return null;}));
         }
@@ -61,14 +61,14 @@ class GameAudio {
                 this.rewardGain = this.context.createGain(); this.rewardGain.gain.value = this.settings.reward_gain; this.rewardGain.connect(this.master);
                 this.setVolume(this.volume); this.setDucked(this.ducked);
             }
-            if (this.context.state === 'suspended') this.context.resume().catch(() => this.onStatus('소리 버튼을 눌러 오디오를 활성화하세요'));
+            if (this.context.state === 'suspended') this.context.resume().catch(() => this.onStatus('Press the sound button to enable audio'));
             if (this.latestState) this.syncBackground(this.latestState);
-        } catch {this.onStatus('오디오 미지원 · 자막으로 안내합니다');}
+        } catch {this.onStatus('Audio unavailable · Follow the captions');}
     }
     load(name) {
         if (!this.context || !this.urls[name]) return Promise.resolve(null);
         if (!this.raw.size) this.preload();
-        if (!this.buffers.has(name)) this.buffers.set(name, this.raw.get(name).then(bytes => bytes ? this.context.decodeAudioData(bytes.slice(0)) : null).catch(() => {this.onStatus(`${name} 음원 재생 불가`);return null;}));
+        if (!this.buffers.has(name)) this.buffers.set(name, this.raw.get(name).then(bytes => bytes ? this.context.decodeAudioData(bytes.slice(0)) : null).catch(() => {this.onStatus(`${name} audio could not be played`);return null;}));
         return this.buffers.get(name);
     }
     setVolume(value) {
@@ -128,7 +128,7 @@ class GameAudio {
         const source=this.context.createBufferSource();source.buffer=buffer;source.loop=true;
         source.connect(this.workGain);this.work=source;this.setDucked(this.ducked);source.start();
         source.onended=()=>source.disconnect();
-        this.onStatus(({water:'물 뿌리는 중',soil:'비료 뿌리는 중',cut:'재료 자르는 중',cook:'젓는 중',crop:'수확하는 중'})[name]);
+        this.onStatus(({water:'Watering',soil:'Fertilizing',cut:'Chopping',cook:'Stirring',crop:'Harvesting'})[name]);
         // Cutting/stirring only remains audible while the pointer is moving.
         this.motionTimer=setInterval(()=>{
             if (['cut','cook'].includes(this.workName) && this.now()-this.lastMotion>this.settings.motion_idle_ms)
@@ -138,7 +138,7 @@ class GameAudio {
     stopWork() {
         const wasWorking = !!this.workName;
         this.workToken++;this.workName=null;clearInterval(this.motionTimer);
-        if(wasWorking)this.onStatus(this.enabled?"작업음 · 성공음 준비":"효과음 꺼짐");
+        if(wasWorking)this.onStatus(this.enabled?"Task and reward sounds ready":"Sound off");
         if (this.work) {try{this.work.stop();}catch{}this.work=null;}
     }
     async correct(count=1, cooking=false) {

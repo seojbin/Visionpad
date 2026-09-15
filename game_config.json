@@ -95,11 +95,15 @@
       "initial_plot_count": 2,
       "costs": [
         30,
-        50
+        50,
+        70,
+        90
       ],
       "stone_costs": [
         5,
-        10
+        10,
+        15,
+        20
       ],
       "icon": [
         "1111111",
@@ -619,7 +623,7 @@
         },
         {
           "kind": "stir",
-          "label": "튀기기",
+          "label": "꽃잎 여덟 장 그리기",
           "tolerance": 4.0,
           "path": [
             [
@@ -1265,6 +1269,32 @@
         "label": "4번 밭",
         "action": "",
         "tts": "4번 밭",
+        "width": 12,
+        "height": 8,
+        "hit_width": 16,
+        "hit_height": 12
+      },
+      {
+        "id": "plot_5",
+        "type": "plot",
+        "x": 23,
+        "y": 20,
+        "label": "Plot 5",
+        "action": "",
+        "tts": "1번 밭",
+        "width": 12,
+        "height": 8,
+        "hit_width": 16,
+        "hit_height": 12
+      },
+      {
+        "id": "plot_6",
+        "type": "plot",
+        "x": 38,
+        "y": 20,
+        "label": "Plot 6",
+        "action": "",
+        "tts": "1번 밭",
         "width": 12,
         "height": 8,
         "hit_width": 16,

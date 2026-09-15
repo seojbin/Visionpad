@@ -76,7 +76,7 @@ async def command(req: CommandRequest):
 async def reset():
     engine.reset()
     return {
-        "tts": "게임을 초기화했습니다. 집입니다",
+        "tts": "New game. Home.",
         "state": engine.get_state()
     }
 
