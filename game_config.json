@@ -1604,9 +1604,9 @@
       "correct_max_load_age_ms": 650,
       "max_reward_sources": 2,
       "bgm_gain": {
-        "basic": 0.9,
+        "basic": 1.0,
         "minigame": 0.5,
-        "shop": 0.9
+        "shop": 1.0
       },
       "one_shot_gain": {
         "sleep": 1.0,
