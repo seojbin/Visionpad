@@ -2,6 +2,7 @@ import copy
 import math
 import random
 import time
+from turtle import width
 
 from dotpad import DotPad
 from pathlib import Path
@@ -527,16 +528,35 @@ class GameEngine(SaveMixin):
 
     def get_home_objects(self):
         objects = []
+        stove_y = next(
+        (
+            obj.get("y")
+            for obj in self.config.get("home", {}).get("objects", [])
+            if obj.get("id") == "home_stove"
+        ),
+        None
+    )
+
         for obj in self.config.get("home", {}).get("objects", []):
             copied = dict(obj)
+
+        # 연구대를 stove와 같은 y축에 정렬
+            if copied.get("type") == "chest" and stove_y is not None:
+                copied["y"] = stove_y
+
             if self.day_ended and copied.get("id") != "home_bed":
                 continue
             if self.day_ended and copied.get("id") == "home_bed":
                 copied["tts"] = "Bed. Sleep until morning."
             if copied.get("id") == "home_stove" and not self.day_ended:
-                craftable = sum(1 for rid in self.config.get("recipes", {}) if self.can_craft_recipe(rid))
+                craftable = sum(
+                1 for rid in self.config.get("recipes", {})
+                if self.can_craft_recipe(rid)
+            )
                 copied["tts"] = f"Kitchen. Available recipes: {craftable}."
+
             objects.append(copied)
+
         return objects
 
     def get_farm_objects(self):
@@ -1176,19 +1196,25 @@ class GameEngine(SaveMixin):
             return
         needed = max(1, int(self.get_seed_config(state["seed_id"]).get("growth_days", 3)))
         growth = needed if state["mature"] else int(state["growth"])
-        # Same inclusive edges as the plot frame, including even-width boxes.
-        width = int(obj.get("width",12))
-        x1 = int(obj["x"])-width//2
-        x2 = x1+width-1
-        frame_bottom = int(obj["y"])-int(obj.get("height",8))//2+int(obj.get("height",8))-1
-        y = frame_bottom+3
-        self.dotpad.draw_line(x1,y-1,x2,y-1)
-        self.dotpad.set_dot(x1,y)
-        self.dotpad.set_dot(x2,y)
-        inner_width=max(0,width-2)
-        fill_width=max(0,min(inner_width,int(round(inner_width*growth/needed))))
-        for x in range(x1+1,x1+1+fill_width):
-            self.dotpad.set_dot(x,y)
+        width = int(obj.get("width", 12))
+        x1 = int(obj["x"]) - width // 2
+        frame_bottom = (
+        int(obj["y"])
+        - int(obj.get("height", 8)) // 2
+        + int(obj.get("height", 8))
+        - 1
+    )
+        top_y = frame_bottom + 2
+        bottom_y = frame_bottom + 3
+
+        if growth <= 0:
+            return
+
+        fill_width = min(width, max(1, math.ceil(width * growth / needed)))
+
+        for x in range(x1, x1 + fill_width):
+            self.dotpad.set_dot(x, top_y)
+            self.dotpad.set_dot(x, bottom_y)
 
     def draw_watering_can(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
