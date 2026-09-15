@@ -2174,7 +2174,7 @@ class GameEngine(SaveMixin):
         self.current_page = "harvest"
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{self.get_seed_label(state['seed_id'])} harvest. Collect all crops. No time limit.", sfx="harvest_start")
+        return self.response(tts=f"{self.get_seed_label(state['seed_id'])} harvest. Collect all crops.", sfx="harvest_start")
 
     def collect_harvest_point(self, x, y):
         collected = False
@@ -2368,7 +2368,7 @@ class GameEngine(SaveMixin):
         self.cooking_path_samples = self.build_path_samples(self.get_cooking_gesture().get("path", []))
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{self.get_recipe_label(self.selected_recipe_id)}. {self.cooking_step_text()}. No time limit.", sfx="cooking_start")
+        return self.response(tts=f"{self.get_recipe_label(self.selected_recipe_id)}. {self.cooking_step_text()}.", sfx="cooking_start")
 
     def build_path_samples(self, path, spacing=1.5):
         if len(path) < 2:
@@ -2458,7 +2458,7 @@ class GameEngine(SaveMixin):
         self.clear_cooking()
         self.clear_hover()
         result = self.consume_time("cook")
-        text = f"{label} made. Saved to inventory."
+        text = f"{label} made."
         if result["night"]:
             return self.night_response(text)
         self.render()
