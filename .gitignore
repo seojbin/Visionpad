@@ -48,8 +48,6 @@ output_edges/
 output/
 outputs/
 
-*.mp3
-
 
 # =========================================================
 # Hugging Face / model cache
