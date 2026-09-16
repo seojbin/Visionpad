@@ -2538,7 +2538,6 @@ class GameEngine(KeypadUI, SaveMixin):
         command = {"f1":"minimap", "f2":"resources", "f3":"load", "f3_long":"save",
                    "f4":"pause", "arrowleft":"left", "arrowright":"right"}.get(command, command)
         if command == "save":
-            if self.current_page != "load_game": self.open_load_game()
             return self.save_game()
         if command == "load": return self.toggle_menu("load_game")
         if command == "minimap": return self.toggle_menu("minimap")
