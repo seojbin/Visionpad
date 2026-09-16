@@ -12,18 +12,19 @@
 <div class="workspace"><main>
 <div class="top-info"><div class="info-box">Day<strong id="day-text">Day 1</strong></div><div class="info-box">Location<strong id="location-text">Home</strong></div><div class="info-box">Gold<strong id="coin-text">60</strong></div><div class="info-box">Activity time<strong id="time-text">0 / 20</strong></div></div>
 <div class="pad-panel" id="pad-panel"><div class="device-top"><b>dot<span style="font-weight:300"> pad</span></b><span>TACTILE GAME SIMULATOR</span><span>60 × 40</span></div>
-<div class="hardware-layout"><div class="screen"><canvas id="dotpad" width="900" height="600" tabindex="0" aria-label="Tactile game pad. Arrow keys move the pointer, Enter selects, and Space presses or releases."></canvas></div></div>
-<div class="hardware-controls"><button id="nav-prev" class="physical-arrow" aria-label="Load game" title="Load game"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4L6 12l10 8Z"/></svg></button><div class="controls"><button data-command="minimap">F1<span>Map</span></button><button data-command="scene">F2<span>Location</span></button><button data-command="resources">F3<span>Inventory</span></button><button data-command="pause">F4<span>Pause</span></button></div><button id="nav-next" class="physical-arrow" aria-label="Save game" title="Save game"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l10 8L8 20Z"/></svg></button></div>
+<div class="hardware-layout"><div class="screen"><canvas id="dotpad" width="900" height="600" tabindex="0" aria-label="Tactile game pad. W/A/S/D move the pointer, Enter selects, and Space presses or releases."></canvas></div></div>
+<div class="hardware-controls"><button id="nav-prev" class="physical-arrow" aria-label="Go left"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4L6 12l10 8Z"/></svg></button><div class="controls"><button data-command="minimap">F1<span>Map</span></button><button data-command="resources">F2<span>Inventory</span></button><button data-command="load" title="Press to load; hold to save">F3<span>Load / Save</span></button><button data-command="pause">F4<span>Pause</span></button></div><button id="nav-next" class="physical-arrow" aria-label="Go right"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l10 8L8 20Z"/></svg></button></div>
 <div class="device-leds" aria-hidden="true"><i></i><i></i></div><div class="braille-bezel"><canvas id="timepad" width="600" height="60" aria-label="Activity time used, shown in the lower 20 cells"></canvas></div><div class="time-label">Activity time · 20 cells · Travel is free</div>
 <div class="device-bottom"><span>DOTDEW VALLEY</span><span id="pointer-info">TOUCH · DRAG · RELEASE</span></div></div>
 <div class="support-line"><span>Explore the same dot patterns and controls before connecting a physical pad.</span><a href="https://dot-canvas-esy-0910.ey55616.chatgpt.site/" target="_blank" rel="noopener noreferrer">Open reference pad ↗</a></div>
-<details class="card"><summary>Controls and game time</summary><p>Select an object with a mouse or touch, then hold and move to interact. With the pad focused, use the arrow keys to move one dot (Shift: three dots), Enter to select, and Space to press or release.<br>The right device triangle saves a new slot; the left opens saved games. The newest 12 saves are kept. Select the lower-left triangle on the load screen to return without loading.<br>Travel and opening menus take no time. Planting, watering, and fertilizing take two hours; harvesting, research, and cooking take three. Water crops before sleeping to help them grow. Fertilizer advances growth immediately.<br>Hold and drag over targets to water, fertilize, or harvest. Collect every harvest target to finish. You can release and continue later. Food effects can improve your harvest or help with other activities.<br>Select all required ingredients to start cooking automatically, then follow each path in order. Release between stages and press the next filled square to continue. Minigames have no time limit.<br>When your daily activity time runs out, you return home. Select the bed to start the next day.</p></details>
+<details class="card"><summary>Controls and game time</summary><p>Select an object with a mouse or touch, then hold and move to interact. With the pad focused, use W/A/S/D to move one dot (Shift: three dots), Enter to select, and Space to press or release.<br>The device Left/Right keys follow the current page exits or change item pages. F1 opens the map, F2 the inventory, F3 saved games, and F4 pauses. Press F1, F2, or F3 again in its menu to return to your current region. Hold F3 for 0.8 seconds to save a new slot and show saved games. The newest 12 saves are kept.<br>Travel and opening menus take no time. Planting, watering, and fertilizing take two hours; harvesting, research, and cooking take three. Water crops before sleeping to help them grow. Fertilizer advances growth immediately.<br>Hold and drag over targets to water, fertilize, or harvest. Collect every harvest target to finish. You can release and continue later. Food effects can improve your harvest or help with other activities.<br>Select all required ingredients to start cooking automatically, then follow each path in order. Release between stages and press the next filled square to continue. Minigames have no time limit.<br>When your daily activity time runs out, you return home. Select the bed to start the next day.</p></details>
 </main><aside>
 <section class="card"><div class="section-tag">CURRENT SCENE</div><div class="scene-title" id="page-text">Home</div><div class="scene-sub" id="task-progress">Choose an activity to start your day.</div><h2 style="margin-top:22px">Voice guidance <small id="tts-text" class="section-tag">Loading</small></h2><div id="caption" role="status">Select an object on the pad.</div><div class="toolbar"><button id="repeat-button">Replay</button><button id="mute-button" aria-pressed="false">Speech on</button><button id="tts-test-button">Test</button></div><p id="voice-info" class="scene-sub">Loading English voices…</p><label class="setting">Speech rate <input id="speech-rate" type="range" min="0.8" max="1.5" step="0.1" value="1.1"><span id="rate-label">1.1×</span></label><label class="setting">Sound volume <input id="sfx-volume" type="range" min="0" max="1" step="0.1" value="0.7"><span id="volume-label">70%</span></label><div class="toolbar" style="margin-top:12px"><button id="sfx-toggle" aria-pressed="false">Sound on</button></div><p id="sound-text" class="scene-sub">Task and reward sounds ready</p></section>
 <section class="card"><h2>Daily status</h2><div id="score-feedback" style="color:var(--mint);font-size:12px;min-height:22px"></div><div id="buff-text">No food effect</div><div class="progress-track"><div id="activity-fill"></div></div><div class="metrics"><div>Fertilizer<strong id="fertilizer-text">2</strong></div><div>Unlocked plots<strong id="plot-text">2</strong></div><div>Seed recovery<strong id="research-text">Level 0</strong></div><div>Time left<strong id="remaining-text">20 hours</strong></div></div></section>
 <section class="card"><h2>Objects nearby</h2><div class="scene-sub" style="margin-bottom:12px">These buttons perform the same actions as the tactile objects.</div><div id="object-list"></div></section>
-<section class="card"><h2>Physical pad and hand tracking</h2><div class="toolbar"><button id="usb-button">Connect USB pad</button></div><p class="scene-sub" id="hardware-status">Web simulator · USB not connected</p><label class="setting" for="tracking-url">Hand-tracking server</label><input id="tracking-url" value="ws://127.0.0.1:8765" aria-label="Hand-tracking WebSocket address" style="width:100%;padding:9px;background:#111b13;border:1px solid #41543b;color:#dcead4;border-radius:6px;margin:8px 0"><div class="toolbar"><button id="tracking-button">Connect hand tracking</button><button id="tracking-hold" aria-pressed="false" disabled>Press</button></div><p id="tracking-status" class="scene-sub">Not connected</p><p class="scene-sub" style="line-height:1.6">The reference server sends hand coordinates only. Use the press button to begin selecting or dragging, then press it again to release.</p><a href="https://github.com/eun022/hand_drawing" target="_blank" rel="noopener noreferrer" style="color:#cbe8b8;font-size:12px">Connection tools and setup ↗</a></section><details class="card"><summary>Diagnostics and reset</summary><p>This page simulates the tactile pad. Connect a USB pad using Chrome or Edge on localhost. Start the hand-tracking server before connecting. Progress is stored in server memory and resets when the server restarts.</p><div id="status"></div><button class="text-button" id="reset-button">New game</button></details>
-</aside></div></div><script src="/static/game-audio.js?v=20260915-en"></script><script>
+<section class="card"><h2>Physical pad and hand tracking</h2><div class="toolbar"><button id="usb-button">Connect USB pad</button></div><p class="scene-sub" id="hardware-status">Web simulator · USB not connected</p><label class="setting" for="tracking-url">Hand-tracking server</label><input id="tracking-url" value="ws://127.0.0.1:8765" aria-label="Hand-tracking WebSocket address" style="width:100%;padding:9px;background:#111b13;border:1px solid #41543b;color:#dcead4;border-radius:6px;margin:8px 0"><div class="toolbar"><button id="tracking-button">Connect hand tracking</button><button id="tracking-hold" aria-pressed="false" disabled>Press</button></div><p id="tracking-status" class="scene-sub">Not connected</p><p class="scene-sub" style="line-height:1.6">The reference server sends hand coordinates only. Use the press button to begin selecting or dragging, then press it again to release.</p><a href="https://github.com/eun022/hand_drawing" target="_blank" rel="noopener noreferrer" style="color:#cbe8b8;font-size:12px">Connection tools and setup ↗</a></section><details class="card"><summary>Diagnostics and reset</summary><p>This page simulates the tactile pad. Connect a USB pad using Chrome or Edge on localhost. Start the hand-tracking server before connecting. Hold F3 to save progress to a local file. After restarting the server, press F3 to load a saved game.</p><div id="status"></div><button class="text-button" id="reset-button">New game</button></details>
+</aside></div></div><script src="/static/game-audio.js?v=20260915-en"></script><script src="/static/game-keys.js?v=20260916-hold2"></script>
+<script>
 
 const canvas = document.getElementById("dotpad");
 const ctx = canvas.getContext("2d");
@@ -371,7 +372,7 @@ function drawState(state) {
     canvas.style.aspectRatio = `${state.width} / ${state.height}`;
     timeCanvas.style.aspectRatio = `${state.time_width} / ${state.time_height}`;
     for (const button of document.querySelectorAll("[data-command]")) {
-        const active = ({minimap:"minimap",resources:"inventory"})[button.dataset.command] === state.page || (button.dataset.command === "pause" && state.paused);
+        const active = ({minimap:"minimap",resources:"inventory",load:"load_game"})[button.dataset.command] === state.page || (button.dataset.command === "pause" && state.paused);
         button.classList.toggle("active", active);
         button.setAttribute("aria-pressed", String(active));
     }
@@ -395,7 +396,7 @@ function drawState(state) {
         list.replaceChildren();
         if(!objects.length){
             const help=document.createElement("p");help.className="scene-sub";help.style.lineHeight="1.7";
-            help.textContent=state.page==="cooking"?"Press the filled square and follow the line. Release between stages. Press F2 to leave.":"Hold and drag over targets. Press F2 to leave.";
+            help.textContent=state.page==="cooking"?"Press the filled square and follow the line. Release between stages. Press F1 to open the map.":"Hold and drag over targets. Press F1 to open the map.";
             list.append(help);
         }
         objects.forEach(o => {
@@ -530,9 +531,9 @@ function releasePointer(event) {
     queuePointer("/api/pointer/up",pointerX,pointerY);
 }
 canvas.addEventListener("pointerup",releasePointer);
-canvas.addEventListener("pointercancel",()=>{pointerPressed=false;sendCommand("scene")});
+canvas.addEventListener("pointercancel",()=>{pointerPressed=false;sendCommand("release")});
 canvas.addEventListener("keydown",event=>{
-    const moves = {ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+    const moves = {a:[-1,0],d:[1,0],w:[0,-1],s:[0,1],A:[-1,0],D:[1,0],W:[0,-1],S:[0,1]};
     if (moves[event.key]) {
         event.preventDefault(); const [dx,dy]=moves[event.key]; const step=event.shiftKey?3:1;
         pointerX=Math.max(0,Math.min(logicalWidth-1,pointerX+dx*step));
@@ -547,27 +548,52 @@ canvas.addEventListener("keydown",event=>{
     }
 });
 
+const gameKeys = new GameKeys(command => {
+    if (command === "save") document.getElementById("caption").textContent = "Saving game…";
+    return sendCommand(command);
+});
 for (const button of document.querySelectorAll("button[data-command]")) {
-    button.addEventListener("click", () => {
-        sendCommand(button.dataset.command);
+    if (button.dataset.command !== "load") {
+        button.addEventListener("click", () => sendCommand(button.dataset.command));
+        continue;
+    }
+    let lastRelease = -Infinity;
+    button.style.touchAction = "none";
+    button.style.userSelect = "none";
+    button.addEventListener("contextmenu", event => event.preventDefault());
+    button.addEventListener("pointerdown", event => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        unlockSpeech(); gameKeys.down("F3");
+        try {button.setPointerCapture(event.pointerId);} catch {}
+        button.classList.add("holding");
+    });
+    const end = cancelled => {gameKeys.up("F3", cancelled);lastRelease=performance.now();button.classList.remove("holding");};
+    button.addEventListener("pointerup", () => end(false));
+    button.addEventListener("pointercancel", () => end(true));
+    button.addEventListener("lostpointercapture", () => end(true));
+    button.addEventListener("keydown", event => {
+        if (["Enter", " "].includes(event.key)) {event.preventDefault();gameKeys.down("F3");}
+    });
+    button.addEventListener("keyup", event => {
+        if (["Enter", " "].includes(event.key)) {event.preventDefault();end(false);}
+    });
+    button.addEventListener("click", event => {
+        if (event.detail === 0 && !gameKeys.pressed.has("F3") && performance.now()-lastRelease > 250) sendCommand("load");
     });
 }
-
+const padKeys = ["F1","F2","F3","F4","ArrowLeft","ArrowRight"];
 window.addEventListener("keydown", event => {
-    if (event.key === "F1") {
-        event.preventDefault();
-        sendCommand("minimap");
-    } else if (event.key === "F2") {
-        event.preventDefault();
-        sendCommand("scene");
-    } else if (event.key === "F3") {
-        event.preventDefault();
-        sendCommand("resources");
-    } else if (event.key === "F4") {
-        event.preventDefault();
-        sendCommand("pause");
-    }
+    if (!padKeys.includes(event.key)) return;
+    if (event.key.startsWith("Arrow") && ["INPUT","TEXTAREA","SELECT"].includes(event.target.tagName)) return;
+    event.preventDefault();unlockSpeech();gameKeys.down(event.key);
 });
+window.addEventListener("keyup", event => {
+    if (!padKeys.includes(event.key)) return;
+    event.preventDefault();gameKeys.up(event.key);
+});
+window.addEventListener("blur", () => gameKeys.cancel());
+document.addEventListener("visibilitychange", () => {if(document.hidden)gameKeys.cancel();});
 
 ttsTestButton.addEventListener("click", () => {
     unlockSpeech();
@@ -589,7 +615,7 @@ document.getElementById("mute-button").addEventListener("click",event=>{
     if (!speechEnabled && "speechSynthesis" in window) {speechSequence++;pendingSpeech=null;activeUtterance=null;speechSynthesis.cancel();actionSpeaking=false;gameAudio.setDucked(false);ttsText.textContent="Off";}
 });
 document.getElementById("speech-rate").addEventListener("input",event=>{document.getElementById("rate-label").textContent=event.target.value+"×"});
-for (const [id, command] of [["nav-prev", "load"], ["nav-next", "save"]]) {
+for (const [id, command] of [["nav-prev", "left"], ["nav-next", "right"]]) {
     const button = document.getElementById(id);
     button.addEventListener("click", () => {
         unlockSpeech();
@@ -597,7 +623,6 @@ for (const [id, command] of [["nav-prev", "load"], ["nav-next", "save"]]) {
         gameAudio.inputUp();
         sendCommand(command);
     });
-    button.addEventListener("pointerenter", () => announce(command === "save" ? "Save game." : "Load game.", "hover"));
 }
 document.getElementById("sfx-volume").addEventListener("input",event=>{
     gameAudio.unlock();gameAudio.setVolume(event.target.value);document.getElementById("volume-label").textContent=Math.round(event.target.value*100)+"%";
@@ -608,11 +633,22 @@ document.getElementById("sfx-toggle").addEventListener("click",event=>{
     event.currentTarget.setAttribute("aria-pressed",String(!gameAudio.enabled));
     document.getElementById("sound-text").textContent=gameAudio.enabled?"Task and reward sounds ready":"Sound off";
 });
-window.addEventListener("blur",()=>{gameAudio.stopAll();if(pointerPressed){pointerPressed=false;sendCommand("scene");}});
+window.addEventListener("blur",()=>{gameAudio.stopAll();if(pointerPressed){pointerPressed=false;sendCommand("release");}});
 document.addEventListener("visibilitychange",()=>{if(document.hidden)gameAudio.stopAll();});
 window.DotdewInput = {
     state:()=>currentState,
-    command:sendCommand,
+    command:(command, phase)=>{
+        // Adapters may forward key events rather than DOM keyboard events.
+        if (command && typeof command === "object") {phase=command.phase;command=command.key;}
+        if (phase === "down") {unlockSpeech();return gameKeys.down(command);}
+        if (phase === "up") return gameKeys.up(command);
+        if (phase === "cancel") return gameKeys.up(command,true);
+        const match = /^(F[1-4]|ArrowLeft|ArrowRight)_(down|up)$/i.exec(String(command));
+        if (match) return match[2].toLowerCase()==="down" ? gameKeys.down(match[1]) : gameKeys.up(match[1]);
+        return sendCommand(command);
+    },
+    keyDown:key=>{unlockSpeech();gameKeys.down(key);},
+    keyUp:key=>gameKeys.up(key),
     move:(x,y)=>{if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>=logicalWidth||y>=logicalHeight)return;pointerX=x;pointerY=y;pointerInside=true;return queuePointer(pointerPressed?"/api/pointer/drag":"/api/pointer/move",x,y)},
     press:()=>{unlockSpeech();pointerPressed=true;return queuePointer("/api/pointer/down",pointerX,pointerY)},
     release:()=>{pointerPressed=false;return queuePointer("/api/pointer/up",pointerX,pointerY)}

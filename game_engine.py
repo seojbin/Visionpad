@@ -7,9 +7,10 @@ from turtle import width
 from dotpad import DotPad
 from pathlib import Path
 from game_saves import SaveMixin
+from game_ui import KeypadUI
 
 
-class GameEngine(SaveMixin):
+class GameEngine(KeypadUI, SaveMixin):
 
     def __init__(self, config, save_dir=None):
         config = self.prepare_display_config(config)
@@ -94,9 +95,18 @@ class GameEngine(SaveMixin):
                 if o.get("type") == "arrow": o.update(y=34)
             return objects
         if page in ("home", "town"):
-            return self.spatial_objects(objects)
+            objects = [dict(o) for o in objects]
+            facilities = [o for o in objects if o.get("type") in ("bed", "chest", "stove", "shop_npc")]
+            order = {"bed": 0, "chest": 1, "stove": 2, "shop_npc": 3}
+            facilities.sort(key=lambda o: order[o["type"]])
+            for index, o in enumerate(facilities):
+                o.update(x=8 + index*16, y=7, width=12, height=10, hit_width=12, hit_height=10)
+            return objects
         if page in ("shop_buy", "shop_sell"):
             objects = [dict(o) for o in objects]
+            for o in objects:
+                if o.get("type") == "shop_item":
+                    o.update(width=12, height=8, hit_width=12, hit_height=8)
             for o in objects:
                 if o.get("id") == f"shop_{'buy' if page == 'shop_buy' else 'sell'}_back":
                     o.update(x=55, y=35, size=3, hit_width=7, hit_height=7)
@@ -120,6 +130,9 @@ class GameEngine(SaveMixin):
             for i, o in enumerate(arrows):
                 o.update(x=6 + len(buttons)*12 + i*9, y=6, hit_width=7, hit_height=7)
             return buttons + arrows + [o for o in items if o not in buttons]
+        if page == "recipe_select":
+            for o in items:
+                if o.get("type") == "recipe": o.update(width=12, height=8, hit_width=12, hit_height=8)
         if page == "ingredient_select":
             items.sort(key=lambda o: o["type"] != "cooking_start")
         # Restore original frame dimensions. Wrap complete items instead of
@@ -149,6 +162,7 @@ class GameEngine(SaveMixin):
         return items+arrows
 
     def reset(self):
+        self._menu_stack = []
         self._load_return = None
         self._save_slots = []
         self.sleep_until = None
@@ -486,7 +500,7 @@ class GameEngine(SaveMixin):
             ingredient_total += crop_price * int(count)
         return max(1, int(math.ceil(ingredient_total * 1.2)))
 
-    def get_objects(self):
+    def get_layout_objects(self):
         if self.sleep_until is not None:
             return []
         pages = {
@@ -524,7 +538,21 @@ class GameEngine(SaveMixin):
                     obj.update(direction="left", x=3, y=self.dotpad.height-6)
                 w,h=(5,9) if obj.get("direction") in ("left","right") else (9,5)
                 obj["hit_width"],obj["hit_height"]=w,h
+        # Key navigation follows a linear route; the minimap keeps its own geometry.
+        route = ("farm", "home", "town", "mine")
+        if self.current_page in route:
+            origin = route.index(self.current_page)
+            for obj in objects:
+                action = obj.get("action", "")
+                if obj.get("type") == "arrow" and action.startswith("travel:"):
+                    target = action.split(":", 1)[1]
+                    if target in route:
+                        obj["direction"] = "left" if route.index(target) < origin else "right"
+                        obj["hit_width"], obj["hit_height"] = 5, 9
         return objects
+
+    def get_objects(self):
+        return [o for o in self.get_layout_objects() if o.get("type") != "arrow"]
 
     def get_home_objects(self):
         objects = []
@@ -1154,67 +1182,37 @@ class GameEngine(SaveMixin):
             self.dotpad.set_dot(round(x)-w//2+col, round(y)-h//2+row)
 
     def draw_bed(self, obj):
-        width, height = obj.get("width", 10), obj.get("height", 6)
-        self.dotpad.draw_box(obj["x"], obj["y"], width, height)
-        x1 = int(obj["x"] - width // 2)
-        y1 = int(obj["y"] - height // 2)
-        self.dotpad.draw_line(x1 + 2, y1, x1 + 2, y1 + height - 1)
+        self.draw_facility(obj)
 
     def draw_chest(self, obj):
-        self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 8), obj.get("height", 6))
-        self.dotpad.set_dot(obj["x"], obj["y"])
-        self.dotpad.draw_line(obj["x"] - 3, obj["y"], obj["x"] + 3, obj["y"])
+        self.draw_facility(obj)
 
     def draw_stove(self, obj):
-        x, y = int(obj["x"]), int(obj["y"])
-        self.dotpad.draw_box(x, y, obj.get("width", 10), obj.get("height", 7))
-        for dx, dy in [(-2, -1), (2, -1), (-2, 2), (2, 2)]:
-            self.dotpad.set_dot(x + dx, y + dy)
-            self.dotpad.set_dot(x + dx + 1, y + dy)
+        self.draw_facility(obj)
 
     def draw_plot(self, obj):
-        self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 10), obj.get("height", 8))
+        left, top, width, height = self.plot_bounds(obj)
+        # Draw the frame explicitly so DotPad.draw_box rounding cannot offset the fill.
+        for y in range(top, top+height):
+            for x in range(left, left+width):
+                if x in (left, left+width-1) or y in (top, top+height-1):
+                    self.dotpad.set_dot(x, y)
         state = self.farm_plots.get(obj["id"], self.new_plot_state())
-        if state["seed_id"] is None:
-            return
-        if state["mature"]:
-            for dx, dy in [(0, -2), (0, -1), (0, 0), (-1, 0), (1, 0), (-2, -1), (2, -1)]:
-                self.dotpad.set_dot(obj["x"] + dx, obj["y"] + dy)
-        else:
-            self.dotpad.set_dot(obj["x"], obj["y"])
-            if state["growth"] >= 1:
-                self.dotpad.set_dot(obj["x"], obj["y"] - 1)
-            if state["growth"] >= 2:
-                self.dotpad.set_dot(obj["x"] - 1, obj["y"])
-                self.dotpad.set_dot(obj["x"] + 1, obj["y"])
-            if state["fertilized"]:
-                self.dotpad.set_dot(obj["x"] - 2, obj["y"] + 2)
         self.draw_plot_progress(obj, state)
 
+    @staticmethod
+    def plot_bounds(obj):
+        width, height = int(obj.get("width", 10)), int(obj.get("height", 8))
+        return round(obj["x"])-width//2, round(obj["y"])-height//2, width, height
+
     def draw_plot_progress(self, obj, state):
-        if state["seed_id"] is None:
-            return
+        if state["seed_id"] is None: return
         needed = max(1, int(self.get_seed_config(state["seed_id"]).get("growth_days", 3)))
-        growth = needed if state["mature"] else int(state["growth"])
-        width = int(obj.get("width", 12))
-        x1 = int(obj["x"]) - width // 2
-        frame_bottom = (
-        int(obj["y"])
-        - int(obj.get("height", 8)) // 2
-        + int(obj.get("height", 8))
-        - 1
-    )
-        top_y = frame_bottom + 2
-        bottom_y = frame_bottom + 3
-
-        if growth <= 0:
-            return
-
-        fill_width = min(width, max(1, math.ceil(width * growth / needed)))
-
-        for x in range(x1, x1 + fill_width):
-            self.dotpad.set_dot(x, top_y)
-            self.dotpad.set_dot(x, bottom_y)
+        ratio = 1.0 if state["mature"] else max(0.0, min(1.0, float(state["growth"]) / needed))
+        left, top, width, height = self.plot_bounds(obj)
+        rows = min(height-2, math.ceil((height-2)*ratio))
+        for y in range(top+height-1-rows, top+height-1):
+            for x in range(left+1, left+width-1): self.dotpad.set_dot(x, y)
 
     def draw_watering_can(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
@@ -1232,9 +1230,7 @@ class GameEngine(SaveMixin):
         self.dotpad.set_dot(x + 1, y + 2)
 
     def draw_seed(self, obj):
-        x, y = int(obj["x"]), int(obj["y"])
-        self.dotpad.draw_box(x, y, obj.get("width", 12), obj.get("height", 10))
-        self.draw_crop_symbol(x, y, obj.get("seed_id"))
+        self.draw_catalog_item(obj, "seed")
 
     def draw_crop_symbol(self, x, y, seed_id):
         # Distinct compact silhouettes: round fruit, tapered root, paired tubers.
@@ -1250,23 +1246,7 @@ class GameEngine(SaveMixin):
                     self.dotpad.set_dot(x + i - 2, y + j - 2)
 
     def draw_resource(self, obj):
-        if obj.get("resource_kind") in ("pickaxe", "stone", "copper", "iron", "diamond"):
-            self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 10), obj.get("height", 6))
-            self.draw_mine_item(obj["x"], obj["y"], obj["resource_kind"])
-            return
-        x, y = int(obj["x"]), int(obj["y"])
-        self.dotpad.draw_box(x, y, obj.get("width", 10), obj.get("height", 7))
-        kind = obj.get("resource_kind")
-        if kind in ("seed", "crop"):
-            self.draw_crop_symbol(x, y, obj.get("seed_id"))
-        elif kind == "coin":
-            self.dotpad.draw_box(x, y, 4, 4)
-        elif kind == "food":
-            self.draw_recipe_icon(x, y, obj.get("recipe_id"))
-        else:
-            self.dotpad.set_dot(x, y)
-            self.dotpad.set_dot(x - 1, y)
-            self.dotpad.set_dot(x + 1, y)
+        self.draw_catalog_item(obj, obj.get("resource_kind"), obj.get("recipe_id"))
 
     def draw_filled_square(self, x, y, size=4):
         left, top = round(x)-size//2, round(y)-size//2
@@ -1344,14 +1324,9 @@ class GameEngine(SaveMixin):
         self.dotpad.draw_box(x, y, obj.get("width", 18), obj.get("height", 7))
         kind = obj.get("care_kind")
         if kind == "water":
-            self.dotpad.set_dot(x, y - 2)
-            self.dotpad.set_dot(x - 1, y - 1)
-            self.dotpad.set_dot(x + 1, y - 1)
-            self.dotpad.draw_line(x - 1, y, x + 1, y)
+            self.draw_icon_pattern(x, y, ["00100", "01110", "11111", "11111", "01110"])
         elif kind == "fertilizer":
-            self.dotpad.draw_box(x, y, 5, 4)
-            self.dotpad.set_dot(x - 1, y + 1)
-            self.dotpad.set_dot(x + 1, y + 1)
+            self.draw_category(x, y, "fertilizer")
         elif kind == "harvest":
             self.draw_harvest_crop({"x": x, "y": y})
         elif kind == "plant":
@@ -1380,14 +1355,13 @@ class GameEngine(SaveMixin):
             self.dotpad.set_dot(x + dx, y + dy)
 
     def draw_recipe(self, obj):
-        x, y = int(obj["x"]), int(obj["y"])
-        self.dotpad.draw_box(x, y, obj.get("width", 12), obj.get("height", 9))
-        self.draw_recipe_icon(x, y, obj.get("recipe_id"))
+        self.draw_catalog_item(obj, "food", obj.get("recipe_id"))
 
     def draw_ingredient(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
         self.dotpad.draw_box(x, y, obj.get("width", 12), obj.get("height", 9))
-        self.dotpad.set_dot(x, y)
+        if not obj.get("selected"):
+            self.draw_category(x, y, "crop")
         if obj.get("selected"):
             self.dotpad.draw_line(x - 3, y + 1, x - 1, y + 3)
             self.dotpad.draw_line(x - 1, y + 3, x + 3, y - 2)
@@ -1459,10 +1433,7 @@ class GameEngine(SaveMixin):
             self.draw_filled_square(*resume)
 
     def draw_shop_npc(self, obj):
-        x, y = int(obj["x"]), int(obj["y"])
-        self.dotpad.draw_box(x, y, obj.get("width", 16), obj.get("height", 12))
-        self.dotpad.draw_box(x, y - 1, 6, 6)
-        self.dotpad.draw_line(x - 5, y + 4, x + 5, y + 4)
+        self.draw_facility(obj)
 
     def draw_shop_choice(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
@@ -1473,26 +1444,7 @@ class GameEngine(SaveMixin):
         self.draw_icon_pattern(x,y,glyph)
 
     def draw_shop_item(self, obj):
-        if obj.get("shop_kind") == "food":
-            self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 10), 8)
-            self.draw_recipe_icon(obj["x"], obj["y"], obj.get("item_id"))
-            return
-        if obj.get("shop_kind") in ("pickaxe", "mineral"):
-            self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 10), obj.get("height", 6))
-            self.draw_mine_item(obj["x"], obj["y"], obj["item_id"])
-            return
-        x, y = int(obj["x"]), int(obj["y"])
-        self.dotpad.draw_box(x, y, obj.get("width", 11), obj.get("height", 9))
-        kind = obj.get("shop_kind")
-        if kind in ("seed", "crop"):
-            self.draw_crop_symbol(x, y, obj.get("item_id"))
-        elif kind == "fertilizer":
-            self.dotpad.draw_line(x - 2, y, x + 2, y)
-            self.dotpad.draw_line(x, y - 2, x, y + 2)
-        else:
-            self.dotpad.draw_line(x - 2, y + 1, x + 2, y + 1)
-            self.dotpad.set_dot(x - 2, y)
-            self.dotpad.set_dot(x + 2, y)
+        self.draw_catalog_item(obj, obj.get("shop_kind"), obj.get("item_id"))
 
     def point_to_segment_distance(self, px, py, x1, y1, x2, y2):
         dx, dy = x2 - x1, y2 - y1
@@ -1823,6 +1775,7 @@ class GameEngine(SaveMixin):
             return self.night_only_response()
         if location not in ("home", "farm", "town", "mine"):
             return self.response(tts="Location unavailable.")
+        self._menu_stack.clear()
         changed = location != self.current_location
         self.current_location = location
         self.current_page = location
@@ -2582,35 +2535,24 @@ class GameEngine(SaveMixin):
 
     def handle_command(self, command):
         command = str(command).lower().strip()
-        if command == "save": return self.save_game()
-        if command == "load": return self.open_load_game()
-        if self.current_page == "load_game":
-            if command == "scene": return self.close_load_game()
-            return self.response(tts="Choose a save, or go back.")
-        if self.sleep_until is not None:
+        command = {"f1":"minimap", "f2":"resources", "f3":"load", "f3_long":"save",
+                   "f4":"pause", "arrowleft":"left", "arrowright":"right"}.get(command, command)
+        if command == "save":
+            if self.current_page != "load_game": self.open_load_game()
+            return self.save_game()
+        if command == "load": return self.toggle_menu("load_game")
+        if command == "minimap": return self.toggle_menu("minimap")
+        if command == "resources": return self.toggle_menu("inventory")
+        if command in ("left", "right"): return self.navigate_key(command)
+        if command == "release":
+            self.pointer_pressed = self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
+            self.drag_tool = None
             return self.response()
-        command = str(command).lower().strip()
         if command == "pause":
             self.paused = not self.paused
-            if self.paused:
-                self.pointer_pressed = False
-                self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
-                self.drag_tool = None
+            self.pointer_pressed = self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
+            self.drag_tool = None
             return self.response(tts="Paused." if self.paused else "Resumed.")
-        if self.paused:
-            return self.response(tts="Resume first.")
-        if self.day_ended:
-            if command == "scene":
-                return self.return_to_scene()
-            return self.night_only_response()
-        if command == "minimap":
-            return self.open_minimap()
-        if command == "scene":
-            if self.current_page in ("home", "farm", "town", "mine"):
-                return self.response(tts=f"{self.get_page_name(self.current_location)}.")
-            return self.return_to_scene()
-        if command == "resources":
-            return self.open_inventory()
         return self.response()
 
     def resource_summary_text(self):
@@ -2635,6 +2577,7 @@ class GameEngine(SaveMixin):
             "action_costs": {k: self.get_action_cost(k) for k in ("travel", "plant", "water", "fertilize", "harvest", "research", "cook", "mine")},
             "sleeping": self.sleep_until is not None,
             "client_settings": self.client_settings,
+            "navigation": {d: bool(self.key_arrows(d)) for d in ("left", "right")},
             "page": self.current_page,
             "page_name": self.get_page_name(self.current_page),
             "current_location": self.current_location,
@@ -2692,7 +2635,7 @@ class GameEngine(SaveMixin):
             "time_height": self.timepad.height,
             "pointer": {"x": self.last_pointer[0], "y": self.last_pointer[1], "pressed": self.pointer_pressed},
             "hover_object": self.hover_object_id,
-            "controls": {"F1": "Map", "F2": "Current scene", "F3": "Inventory", "F4": "Pause"}
+            "controls": {"F1": "Map", "F2": "Inventory", "F3": "Load / hold to save", "F4": "Pause"}
         }
 
     MINERAL_LABELS = {"stone": "Stone", "copper": "Copper", "iron": "Iron", "diamond": "Diamond"}
@@ -2730,9 +2673,6 @@ class GameEngine(SaveMixin):
             top = origin_y + row * (rh + gap)
             for col in range(columns):
                 left = origin_x + col * (rw + gap)
-                # Keep the bottom-left triangle and its touch area clear.
-                if left < 11 and top + rh > height - 15:
-                    continue
                 candidates.append((left, top))
         random.shuffle(candidates)
         limit = max(0, min(7, int(cfg.get("daily_rock_limit", 7))))

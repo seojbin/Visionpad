@@ -53,6 +53,7 @@ class SaveMixin:
 
     def restore_snapshot(self, state):
         state = copy.deepcopy(state)
+        state.setdefault("_menu_stack", [])
         # Validate structure against a fresh engine before mutating the live game.
         previous_rng = random.getstate()
         try:
@@ -130,7 +131,8 @@ class SaveMixin:
 
     def close_load_game(self):
         if self._load_return is not None: self.restore_snapshot(self._load_return)
-        return self.response(tts="Back.")
+        self._menu_stack.clear()
+        return self.return_to_scene()
 
     def load_game(self, slot_id):
         if self.current_page != "load_game" or slot_id not in {s["id"] for s in self._save_slots}:
