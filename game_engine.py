@@ -8,6 +8,7 @@ from dotpad import DotPad
 from pathlib import Path
 from game_saves import SaveMixin
 from game_ui import KeypadUI
+from spectator_state import spectator_snapshot
 
 
 class GameEngine(KeypadUI, SaveMixin):
@@ -2568,11 +2569,13 @@ class GameEngine(KeypadUI, SaveMixin):
         if self.current_page in ("water_minigame", "fertilizer_minigame", "cooking"):
             self.render()
         plots = {plot_id: dict(state) for plot_id, state in self.farm_plots.items()}
+        objects = self.get_objects()
         return {
+            "spectator": spectator_snapshot(self, objects),
             "objects": [{"id": o["id"], "label": o.get("label", ""),
                          "type": o.get("type"), "x": o.get("x"), "y": o.get("y"),
                          "description": self.get_object_tts(o), "actionable": bool(o.get("action"))}
-                        for o in self.get_objects() if o.get("type") != "route"],
+                        for o in objects if o.get("type") != "route"],
             "action_costs": {k: self.get_action_cost(k) for k in ("travel", "plant", "water", "fertilize", "harvest", "research", "cook", "mine")},
             "sleeping": self.sleep_until is not None,
             "client_settings": self.client_settings,

@@ -7,23 +7,25 @@
 .hardware-controls{display:flex;align-items:center;justify-content:center;gap:24px;margin:24px 0 0}.hardware-controls .controls{flex:1;max-width:430px;margin:0;gap:22px}.hardware-controls .controls button{border-radius:50%;aspect-ratio:1;min-height:0;width:100%;padding:0;background:linear-gradient(#555b55,#343a34);border:1px solid #697267;border-bottom:4px solid #10160f;box-shadow:0 2px 4px #0007;color:#e3e9df;font-size:12px}.hardware-controls .controls button span{font-size:9px;margin-top:3px}.hardware-controls .controls button.active{background:linear-gradient(#c4d8b4,#92ab81);color:#182213}.physical-arrow{border:0;background:transparent;width:34px;height:44px;padding:3px;color:#d2dacf;flex-shrink:0}.physical-arrow svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;filter:drop-shadow(0 2px 1px #000)}.physical-arrow:hover{color:var(--mint)}.physical-arrow:active{transform:translateY(2px)}.device-leds{display:flex;justify-content:center;gap:14px;margin:16px 0 18px}.device-leds i{width:5px;height:5px;border-radius:50%;background:#95b880;box-shadow:0 0 5px #b1d09855}.device-leds i:last-child{background:#586658;box-shadow:none}.braille-bezel{width:78%;margin:auto;padding:7px 11px;background:linear-gradient(#141916,#222824);border:1px solid #4b554b;border-radius:8px;box-shadow:inset 0 2px 7px #0009}#timepad{width:100%;box-shadow:none;border-radius:3px}.time-label{text-align:center;margin-top:12px}.screen{border-color:#141a16}.device-top{padding-bottom:18px}@media(max-width:500px){.hardware-controls{gap:12px;margin-top:18px}.hardware-controls .controls{gap:10px}.hardware-controls .controls button{font-size:11px}.hardware-controls .controls button span{font-size:7px}.physical-arrow{width:25px}.braille-bezel{width:88%;padding:6px 8px}.device-leds{margin:12px 0}.pad-panel{padding-bottom:19px}}
 /* Geometry and bezel colors matched to the supplied preview's workspace.css. */
 .pad-panel{position:relative;padding:5% 8% 4%;border-radius:6%;background:linear-gradient(125deg,#353635,#242524 63%,#30312f)}.screen{padding:4% 5%;background:linear-gradient(140deg,#424441,#30322f);border:2px solid #1a1c1a;border-radius:4%;box-shadow:0 0 0 5px #222522,inset 0 3px 8px #0007}#dotpad{background:#30362f}.hardware-controls{gap:5%;margin:4% 4% 5%}.hardware-controls .controls{max-width:none;gap:9%;padding:7px 10px;background:#41443f;border-radius:16px}.hardware-controls .controls button{aspect-ratio:1.5;border-radius:40%;border:1px solid #202520;box-shadow:0 1px 2px #0009,inset 0 1px 1px #7c80774d;background:linear-gradient(#555852,#454842)}.device-leds{position:absolute;right:3.5%;top:78%;margin:0;gap:10px}.device-leds i{width:3px;height:3px}.braille-bezel{width:100%;padding:3% 12%;background:#42463e;border:2px solid #1b1f1a;border-radius:7px;box-shadow:0 0 0 5px #222522,inset 0 2px 3px #0008}.device-top{font-size:9px}.device-bottom{font-size:8px}.time-label{font-size:9px}@media(max-width:500px){.pad-panel{padding:6% 7% 5%}.hardware-controls .controls{padding:5px;gap:7%}.hardware-controls .controls button{aspect-ratio:1.2;font-size:10px}.hardware-controls .controls button span{font-size:6px}.braille-bezel{width:100%;padding:3% 12%}.device-top{font-size:7px}.device-top b{font-size:12px}}
+.visual-access{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 20px}.visual-access button{border:1px solid #93b67e;border-radius:8px;background:#314a2b;color:#f1f6e9;padding:10px 16px;font:inherit}.visual-access span{font-size:12px;color:#acbaa5}.visual-access .visual-error{color:#f1bb97}.dotdew-observer{scroll-margin-top:16px}
 </style></head><body><div class="container">
 <header><div><div class="eyebrow">Tactile garden</div><h1>Dotdew Valley</h1><p>Grow a little world at your fingertips.</p></div><div class="connection" id="connection"><i class="led"></i><span id="connection-text">Connecting</span></div></header>
+<nav class="visual-access" aria-label="Display views"><button type="button" id="show-visual" disabled>Open visual display ↗</button><span id="visual-load-status" role="status">Loading visual display…</span></nav>
 <div class="workspace"><main>
 <div class="top-info"><div class="info-box">Day<strong id="day-text">Day 1</strong></div><div class="info-box">Location<strong id="location-text">Home</strong></div><div class="info-box">Gold<strong id="coin-text">60</strong></div><div class="info-box">Activity time<strong id="time-text">0 / 20</strong></div></div>
 <div class="pad-panel" id="pad-panel"><div class="device-top"><b>dot<span style="font-weight:300"> pad</span></b><span>TACTILE GAME SIMULATOR</span><span>60 × 40</span></div>
 <div class="hardware-layout"><div class="screen"><canvas id="dotpad" width="900" height="600" tabindex="0" aria-label="Tactile game pad. W/A/S/D move the pointer, Enter selects, and Space presses or releases."></canvas></div></div>
 <div class="hardware-controls"><button id="nav-prev" class="physical-arrow" aria-label="Go left"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4L6 12l10 8Z"/></svg></button><div class="controls"><button data-command="minimap">F1<span>Map</span></button><button data-command="resources">F2<span>Inventory</span></button><button data-command="load" title="Press to load; hold to save">F3<span>Load / Save</span></button><button data-command="pause">F4<span>Pause</span></button></div><button id="nav-next" class="physical-arrow" aria-label="Go right"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l10 8L8 20Z"/></svg></button></div>
-<div class="device-leds" aria-hidden="true"><i></i><i></i></div><div class="braille-bezel"><canvas id="timepad" width="600" height="60" aria-label="Activity time used, shown in the lower 20 cells"></canvas></div><div class="time-label">Activity time · 20 cells · Travel is free</div>
+<div class="device-leds" aria-hidden="true"><i></i><i></i></div><div class="braille-bezel"><canvas id="timepad" width="600" height="60" aria-label="Activity time used, shown in the lower 20 cells"></canvas></div>
 <div class="device-bottom"><span>DOTDEW VALLEY</span><span id="pointer-info">TOUCH · DRAG · RELEASE</span></div></div>
-<div class="support-line"><span>Explore the same dot patterns and controls before connecting a physical pad.</span><a href="https://dot-canvas-esy-0910.ey55616.chatgpt.site/" target="_blank" rel="noopener noreferrer">Open reference pad ↗</a></div>
-<details class="card"><summary>Controls and game time</summary><p>Select an object with a mouse or touch, then hold and move to interact. With the pad focused, use W/A/S/D to move one dot (Shift: three dots), Enter to select, and Space to press or release.<br>The device Left/Right keys follow the current page exits or change item pages. F1 opens the map, F2 the inventory, F3 saved games, and F4 pauses. Press F1, F2, or F3 again in its menu to return to your current region. Hold F3 for 0.8 seconds to save a new slot without leaving the current screen. The newest 12 saves are kept.<br>Travel and opening menus take no time. Planting, watering, and fertilizing take two hours; harvesting, research, and cooking take three. Water crops before sleeping to help them grow. Fertilizer advances growth immediately.<br>Hold and drag over targets to water, fertilize, or harvest. Collect every harvest target to finish. You can release and continue later. Food effects can improve your harvest or help with other activities.<br>Select all required ingredients to start cooking automatically, then follow each path in order. Release between stages and press the next filled square to continue. Minigames have no time limit.<br>When your daily activity time runs out, you return home. Select the bed to start the next day.</p></details>
+
+
 </main><aside>
 <section class="card"><div class="section-tag">CURRENT SCENE</div><div class="scene-title" id="page-text">Home</div><div class="scene-sub" id="task-progress">Choose an activity to start your day.</div><h2 style="margin-top:22px">Voice guidance <small id="tts-text" class="section-tag">Loading</small></h2><div id="caption" role="status">Select an object on the pad.</div><div class="toolbar"><button id="repeat-button">Replay</button><button id="mute-button" aria-pressed="false">Speech on</button><button id="tts-test-button">Test</button></div><p id="voice-info" class="scene-sub">Loading English voices…</p><label class="setting">Speech rate <input id="speech-rate" type="range" min="0.8" max="1.5" step="0.1" value="1.1"><span id="rate-label">1.1×</span></label><label class="setting">Sound volume <input id="sfx-volume" type="range" min="0" max="1" step="0.1" value="0.7"><span id="volume-label">70%</span></label><div class="toolbar" style="margin-top:12px"><button id="sfx-toggle" aria-pressed="false">Sound on</button></div><p id="sound-text" class="scene-sub">Task and reward sounds ready</p></section>
 <section class="card"><h2>Daily status</h2><div id="score-feedback" style="color:var(--mint);font-size:12px;min-height:22px"></div><div id="buff-text">No food effect</div><div class="progress-track"><div id="activity-fill"></div></div><div class="metrics"><div>Fertilizer<strong id="fertilizer-text">2</strong></div><div>Unlocked plots<strong id="plot-text">2</strong></div><div>Seed recovery<strong id="research-text">Level 0</strong></div><div>Time left<strong id="remaining-text">20 hours</strong></div></div></section>
 <section class="card"><h2>Objects nearby</h2><div class="scene-sub" style="margin-bottom:12px">These buttons perform the same actions as the tactile objects.</div><div id="object-list"></div></section>
 <section class="card"><h2>Physical pad and hand tracking</h2><div class="toolbar"><button id="usb-button">Connect USB pad</button></div><p class="scene-sub" id="hardware-status">Web simulator · USB not connected</p><label class="setting" for="tracking-url">Hand-tracking server</label><input id="tracking-url" value="ws://127.0.0.1:8765" aria-label="Hand-tracking WebSocket address" style="width:100%;padding:9px;background:#111b13;border:1px solid #41543b;color:#dcead4;border-radius:6px;margin:8px 0"><div class="toolbar"><button id="tracking-button">Connect hand tracking</button><button id="tracking-hold" aria-pressed="false" disabled>Press</button></div><p id="tracking-status" class="scene-sub">Not connected</p><p class="scene-sub" style="line-height:1.6">The reference server sends hand coordinates only. Use the press button to begin selecting or dragging, then press it again to release.</p><a href="https://github.com/eun022/hand_drawing" target="_blank" rel="noopener noreferrer" style="color:#cbe8b8;font-size:12px">Connection tools and setup ↗</a></section><details class="card"><summary>Diagnostics and reset</summary><p>This page simulates the tactile pad. Connect a USB pad using Chrome or Edge on localhost. Start the hand-tracking server before connecting. Hold F3 to save progress to a local file. After restarting the server, press F3 to load a saved game.</p><div id="status"></div><button class="text-button" id="reset-button">New game</button></details>
-</aside></div></div><script src="/static/game-audio.js?v=20260915-en"></script><script src="/static/game-keys.js?v=20260916-hold2"></script>
+</aside></div></div><script src="/static/game-audio.js?v=20260915-en"></script><script src="/static/game-keys.js?v=20260916-hold-feedback3"></script>
 <script>
 
 const canvas = document.getElementById("dotpad");
@@ -148,7 +150,7 @@ function unlockSpeech() {
     refreshVoices();
     if ("speechSynthesis" in window) {
         speechSynthesis.resume();
-        if (pendingSpeech) playPendingSpeech();
+        if (pendingSpeech && !activeUtterance) playPendingSpeech();
     }
 }
 function speak(text, important=true) {
@@ -163,7 +165,7 @@ function speak(text, important=true) {
 if ("speechSynthesis" in window) {
     speechSynthesis.addEventListener("voiceschanged", () => {
         refreshVoices();
-        if (pendingSpeech) playPendingSpeech();
+        if (pendingSpeech && !activeUtterance) playPendingSpeech();
     });
     refreshVoices();
 }
@@ -431,6 +433,9 @@ async function handleResponse(response) {
         drawState(data.state);
     }
 
+    // Passive visual observer: no input or game logic depends on this listener.
+    try { window.dispatchEvent(new CustomEvent("dotdew-observer", {detail: {state:data.state, events:data.sound_events || [], message:data.tts, priority:data.priority, sfx:data.sfx}})); } catch (error) { console.warn("Observer unavailable", error); }
+
     if (data.tts) gameAudio.miningNarrationToken++;
     gameAudio.handle(data.state, data.sound_events || []);
     const score = (data.sound_events || []).filter(e=>e.kind === "correct").reduce((n,e)=>n+e.count,0);
@@ -448,7 +453,20 @@ async function handleResponse(response) {
     }
 }
 
+let queuedHover = null;
 function queuePointer(endpoint, x, y) {
+    if (endpoint.endsWith("/move")) {
+        if (queuedHover) {queuedHover.x=x;queuedHover.y=y;return requestQueue;}
+        const hover={x,y};queuedHover=hover;
+        requestQueue=requestQueue.then(async()=>{
+            queuedHover=null;
+            try {
+                const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(hover)});
+                await handleResponse(response);
+            } catch(error) {connection(false,"Connection error · Check the server");}
+        });
+        return requestQueue;
+    }
     if(endpoint.endsWith("/down")) gameAudio.inputDown(currentState,x,y);
     if(endpoint.endsWith("/drag")) gameAudio.move(x,y);
     if(endpoint.endsWith("/up")) gameAudio.inputUp();
@@ -573,7 +591,10 @@ for (const button of document.querySelectorAll("button[data-command]")) {
     button.addEventListener("pointercancel", () => end(true));
     button.addEventListener("lostpointercapture", () => end(true));
     button.addEventListener("keydown", event => {
-        if (["Enter", " "].includes(event.key)) {event.preventDefault();gameKeys.down("F3");}
+        if (["Enter", " "].includes(event.key)) {
+            event.preventDefault();
+            if (!event.repeat) gameKeys.down("F3");
+        }
     });
     button.addEventListener("keyup", event => {
         if (["Enter", " "].includes(event.key)) {event.preventDefault();end(false);}
@@ -586,7 +607,10 @@ const padKeys = ["F1","F2","F3","F4","ArrowLeft","ArrowRight"];
 window.addEventListener("keydown", event => {
     if (!padKeys.includes(event.key)) return;
     if (event.key.startsWith("Arrow") && ["INPUT","TEXTAREA","SELECT"].includes(event.target.tagName)) return;
-    event.preventDefault();unlockSpeech();gameKeys.down(event.key);
+    event.preventDefault();
+    // Auto-repeat must not cancel and restart speech while F3 is held.
+    if (event.repeat || gameKeys.pressed.has(event.key.toUpperCase())) return;
+    unlockSpeech();gameKeys.down(event.key);
 });
 window.addEventListener("keyup", event => {
     if (!padKeys.includes(event.key)) return;
@@ -640,14 +664,17 @@ window.DotdewInput = {
     command:(command, phase)=>{
         // Adapters may forward key events rather than DOM keyboard events.
         if (command && typeof command === "object") {phase=command.phase;command=command.key;}
-        if (phase === "down") {unlockSpeech();return gameKeys.down(command);}
+        if (phase === "down") {if(gameKeys.pressed.has(String(command).toUpperCase()))return;unlockSpeech();return gameKeys.down(command);}
         if (phase === "up") return gameKeys.up(command);
         if (phase === "cancel") return gameKeys.up(command,true);
         const match = /^(F[1-4]|ArrowLeft|ArrowRight)_(down|up)$/i.exec(String(command));
         if (match) return match[2].toLowerCase()==="down" ? gameKeys.down(match[1]) : gameKeys.up(match[1]);
         return sendCommand(command);
     },
-    keyDown:key=>{unlockSpeech();gameKeys.down(key);},
+    keyDown:key=>{
+        if (gameKeys.pressed.has(String(key).toUpperCase())) return;
+        unlockSpeech();gameKeys.down(key);
+    },
     keyUp:key=>gameKeys.up(key),
     move:(x,y)=>{if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>=logicalWidth||y>=logicalHeight)return;pointerX=x;pointerY=y;pointerInside=true;return queuePointer(pointerPressed?"/api/pointer/drag":"/api/pointer/move",x,y)},
     press:()=>{unlockSpeech();pointerPressed=true;return queuePointer("/api/pointer/down",pointerX,pointerY)},
@@ -683,4 +710,4 @@ function refreshDelayedVisuals() {
         }
     }).finally(() => { visualPollPending = false; });
 }
-</script><script type="module" src="/static/hardware.mjs?v=20260916-pan-quicksave"></script></body></html>
+</script><script type="module" src="/static/hardware.mjs?v=20260916-pan-quicksave"></script><div id="visual-relay" hidden aria-hidden="true"></div><script src="/static/spectator/display.js?v=linked-4" onerror="document.getElementById('visual-load-status').textContent='Visual display failed to download. Copy the complete update and reload with Ctrl+F5.'"></script></body></html>

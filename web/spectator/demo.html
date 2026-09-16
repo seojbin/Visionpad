@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Dotdew Valley · Visual preview</title>
+  </head>
+  <body class="dv-standalone" data-spectator="demo">
+    <div class="dv-demo-controls">
+      Preview fixtures · not a live game
+      <select aria-label="Preview scene" id="scene"></select
+      ><select aria-label="Time of day" id="time">
+        <option value="0">Morning</option>
+        <option value="8">Daytime</option>
+        <option value="14">Dusk</option>
+        <option value="19">Evening</option>
+      </select>
+    </div>
+    <script type="module">
+      import { receive, ready } from "./viewer.js";
+      const fixtures = await (await fetch("./fixtures.json")).json();
+      await ready;
+      const select = document.getElementById("scene");
+      for (const key of Object.keys(fixtures)) {
+        const o = document.createElement("option");
+        o.value = key;
+        o.textContent = key.replaceAll("_", " ");
+        select.append(o);
+      }
+      function draw() {
+        const s = structuredClone(fixtures[select.value]);
+        s.time.used_cells = Number(document.getElementById("time").value);
+        receive({
+          state: s,
+          message:
+            "Preview · " + select.options[select.selectedIndex].textContent,
+        });
+      }
+      select.onchange = draw;
+      document.getElementById("time").onchange = draw;
+      window.previewReady = true;
+      draw();
+    </script>
+  </body>
+</html>

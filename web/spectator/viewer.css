@@ -1,0 +1,360 @@
+.dotdew-observer {
+  --ink: #ede9d6;
+  --gold: #dfbc77;
+  --muted: #b9bca7;
+  max-width: 1320px;
+  margin: 28px auto 36px;
+  background: #17231f;
+  border: 1px solid #435344;
+  border-radius: 18px;
+  overflow: hidden;
+  color: var(--ink);
+  font:
+    15px/1.5 Georgia,
+    serif;
+  box-shadow: 0 18px 48px #0003;
+  text-align: left;
+}
+.dotdew-observer * {
+  box-sizing: border-box;
+}
+.dv-heading {
+  padding: 22px 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid #52604b;
+}
+.dv-heading h2 {
+  font:
+    normal 29px Georgia,
+    serif;
+  margin: 2px 0;
+  color: #f7ebc8;
+}
+.dv-eyebrow {
+  font:
+    11px/1.5 system-ui,
+    sans-serif;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: #cdb176;
+}
+.dv-live {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #9eca98;
+  border-radius: 50%;
+  margin-right: 8px;
+  box-shadow: 0 0 10px #91bc6b70;
+}
+.dv-tools {
+  display: flex;
+  gap: 8px;
+}
+.dotdew-observer button {
+  border: 1px solid #62725a;
+  background: #293a30;
+  color: #f2e7cb;
+  border-radius: 8px;
+  padding: 9px 13px;
+  cursor: pointer;
+  font:
+    12px system-ui,
+    sans-serif;
+}
+.dotdew-observer button:hover {
+  background: #3b503e;
+}
+.dv-stage {
+  position: relative;
+  background: #25362b;
+  isolation: isolate;
+}
+.dv-stage canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
+  aspect-ratio: 8/5;
+  pointer-events: none;
+}
+.dv-hud {
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  right: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  pointer-events: none;
+  font:
+    13px system-ui,
+    sans-serif;
+}
+.dv-badge {
+  padding: 9px 13px;
+  background: #17231fde;
+  border: 1px solid #c5a16380;
+  border-radius: 6px;
+  box-shadow: 0 3px 0 #0003;
+}
+.dv-menu {
+  position: absolute;
+  inset: 70px 7% 40px;
+  padding: 22px;
+  background: #f2e4c9f5;
+  color: #443823;
+  border: 4px solid #805d38;
+  outline: 2px solid #d8b978;
+  border-radius: 8px;
+  overflow: auto;
+  box-shadow: 0 10px 35px #0006;
+}
+.dv-menu[hidden] {
+  display: none;
+}
+.dv-menu h3 {
+  font:
+    normal 24px Georgia,
+    serif;
+  margin: 0 0 4px;
+}
+.dv-subtitle {
+  font:
+    12px system-ui,
+    sans-serif;
+  color: #746047;
+  margin-bottom: 15px;
+}
+.dv-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.dv-card {
+  padding: 8px;
+  background: #e7d3ae;
+  border: 2px solid #b38c57;
+  border-radius: 3px;
+  text-align: center;
+  min-width: 0;
+  position: relative;
+}
+.dv-card.is-focused {
+  border-color: #438156;
+  box-shadow: 0 0 0 3px #84b684;
+}
+.dv-card.is-selected::after {
+  content: "✓";
+  position: absolute;
+  right: 6px;
+  top: 4px;
+  background: #456747;
+  color: white;
+  border-radius: 50%;
+  width: 23px;
+  height: 23px;
+}
+.dv-card canvas {
+  width: 64px;
+  height: 64px;
+  display: block;
+  margin: 0 auto 5px;
+  image-rendering: pixelated;
+}
+.dv-card strong {
+  display: block;
+  font:
+    600 12px system-ui,
+    sans-serif;
+}
+.dv-card small {
+  display: block;
+  font:
+    11px/1.4 system-ui,
+    sans-serif;
+  color: #725b3f;
+  margin-top: 5px;
+}
+.dv-footer {
+  padding: 17px 25px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  background: #1c2a23;
+}
+.dv-caption {
+  font:
+    14px/1.6 system-ui,
+    sans-serif;
+  min-height: 24px;
+}
+.dv-caption em {
+  color: #c9b78f;
+  font-style: normal;
+}
+.dv-status {
+  font:
+    11px system-ui,
+    sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #aebfa7;
+}
+.dv-details {
+  padding: 0 25px 16px;
+  font:
+    12px system-ui,
+    sans-serif;
+  color: #b8c4b2;
+}
+.dv-events {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+}
+.dv-event {
+  padding: 4px 9px;
+  border: 1px solid #637357;
+  border-radius: 4px;
+  color: #e2d9ba;
+}
+.dv-shade {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #101a30ed;
+  text-align: center;
+  color: #f3e6b6;
+  font:
+    28px Georgia,
+    serif;
+  pointer-events: none;
+  z-index: 3;
+}
+.dv-shade[hidden] {
+  display: none;
+}
+.dv-shade small {
+  display: block;
+  font:
+    13px system-ui,
+    sans-serif;
+  margin-top: 12px;
+  letter-spacing: 2px;
+}
+.dotdew-observer.dv-expanded {
+  position: fixed;
+  inset: 12px;
+  z-index: 9999;
+  margin: 0;
+  max-width: none;
+  overflow: auto;
+}
+.dv-expanded .dv-stage {
+  max-width: 1100px;
+  margin: auto;
+}
+.dv-standalone {
+  margin: 0;
+  padding: 16px;
+  background: #111c18;
+}
+.dv-standalone .dotdew-observer {
+  margin: 0 auto;
+}
+.dv-demo-controls {
+  max-width: 1320px;
+  margin: 15px auto;
+  color: #fff;
+  font: 14px system-ui;
+}
+.dv-demo-controls select {
+  padding: 8px;
+  margin-left: 12px;
+}
+@media (max-width: 650px) {
+  .dv-heading {
+    padding: 14px;
+  }
+  .dv-heading h2 {
+    font-size: 22px;
+  }
+  .dv-tools button {
+    padding: 7px;
+  }
+  .dv-menu {
+    inset: 48px 3% 10px;
+    padding: 10px;
+  }
+  .dv-menu h3 {
+    font-size: 19px;
+  }
+  .dv-cards {
+    gap: 5px;
+  }
+  .dv-card {
+    padding: 4px;
+  }
+  .dv-card canvas {
+    width: 36px;
+    height: 36px;
+  }
+  .dv-card small {
+    display: none;
+  }
+  .dv-card strong {
+    font-size: 10px;
+  }
+  .dv-hud {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    font-size: 10px;
+  }
+  .dv-badge {
+    padding: 5px;
+  }
+  .dv-footer {
+    padding: 12px;
+    grid-template-columns: 1fr;
+  }
+  .dv-status {
+    display: none;
+  }
+  .dv-details {
+    padding: 0 12px 12px;
+  }
+  .dv-heading .dv-eyebrow {
+    font-size: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dotdew-observer * {
+    scroll-behavior: auto !important;
+  }
+}
+@media (max-width: 650px) {
+  .dotdew-observer .dv-menu {
+    position: relative;
+    inset: auto !important;
+    margin: 0 8px 12px;
+    max-height: none;
+  }
+  .dotdew-observer .dv-card small {
+    display: block;
+    font-size: 9px;
+  }
+  .dotdew-observer .dv-stage:has(.dv-menu:not([hidden])) .dv-menu {
+    margin-top: -4px;
+  }
+  .dotdew-observer .dv-menu .dv-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}

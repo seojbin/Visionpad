@@ -52,32 +52,40 @@ class KeypadUI:
                 result['tts'] = f'{name}. {result.get("tts") or ""}'.strip()
         return result
 
+    @staticmethod
+    def item_bounds(obj):
+        w,h=int(obj.get('width',12)),int(obj.get('height',8))
+        return round(obj['x'])-w//2, round(obj['y'])-h//2, w, h
+
     def draw_item_frame(self, obj, kind):
-        x,y=round(obj['x']),round(obj['y'])
-        w,h=obj.get('width',12),obj.get('height',8)
+        left,top,w,h=self.item_bounds(obj)
         if kind not in ('food','coin'):
-            self.dotpad.draw_box(x,y,w,h)
+            # Keep the original DotPad box geometry and icon center unchanged.
+            self.dotpad.draw_box(obj['x'], obj['y'], w, h)
             return
-        left,top=x-w//2,y-h//2
-        cx,cy=left+(w-1)/2,top+(h-1)/2
-        rx,ry=(w-1)/2,(h-1)/2
-        if kind == 'coin':
-            # Mirror integer pixels rather than rounding four half-pixel vertices.
-            # Even-sized frames deliberately have paired tips.
-            previous = (w-2)//2
-            for row in range((h+1)//2):
-                inset = max(0, round((w-2)/2 * (1-row/max(1,(h-1)//2))))
-                cols = set(range(inset,w-inset)) if row == 0 else set(range(inset,max(inset+1,previous)))
-                cols |= {w-1-col for col in cols}
-                previous = inset
-                for col in cols:
-                    for yy in {row,h-1-row}:
-                        self.dotpad.set_dot(left+col,top+yy)
-        else:
-            # Dense sampling creates a continuous oval on the integer pin grid.
-            for i in range(180):
-                angle=i*math.tau/180
-                self.dotpad.set_dot(round(cx+rx*math.cos(angle)),round(cy+ry*math.sin(angle)))
+        # Keep the existing outline; insert only a central column and row.
+        # A 12-by-8 outline becomes 13-by-9, centered on the original box center.
+        previous=(w-2)//2
+        half=max(1,(h-1)//2)
+        for row in range((h+1)//2):
+            t=row/half
+            if kind == 'coin':
+                inset=max(0,round((w-2)/2*(1-t)))
+            else:
+                inset=w//4 if row==0 else max(0,round((w-2)/2*(1-math.sqrt(max(0,1-(1-t)**2)))))
+            cols=set(range(inset,w-inset)) if row==0 else set(range(inset,max(inset+1,previous)))
+            cols |= {w-1-col for col in cols}
+            previous=inset
+            for col in cols:
+                for yy in {row,h-1-row}:self.draw_expanded_item_dot(left,top,w,h,col,yy)
+
+    def draw_expanded_item_dot(self, left, top, w, h, col, row):
+        columns = [col if col < w//2 else col+1]
+        rows = [row if row < h//2 else row+1]
+        if col == w//2-1: columns.append(w//2)
+        if row == h//2-1: rows.append(h//2)
+        for yy in rows:
+            for xx in columns:self.dotpad.set_dot(left+xx,top+yy)
 
     def draw_category(self, x, y, kind):
         if kind in ('stone','copper','iron','diamond','mineral'): kind='mineral'
@@ -96,16 +104,17 @@ class KeypadUI:
     def draw_catalog_item(self, obj, kind, recipe_id=None):
         self.draw_item_frame(obj, kind)
         if kind == 'food':
-            # Food stays distinct by recipe, scaled to leave its oval frame clear.
-            rows=self.get_recipe_config(recipe_id).get('icon',[])
-            if rows:
-                w=max(map(len,rows));h=len(rows)
-                tw,th=min(5,w),min(3,h)
-                rows=[''.join('1' if any(rows[yy][xx:xx+1]=='1'
-                    for yy in range(j*h//th,(j+1)*h//th)
-                    for xx in range(i*w//tw,(i+1)*w//tw)) else '0'
-                    for i in range(tw)) for j in range(th)]
-                self.draw_icon_pattern(obj['x'],obj['y'],rows)
+            # One shared bowl symbol; recipe identity is given by speech.
+            left,top,w,h=self.item_bounds(obj)
+            rows=['111111','011110']
+            x0,y0=left+(w-6)//2,top+(h-2)//2
+            for row,pattern in enumerate(rows):
+                for col,value in enumerate(pattern):
+                    if value=='1':self.draw_expanded_item_dot(left,top,w,h,x0-left+col,y0-top+row)
+        elif kind == 'coin':
+            left,top,w,h=self.item_bounds(obj)
+            for y in range(top+(h-2)//2,top+(h-2)//2+2):
+                for x in range(left+(w-2)//2,left+(w-2)//2+2):self.draw_expanded_item_dot(left,top,w,h,x-left,y-top)
         else: self.draw_category(obj['x'],obj['y'],kind)
 
     def draw_facility(self, obj):
