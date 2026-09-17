@@ -371,6 +371,24 @@
         528,
         455
       ]
+    },
+    "research_seed_return": {
+      "texture": "items",
+      "source": [
+        51,
+        271,
+        177,
+        210
+      ]
+    },
+    "research_field_expand": {
+      "texture": "items",
+      "source": [
+        1013,
+        38,
+        202,
+        201
+      ]
     }
   },
   "pages": {

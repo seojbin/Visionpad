@@ -1108,10 +1108,7 @@ class GameEngine(KeypadUI, SaveMixin):
                 self.dotpad.draw_box(obj["x"], obj["y"], obj["width"], obj["height"])
                 self.dotpad.draw_box(obj["x"], obj["y"], 4, 4)
             elif obj_type == "mine_rock":
-                left, top = obj["x"] - obj["width"] // 2, obj["y"] - obj["height"] // 2
-                for y in range(top, top + obj["height"]):
-                    for x in range(left, left + obj["width"]):
-                        self.dotpad.set_dot(x, y)
+                self.draw_mine_rock(obj)
             elif obj_type == "arrow":
                 self.draw_triangle(obj["x"], obj["y"], obj["direction"], obj.get("size", 2))
             elif obj_type == "box":
@@ -2693,6 +2690,22 @@ class GameEngine(KeypadUI, SaveMixin):
             for i, (x, y) in enumerate(candidates[:limit])
         ]
 
+    def draw_mine_rock(self, obj):
+        """Three fixed damage patterns; preserve a solid two-dot border."""
+        width, height = int(obj["width"]), int(obj["height"])
+        left, top = obj["x"] - width // 2, obj["y"] - height // 2
+        hits = max(0, int(obj.get("hits", 0)))
+        hits_to_break = max(1, int(self.config.get("mine", {}).get("hits_to_break", 3)))
+        # Default: 0 / 1 / 2 hits. Custom hit counts retain the same three patterns.
+        stage = min(2, (2 * hits) // max(1, hits_to_break - 1))
+        for row in range(height):
+            for col in range(width):
+                border = col < 2 or col >= width - 2 or row < 2 or row >= height - 2
+                grid_x, grid_y = (col - 2) % 3 == 0, (row - 2) % 3 == 0
+                filled = stage == 0 or (stage == 1 and (grid_x or grid_y)) or (grid_x and grid_y)
+                if border or filled:
+                    self.dotpad.set_dot(left + col, top + row)
+
     def get_mine_objects(self):
         objects = []
         for rock in self.mine_rocks:
@@ -2700,6 +2713,7 @@ class GameEngine(KeypadUI, SaveMixin):
                             "x": rock["left"] + rock["width"] // 2,
                             "y": rock["top"] + rock["height"] // 2,
                             "width": rock["width"], "height": rock["height"],
+                            "hits": rock.get("hits", 0),
                             "label": "Rock", "tts": "Rock. Tap to break." if self.resources["pickaxe"] else "Pickaxe required.",
                             "action": f"mine_hit:{rock['id']}"})
         exit_arrow = self.back_arrow("mine_exit", "Village", "travel:town")
