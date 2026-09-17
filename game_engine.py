@@ -1730,6 +1730,8 @@ class GameEngine(KeypadUI, SaveMixin):
             return self.open_research()
         if action == "open_recipes":
             return self.open_recipes()
+        if action == "return_shop_choice":
+            return self.return_to_shop_choice()
         if action == "open_shop":
             return self.open_shop()
         if action.startswith("shop_mode:"):
@@ -2468,6 +2470,13 @@ class GameEngine(KeypadUI, SaveMixin):
         self.render()
         return self.response(tts="Shop. Sell on the left. Buy on the right.", sfx="shop_open", sound_events=[{"kind": "one_shot", "sound": "door"}])
 
+    def return_to_shop_choice(self):
+        self.current_page = "shop_choice"
+        self.shop_page = 0
+        self.clear_hover()
+        self.render()
+        return self.response(tts="Shop. Sell on the left. Buy on the right.", sfx="open_page")
+
     def open_shop_mode(self, mode):
         self.shop_page = 0
         if mode == "sell":
@@ -2772,7 +2781,7 @@ class GameEngine(KeypadUI, SaveMixin):
             objects.append({"id": f"shop_{mode}_{kind}_{item_id}", "type": "shop_item", "shop_kind": kind, "item_id": item_id,
                             "x": x, "y": y, "width": 10, "height": 6, "hit_width": 10, "hit_height": 6,
                             "label": label, "tts": text, "action": f"{mode}:{kind}:{item_id}"})
-        objects.append(self.back_arrow(f"shop_{mode}_back", "Back to village", "return_scene"))
+        objects.append(self.back_arrow(f"shop_{mode}_back", "Back to shop", "return_shop_choice"))
         for delta, x, direction, label in [(-1, 30, "left", "Previous page"), (1, 51, "right", "Next page")]:
             if 0 <= self.shop_page + delta < pages:
                 objects.append({"id": f"shop_page_{direction}", "type": "arrow", "x": x, "y": 35, "direction": direction,

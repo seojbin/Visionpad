@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "scenes": {
+    "home": {
+      "background": "room",
+      "objects": [
+        {
+          "id": "bed",
+          "game_id": "home_bed",
+          "game_type": "bed",
+          "art": "bed",
+          "bounds": [
+            75,
+            78,
+            165,
+            225
+          ],
+          "layer": 1
+        },
+        {
+          "id": "research",
+          "game_id": "home_chest",
+          "game_type": "chest",
+          "art": "research",
+          "bounds": [
+            365,
+            62,
+            205,
+            205
+          ],
+          "layer": 1
+        },
+        {
+          "id": "kitchen",
+          "game_id": "home_stove",
+          "game_type": "stove",
+          "art": "kitchen",
+          "bounds": [
+            645,
+            50,
+            245,
+            225
+          ],
+          "layer": 1
+        }
+      ]
+    },
+    "town": {
+      "background": "square",
+      "objects": [
+        {
+          "id": "general_store",
+          "game_id": "town_shop",
+          "game_type": "shop_npc",
+          "art": "store",
+          "bounds": [
+            570,
+            35,
+            290,
+            280
+          ],
+          "layer": 1
+        }
+      ]
+    },
+    "shop": {
+      "background": "shop",
+      "objects": [
+        {
+          "id": "merchant",
+          "owner_id": "town_shop",
+          "art": "merchant",
+          "bounds": [
+            105,
+            147,
+            155,
+            238
+          ],
+          "layer": 1
+        },
+        {
+          "id": "sales_counter",
+          "owner_id": "town_shop",
+          "art": "counter",
+          "bounds": [
+            20,
+            300,
+            315,
+            205
+          ],
+          "layer": 2
+        }
+      ]
+    }
+  }
+}

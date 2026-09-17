@@ -7,7 +7,7 @@ viewer=(root/'viewer.js').read_text()
 viewer=re.sub(r'^import\s*\{.*?\}\s*from\s*"./model.mjs";\s*','',viewer,count=1,flags=re.S)
 viewer=viewer.replace('const base = new URL(".", import.meta.url);', 'const base = new URL(".", document.currentScript.src);')
 viewer=viewer.replace('(document.querySelector(".container") || document.body).append(root);','(document.getElementById("visual-relay") || document.querySelector(".container") || document.body).append(root);')
-viewer=viewer.replace('new URL("viewer.css", base)','new URL("viewer.css?v=side-3", base)')
+viewer=viewer.replace('new URL("viewer.css", base)','new URL("viewer.css?v=catalog-6", base)')
 viewer=viewer.replace('function render() {', 'function render() {\n  if (document.getElementById(\"visual-relay\")) return;')
 # Source pages and the classic entry use the same renderer, without exporting an input interface.
 model=re.sub(r'\bexport\s+','',model);viewer=re.sub(r'\bexport\s+','',viewer)
@@ -23,7 +23,7 @@ if (openButton) {
         'dotdew-visual-'+session, 'width=1150,height=850');
       loadStatus.textContent = child ? 'Visual window connected. Keep this game page open.' : 'Allow pop-ups for this site, then press Open visual display again.';
     };
-  });
+  }).catch(error => {loadStatus.textContent='Visual assets failed: '+error.message;});
 }
 '''
 

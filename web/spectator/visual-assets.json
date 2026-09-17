@@ -1,0 +1,435 @@
+{
+  "version": 1,
+  "textures": {
+    "scenes": "assets/scenes.png",
+    "items": "assets/items.png",
+    "extras": "assets/extras.png",
+    "environments": "assets/environments.png",
+    "facilities": "assets/facilities.png"
+  },
+  "backgrounds": {
+    "home": {
+      "texture": "scenes",
+      "source": [
+        0,
+        0,
+        768,
+        468
+      ]
+    },
+    "farm": {
+      "texture": "scenes",
+      "source": [
+        768,
+        0,
+        768,
+        478
+      ]
+    },
+    "town": {
+      "texture": "scenes",
+      "source": [
+        0,
+        482,
+        768,
+        542
+      ]
+    },
+    "mine": {
+      "texture": "scenes",
+      "source": [
+        768,
+        482,
+        768,
+        542
+      ]
+    },
+    "soil": {
+      "texture": "environments",
+      "source": [
+        0,
+        0,
+        766,
+        487
+      ]
+    },
+    "shop": {
+      "texture": "environments",
+      "source": [
+        770,
+        0,
+        766,
+        487
+      ]
+    },
+    "room": {
+      "texture": "environments",
+      "source": [
+        0,
+        492,
+        766,
+        532
+      ]
+    },
+    "square": {
+      "texture": "environments",
+      "source": [
+        770,
+        492,
+        766,
+        532
+      ]
+    }
+  },
+  "facilities": {
+    "bed": {
+      "texture": "facilities",
+      "source": [
+        80,
+        25,
+        320,
+        437
+      ]
+    },
+    "research": {
+      "texture": "facilities",
+      "source": [
+        545,
+        22,
+        415,
+        436
+      ]
+    },
+    "kitchen": {
+      "texture": "facilities",
+      "source": [
+        1025,
+        25,
+        480,
+        418
+      ]
+    },
+    "store": {
+      "texture": "facilities",
+      "source": [
+        14,
+        479,
+        551,
+        483
+      ]
+    },
+    "merchant": {
+      "texture": "facilities",
+      "source": [
+        630,
+        480,
+        281,
+        523
+      ]
+    },
+    "counter": {
+      "texture": "facilities",
+      "source": [
+        975,
+        570,
+        561,
+        409
+      ]
+    }
+  },
+  "objects": {
+    "tomato": {
+      "texture": "items",
+      "source": [
+        49,
+        57,
+        179,
+        171
+      ]
+    },
+    "carrot": {
+      "texture": "items",
+      "source": [
+        309,
+        36,
+        154,
+        206
+      ]
+    },
+    "potato": {
+      "texture": "items",
+      "source": [
+        536,
+        68,
+        176,
+        160
+      ]
+    },
+    "coin": {
+      "texture": "items",
+      "source": [
+        777,
+        52,
+        187,
+        176
+      ]
+    },
+    "fertilizer": {
+      "texture": "items",
+      "source": [
+        1013,
+        38,
+        202,
+        201
+      ]
+    },
+    "seed_tomato": {
+      "texture": "items",
+      "source": [
+        51,
+        271,
+        177,
+        210
+      ]
+    },
+    "seed_carrot": {
+      "texture": "items",
+      "source": [
+        296,
+        270,
+        172,
+        210
+      ]
+    },
+    "seed_potato": {
+      "texture": "items",
+      "source": [
+        535,
+        270,
+        175,
+        210
+      ]
+    },
+    "pickaxe": {
+      "texture": "items",
+      "source": [
+        774,
+        286,
+        185,
+        186
+      ]
+    },
+    "stone": {
+      "texture": "items",
+      "source": [
+        1019,
+        292,
+        187,
+        180
+      ]
+    },
+    "copper": {
+      "texture": "items",
+      "source": [
+        49,
+        526,
+        182,
+        169
+      ]
+    },
+    "iron": {
+      "texture": "items",
+      "source": [
+        290,
+        526,
+        182,
+        168
+      ]
+    },
+    "diamond": {
+      "texture": "items",
+      "source": [
+        536,
+        531,
+        174,
+        155
+      ]
+    },
+    "tomato_carrot_stew": {
+      "texture": "items",
+      "source": [
+        760,
+        516,
+        212,
+        178
+      ]
+    },
+    "potato_tomato_soup": {
+      "texture": "items",
+      "source": [
+        1012,
+        516,
+        208,
+        179
+      ]
+    },
+    "vegetable_tempura": {
+      "texture": "items",
+      "source": [
+        28,
+        729,
+        223,
+        200
+      ]
+    },
+    "vegetable_fritters": {
+      "texture": "items",
+      "source": [
+        28,
+        729,
+        223,
+        200
+      ]
+    },
+    "sprout": {
+      "texture": "items",
+      "source": [
+        305,
+        778,
+        156,
+        145
+      ]
+    },
+    "leaves": {
+      "texture": "items",
+      "source": [
+        525,
+        728,
+        198,
+        206
+      ]
+    },
+    "plant_tomato": {
+      "texture": "items",
+      "source": [
+        755,
+        719,
+        223,
+        220
+      ]
+    },
+    "plant_carrot": {
+      "texture": "items",
+      "source": [
+        1013,
+        716,
+        215,
+        223
+      ]
+    },
+    "plant_potato": {
+      "texture": "items",
+      "source": [
+        33,
+        963,
+        206,
+        232
+      ]
+    },
+    "rock": {
+      "texture": "items",
+      "source": [
+        264,
+        977,
+        239,
+        210
+      ]
+    },
+    "water": {
+      "texture": "items",
+      "source": [
+        745,
+        987,
+        228,
+        180
+      ]
+    },
+    "research": {
+      "texture": "items",
+      "source": [
+        1002,
+        1003,
+        223,
+        173
+      ]
+    },
+    "wood": {
+      "texture": "extras",
+      "source": [
+        60,
+        108,
+        528,
+        455
+      ]
+    }
+  },
+  "pages": {
+    "home": {
+      "renderer": "home"
+    },
+    "farm": {
+      "renderer": "farm"
+    },
+    "town": {
+      "renderer": "town"
+    },
+    "mine": {
+      "renderer": "mine"
+    },
+    "minimap": {
+      "renderer": "minimap"
+    },
+    "inventory": {
+      "renderer": "inventory"
+    },
+    "research": {
+      "renderer": "research"
+    },
+    "recipe_select": {
+      "renderer": "recipe_select"
+    },
+    "ingredient_select": {
+      "renderer": "ingredient_select"
+    },
+    "cooking": {
+      "renderer": "cooking"
+    },
+    "seed_select": {
+      "renderer": "seed_select"
+    },
+    "plot_detail": {
+      "renderer": "plot_detail"
+    },
+    "water_minigame": {
+      "renderer": "water_minigame"
+    },
+    "fertilizer_minigame": {
+      "renderer": "fertilizer_minigame"
+    },
+    "harvest": {
+      "renderer": "harvest"
+    },
+    "shop_choice": {
+      "renderer": "shop_choice"
+    },
+    "shop_buy": {
+      "renderer": "shop_buy"
+    },
+    "shop_sell": {
+      "renderer": "shop_sell"
+    },
+    "load_game": {
+      "renderer": "load_game"
+    }
+  }
+}

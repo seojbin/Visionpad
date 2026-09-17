@@ -169,7 +169,7 @@ function snapshot(input) {
 const base = new URL(".", document.currentScript.src);
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = new URL("viewer.css?v=side-3", base);
+css.href = new URL("viewer.css?v=catalog-6", base);
 document.head.append(css);
 const root = document.createElement("section");
 root.className = "dotdew-observer";
@@ -180,27 +180,11 @@ const canvas = root.querySelector(".dv-stage>canvas"),
   ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 const sheets = {};
-const assetsReady = Promise.all(
-  ["scenes", "items", "extras"].map(
-    (name) =>
-      new Promise((resolve) => {
-        const i = new Image();
-        i.onload = () => {
-          sheets[name] = i;
-          resolve();
-        };
-        i.onerror = () => {
-          root.querySelector("[data-detail]").textContent =
-            "Some visual artwork could not load. Game controls are unaffected.";
-          resolve();
-        };
-        i.src = new URL(`assets/${name}.png`, base);
-      }),
-  ),
-).then(() => {
-  menuKey = "";
-  render();
-});
+let sceneDefinitions={scenes:{}}, assetCatalog={backgrounds:{},facilities:{},objects:{},pages:{}};
+const assetsReady=Promise.all([
+ fetch(new URL('scene-objects.json?v=catalog-6',base)).then(r=>{if(!r.ok)throw new Error('Scene registry unavailable');return r.json();}).then(d=>{sceneDefinitions=d;}),
+ fetch(new URL('visual-assets.json?v=catalog-6',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
+]).catch(error=>{console.warn(error);}).then(()=>{menuKey='';if(state)updateUI();});
 let animationFrame = 0;
 let state = null,
   lastEnvelope = null,
@@ -218,55 +202,50 @@ function text(s, x, y, color = "#fff2c7", size = 15) {
   ctx.fillStyle = color;
   ctx.fillText(s, x, y);
 }
-// Tight source rectangles keep neighboring atlas sprites out of each item.
-const rects = [
-  [49, 57, 179, 171],
-  [309, 36, 154, 206],
-  [536, 68, 176, 160],
-  [777, 52, 187, 176],
-  [1013, 38, 202, 201],
-  [51, 271, 177, 210],
-  [296, 270, 172, 210],
-  [535, 270, 175, 210],
-  [774, 286, 185, 186],
-  [1019, 292, 187, 180],
-  [49, 526, 182, 169],
-  [290, 526, 182, 168],
-  [536, 531, 174, 155],
-  [760, 516, 212, 178],
-  [1012, 516, 208, 179],
-  [28, 729, 223, 200],
-  [305, 778, 156, 145],
-  [525, 728, 198, 206],
-  [755, 719, 223, 220],
-  [1013, 716, 215, 223],
-  [33, 963, 206, 232],
-  [264, 977, 239, 210],
-  [536, 950, 171, 245],
-  [745, 987, 228, 180],
-  [1002, 1003, 223, 173],
-  [60, 108, 528, 455],
-  [656, 129, 559, 434],
-  [87, 658, 467, 507],
-  [715, 650, 457, 507],
-];
-function sprite(index, x, y, w = 60, h = w, c = ctx) {
-  const i = index >= 25 ? sheets.extras : sheets.items;
-  if (!i) return;
-  const r = rects[index] || rects[24],
-    scale = Math.min(w / r[2], h / r[3]) * 0.92,
-    dw = r[2] * scale,
-    dh = r[3] * scale;
-  c.imageSmoothingEnabled = false;
-  c.drawImage(i, ...r, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+function drawAsset(asset,x,y,w,h,c=ctx,fit=true) {
+ const i=sheets[asset?.texture];if(!i)return false;
+ const r=asset.source||[0,0,i.width,i.height];c.imageSmoothingEnabled=false;
+ const scale=fit?Math.min(w/r[2],h/r[3])*.92:1,dw=fit?r[2]*scale:w,dh=fit?r[3]*scale:h;
+ c.drawImage(i,...r,x+(w-dw)/2,y+(h-dh)/2,dw,dh);return true;
+}
+function sprite(index,x,y,w=60,h=w,c=ctx) {
+ const key=typeof index==='string'?index:Object.keys(SPRITES).find(k=>SPRITES[k]===index&&k!=='farmer');
+ return drawAsset(assetCatalog.objects[key],x,y,w,h,c);
+}
+function objectArt(name, bounds) {
+  const art=assetCatalog.facilities?.[name];if(!art)return;
+  const image=sheets[art.texture];if(!image)return;
+  const source=art.source||[0,0,image.width,image.height];
+  const [x,y,w,h]=bounds, scale=Math.min(w/source[2],h/source[3]);
+  const dw=source[2]*scale,dh=source[3]*scale;
+  ctx.drawImage(image,...source,x+(w-dw)/2,y+h-dh,dw,dh);
+}
+function environment(name, x=0,y=0,w=960,h=600) {
+  return drawAsset(assetCatalog.backgrounds[name],x,y,w,h,ctx,false);
+}
+function sceneObjects(name) {
+  const config=sceneDefinitions.scenes[name];if(!config)return;
+  environment(config.background);
+  const gameObjects=state.spectator?.objects||state.objects||[];
+  for(const object of [...config.objects].sort((a,b)=>(a.layer||0)-(b.layer||0))) {
+    const linked=gameObjects.find(o=>o.id===object.game_id)||(object.game_type?gameObjects.find(o=>o.type===object.game_type):null);
+    if(object.game_id&&!linked&&SCENES.includes(state.page))continue;
+    objectArt(object.art,object.bounds);
+    if(linked&&focused(linked.id)) {
+      outline(...object.bounds,linked.id);
+      text(linked.label,object.bounds[0]+8,object.bounds[1]+object.bounds[3]+18);
+    }
+  }
+}
+function currentPlot() {
+  const id=state.page==='harvest'?state.harvest?.plot_id:state.plot_detail_id;
+  return state.spectator?.plots?.find(p=>p.id===id)||state.farm_plots?.[id]||{};
+}
+function cropImage(plot,forceMature=false) {
+  return forceMature||plot.mature ? (SPRITES['plant_'+plot.seed_id]??17) : plot.growth ? 17 : 16;
 }
 function background(name) {
-  const i = sheets.scenes;
-  ctx.fillStyle = "#42563e";
-  ctx.fillRect(0, 0, 960, 600);
-  if (!i) return;
-  const rect = {home:[0,0,768,468], farm:[768,0,768,478], town:[0,482,768,542], mine:[768,482,768,542]}[name] || [0,0,768,468];
-  ctx.drawImage(i, ...rect, 0, 0, 960, 600);
+  return drawAsset(assetCatalog.backgrounds[name],0,0,960,600,ctx,false);
 }
 function focused(id) {
   return state.hover_object === id;
@@ -289,11 +268,7 @@ function farm() {
       ctx.fillRect(p.x + 6, p.y + y, p.w - 12, 3);
     if (p.seed_id) {
       const growth = p.growth || 0;
-      const idx = p.mature
-        ? (SPRITES["plant_" + p.seed_id] ?? 17)
-        : growth === 0
-          ? 16
-          : 17;
+      const idx = cropImage(p);
       const sz = p.mature ? 57 : growth === 0 ? 29 : 34 + 20 * Math.min(1, growth / (p.growth_days || 3));
       for (let i = 0; i < 6; i++) {
         const x = p.x + 8 + (i % 3) * 58,
@@ -334,19 +309,9 @@ function mine() {
   }
 }
 function facilities() {
-  const objects = state.spectator?.objects || state.objects || [];
-  for (const o of objects) {
-    let b;
-    if (o.type === "bed") b = [52, 89, 188, 164];
-    else if (o.type === "chest") b = [365, 54, 206, 164];
-    else if (o.type === "stove") b = [613, 57, 270, 166];
-    else if (o.type === "shop_npc") b = [62, 66, 338, 202];
-    if (b && focused(o.id)) {
-      outline(...b, o.id);
-      text(o.label || o.type, b[0] + 10, b[1] + b[3] + 23);
-    }
-  }
+  sceneObjects(state.page);
 }
+
 function map() {
   ctx.fillStyle = "#e3d4a6";
   ctx.fillRect(65, 90, 830, 450);
@@ -400,16 +365,15 @@ function map() {
     ctx.lineWidth = state.current_location === name ? 6 : 3;
     ctx.strokeRect(x - 72, y - 50, 144, 92);
     text(node.label, x - 40, y + 67, "#f9e9be", 15);
-    if (state.current_location === name) sprite(22, x - 19, y - 88, 40);
+    if (state.current_location === name) text("You are here",x-44,y-63,"#fff6b3",12);
   }
 }
 function mini() {
   const page = state.page,
     cook = page === "cooking";
-  ctx.fillStyle = "#1d2119ae";
-  ctx.fillRect(0, 0, 960, 600);
-  ctx.fillStyle = cook ? "#bc8c52" : "#6c452b";
-  ctx.fillRect(75, 95, 810, 450);
+  if (!cook) environment("soil");
+  else {ctx.fillStyle = "#1d2119ae";ctx.fillRect(0, 0, 960, 600);}
+  if(cook){ctx.fillStyle = "#bc8c52";ctx.fillRect(75,95,810,450);}
   ctx.strokeStyle = "#d8b17d";
   ctx.lineWidth = 7;
   ctx.strokeRect(75, 95, 810, 450);
@@ -456,20 +420,14 @@ function mini() {
       if (!t.visible) continue;
       const [x, y] = project(t.x, t.y);
       ctx.globalAlpha = t.collected ? 0.4 : 1;
-      if (page === "harvest") {
-        const seed = state.farm_plots?.[state.harvest?.plot_id]?.seed_id;
-        sprite(SPRITES[seed] ?? 0, x - 23, y - 23, 46);
-      } else {
-        ctx.fillStyle = page === "water_minigame" ? "#9accdb" : "#e2ba73";
-        ctx.beginPath();
-        ctx.arc(x, y, 14, 0, Math.PI * 2);
-        ctx.fill();
-        if (t.collected) {
-          ctx.strokeStyle = "#d8ebba";
-          ctx.lineWidth = 4;
-          ctx.stroke();
-        }
+      const plot=currentPlot();
+      if(t.collected && page!=='harvest') {
+        ctx.fillStyle=page==='water_minigame'?'#355d6380':'#d8bb7160';
+        ctx.beginPath();ctx.ellipse(x,y+19,31,10,0,0,Math.PI*2);ctx.fill();
       }
+      sprite(cropImage(plot,page==='harvest'),x-31,y-34,62,62);
+      ctx.strokeStyle=t.collected?'#bfe8ac':'#f2db9b80';ctx.lineWidth=2;
+      ctx.beginPath();ctx.ellipse(x,y+22,24,7,0,0,Math.PI*2);ctx.stroke();
       ctx.globalAlpha = 1;
     }
   }
@@ -502,16 +460,13 @@ function mini() {
 function detail() {
   const id = state.plot_detail_id,
     p = state.spectator?.plots?.find((p) => p.id === id);
-  ctx.fillStyle = "#223322b8";
-  ctx.fillRect(0, 70, 960, 530);
-  ctx.fillStyle = p?.watered ? "#513c29" : "#855632";
-  ctx.fillRect(110, 205, 430, 280);
+  environment('soil');
+  ctx.fillStyle='#34241930';ctx.fillRect(85,130,465,410);
   for (let i = 0; i < 12; i++) {
-    ctx.fillStyle = "#503827";
-    ctx.fillRect(124 + (i % 4) * 100, 230 + Math.floor(i / 4) * 75, 83, 5);
+
     if (p?.seed_id)
       sprite(
-        p.mature ? (SPRITES["plant_" + p.seed_id] ?? 17) : p.growth ? 17 : 16,
+        cropImage(p),
         128 + (i % 4) * 100,
         211 + Math.floor(i / 4) * 75,
         76,
@@ -526,21 +481,55 @@ function detail() {
     14,
   );
 }
+const renderers=new Set([...Object.keys(TITLES),"background"]);
+function fallbackPage() {
+ const spec=assetCatalog.pages?.[state.page];
+ if(!spec||!renderers.has(spec.renderer))return true;
+ if(spec.renderer==='background'){const a=assetCatalog.backgrounds[spec.background];return !a||!sheets[a.texture];}
+ const bg=state.page.startsWith('shop_')?'shop':['plot_detail','water_minigame','fertilizer_minigame','harvest'].includes(state.page)?'soil':scene(state)==='home'?'room':scene(state)==='town'?'square':scene(state);
+ const asset=assetCatalog.backgrounds[bg];
+ return !asset||!sheets[asset.texture];
+}
+function tactileFallback() {
+ const rows=state.dots||[],w=state.width||rows[0]?.length||60,h=state.height||rows.length||40;
+ ctx.fillStyle='#162019';ctx.fillRect(0,0,960,600);
+ const step=Math.min(840/w,440/h),ox=(960-w*step)/2,oy=100+(440-h*step)/2;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  ctx.fillStyle=rows[y]?.[x]?'#f0e9bd':'#2b382d';ctx.beginPath();ctx.arc(ox+(x+.5)*step,oy+(y+.5)*step,Math.max(1,step*.25),0,Math.PI*2);ctx.fill();
+ }
+ text('DotPad live view',ox,76,'#e4dec1',17);
+}
+function itemKey(o) {
+ const id=(o.id||'').replace(/^inventory_/,'').replace(/^(food_|crop_|recipe_|ingredient_)/,'');
+ const kind=o.resource_kind||o.shop_kind||o.item_kind||o.type;
+ if(kind==='seed'||id.startsWith('seed_'))return 'seed_'+(o.seed_id||o.item_id||id.replace(/^seed_/,''));
+ return o.recipe_id||o.ingredient_id||o.seed_id||o.item_id||id;
+}
+function itemFrame(o) {
+ if(['oval','diamond','rectangle'].includes(o.frame_shape))return o.frame_shape;
+ const kind=o.resource_kind||o.shop_kind||o.item_kind||o.kind;
+ if(kind==='food'||o.type==='recipe'||o.recipe_id||/^inventory_food_/.test(o.id||''))return 'oval';
+ if(kind==='coin'||kind==='currency'||kind==='special'||/^inventory_coin$/.test(o.id||''))return 'diamond';
+ return 'rectangle';
+}
+function itemSprite(o) {
+ const key=itemKey(o);if(assetCatalog.objects[key])return key;
+ // Only existing non-item controls retain their fixed interface images.
+ if(['research','care_button','save_slot','shop_choice'].includes(o.type))return spriteFor(o);
+ return null;
+}
 function render() {
   if (document.getElementById("visual-relay")) return;
   if (!state) return;
+  if(fallbackPage()){tactileFallback();return;}
+  const pageSpec=assetCatalog.pages[state.page];
+  if(pageSpec.renderer==="background"){drawAsset(assetCatalog.backgrounds[pageSpec.background],0,0,960,600,ctx,false);return;}
   const loc = scene(state);
   background(loc);
   if (state.page === "farm") farm();
   else if (state.page === "mine") mine();
-  else if (SCENES.includes(state.page)) facilities();
-  if (SCENES.includes(state.page) && state.page !== "mine")
-    sprite(
-      22,
-      state.page === "farm" ? 835 : state.page === "town" ? 610 : 425,
-      state.page === "farm" ? 430 : state.page === "town" ? 325 : 340,
-      74,
-    );
+  if (loc === "home" || loc === "town") sceneObjects(loc);
+  if (state.page.startsWith('shop_')) sceneObjects('shop');
   const ph = phase(state);
   ctx.fillStyle = ph.color;
   ctx.globalAlpha = ph.alpha;
@@ -605,7 +594,7 @@ function burst(color = "#f6d786") {
 }
 function menus() {
   const show =
-    !SCENES.includes(state.page) &&
+    !fallbackPage() && (renderers.has(state.page)||assetCatalog.pages[state.page]?.items===true) && !SCENES.includes(state.page) &&
     ![
       "minimap",
       "cooking",
@@ -657,14 +646,12 @@ function menus() {
       (focused(o.id) ? " is-focused" : "") +
       (o.selected ? " is-selected" : "");
     card.dataset.objectId = o.id;
-    const c = document.createElement("canvas");
-    c.width = c.height = 80;
-    sprite(spriteFor(o), 0, 0, 80, 80, c.getContext("2d"));
-    const title = document.createElement("strong");
-    title.textContent = o.label;
-    const small = document.createElement("small");
-    small.textContent = o.description;
-    card.append(c, title, small);
+    card.dataset.frame=itemFrame(o);
+    const c=document.createElement('canvas');c.width=c.height=80;
+    const key=itemSprite(o),hasArt=key!==null&&sprite(key,0,0,80,80,c.getContext('2d'));
+    const title=document.createElement('strong');title.textContent=o.label||itemKey(o);
+    if(hasArt){const small=document.createElement('small');small.textContent=o.description;card.append(c,title,small);}
+    else {card.classList.add('dv-placeholder');card.append(title);}
     grid.append(card);
   }
   if (!cards.length) {
@@ -807,7 +794,7 @@ if (openButton) {
         'dotdew-visual-'+session, 'width=1150,height=850');
       loadStatus.textContent = child ? 'Visual window connected. Keep this game page open.' : 'Allow pop-ups for this site, then press Open visual display again.';
     };
-  });
+  }).catch(error => {loadStatus.textContent='Visual assets failed: '+error.message;});
 }
 
 } catch(error) {
