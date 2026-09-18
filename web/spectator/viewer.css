@@ -249,18 +249,6 @@
   margin-top: 12px;
   letter-spacing: 2px;
 }
-.dotdew-observer.dv-expanded {
-  position: fixed;
-  inset: 12px;
-  z-index: 9999;
-  margin: 0;
-  max-width: none;
-  overflow: auto;
-}
-.dv-expanded .dv-stage {
-  max-width: 1100px;
-  margin: auto;
-}
 .dv-standalone {
   margin: 0;
   padding: 16px;

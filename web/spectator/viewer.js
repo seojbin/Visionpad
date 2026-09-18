@@ -19,7 +19,7 @@ document.head.append(css);
 const root = document.createElement("section");
 root.className = "dotdew-observer";
 root.setAttribute("aria-label", "Dotdew Valley visual companion");
-root.innerHTML = `<header class="dv-heading"><div><div class="dv-eyebrow"><span class="dv-live"></span>Visual companion · read only</div><h2>Dotdew Valley</h2></div><div class="dv-tools"><button type="button" data-view="expand">Expand</button><button type="button" data-view="detach">Open window</button></div></header><div class="dv-stage"><canvas width="960" height="600" aria-label="Visual representation of the current game"></canvas><div class="dv-hud"><span class="dv-badge" data-place>Waiting for the game</span><span class="dv-badge" data-clock>Live view</span></div><section class="dv-menu" hidden><h3></h3><div class="dv-subtitle"></div><div class="dv-cards"></div></section><div class="dv-shade" hidden></div></div><footer class="dv-footer"><div class="dv-caption">Your adventure will appear here.</div><div class="dv-status">Following player input</div></footer><div class="dv-details"><span data-detail>Connected to the tactile display. Controls stay on the game pad.</span><div class="dv-events"></div></div>`;
+root.innerHTML = `<header class="dv-heading"><div><div class="dv-eyebrow"><span class="dv-live"></span>Visual companion · read only</div><h2>Dotdew Valley</h2></div><div class="dv-tools"><button type="button" data-view="detach">Open window</button></div></header><div class="dv-stage"><canvas width="960" height="600" aria-label="Visual representation of the current game"></canvas><div class="dv-hud"><span class="dv-badge" data-place>Waiting for the game</span><span class="dv-badge" data-clock>Live view</span></div><section class="dv-menu" hidden><h3></h3><div class="dv-subtitle"></div><div class="dv-cards"></div></section><div class="dv-shade" hidden></div></div><footer class="dv-footer"><div class="dv-caption">Your adventure will appear here.</div><div class="dv-status">Following player input</div></footer><div class="dv-details"><span data-detail>Connected to the tactile display. Controls stay on the game pad.</span><div class="dv-events"></div></div>`;
 (document.querySelector(".container") || document.body).append(root);
 const canvas = root.querySelector(".dv-stage>canvas"),
   ctx = canvas.getContext("2d");
@@ -605,12 +605,6 @@ if (isDetached || isDemo) {
   q('[data-view="detach"]').hidden = true;
   channel?.postMessage({ kind: "request" });
 }
-q('[data-view="expand"]').onclick = () => {
-  root.classList.toggle("dv-expanded");
-  q('[data-view="expand"]').textContent = root.classList.contains("dv-expanded")
-    ? "Restore"
-    : "Expand";
-};
 q('[data-view="detach"]').onclick = () => {
   window.open(
     new URL("standalone.html?session=" + encodeURIComponent(session), base),
