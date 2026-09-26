@@ -19,7 +19,7 @@ document.head.append(css);
 const root = document.createElement("section");
 root.className = "dotdew-observer";
 root.setAttribute("aria-label", "Dotdew Valley visual companion");
-root.innerHTML = `<header class="dv-heading"><div><div class="dv-eyebrow"><span class="dv-live"></span>Visual companion · read only</div><h2>Dotdew Valley</h2></div><div class="dv-tools"><button type="button" data-view="detach">Open window</button></div></header><div class="dv-stage"><canvas width="960" height="600" aria-label="Visual representation of the current game"></canvas><div class="dv-hud"><span class="dv-badge" data-place>Waiting for the game</span><span class="dv-badge" data-clock>Live view</span></div><section class="dv-menu" hidden><h3></h3><div class="dv-subtitle"></div><div class="dv-cards"></div></section><div class="dv-shade" hidden></div></div><footer class="dv-footer"><div class="dv-caption">Your adventure will appear here.</div><div class="dv-status">Following player input</div></footer><div class="dv-details"><span data-detail>Connected to the tactile display. Controls stay on the game pad.</span><div class="dv-events"></div></div>`;
+root.innerHTML = `<header class="dv-heading"><div><div class="dv-eyebrow"><span class="dv-live"></span>Visual companion · read only</div><h2>Dotdew Valley</h2></div><div class="dv-tools"><button type="button" data-view="detach">Open window</button></div></header><div class="dv-stage"><canvas width="960" height="600" aria-label="Visual representation of the current game"></canvas><div class="dv-hud"><span class="dv-badge" data-place>Waiting for the game</span><span class="dv-badge" data-clock>Live view</span></div><section class="dv-menu" hidden><h3></h3><div class="dv-subtitle"></div><div class="dv-cards"></div></section><div class="dv-shade" hidden></div></div><footer class="dv-time-footer"><span class="dv-time-label">Activity time</span><div class="dv-time-gauge" role="progressbar" aria-label="Activity time used" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0"><div class="dv-time-fill"></div></div></footer>`;
 (document.querySelector(".container") || document.body).append(root);
 const canvas = root.querySelector(".dv-stage>canvas"),
   ctx = canvas.getContext("2d");
@@ -27,8 +27,8 @@ ctx.imageSmoothingEnabled = false;
 const sheets = {};
 let sceneDefinitions={scenes:{}}, assetCatalog={backgrounds:{},facilities:{},objects:{},pages:{}};
 const assetsReady=Promise.all([
- fetch(new URL('scene-objects.json?v=catalog-6',base)).then(r=>{if(!r.ok)throw new Error('Scene registry unavailable');return r.json();}).then(d=>{sceneDefinitions=d;}),
- fetch(new URL('visual-assets.json?v=catalog-6',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
+ fetch(new URL('scene-objects.json?v=large-cards-10',base)).then(r=>{if(!r.ok)throw new Error('Scene registry unavailable');return r.json();}).then(d=>{sceneDefinitions=d;}),
+ fetch(new URL('visual-assets.json?v=large-cards-10',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
 ]).catch(error=>{console.warn(error);}).then(()=>{menuKey='';if(state)updateUI();});
 let animationFrame = 0;
 let state = null,
@@ -40,7 +40,7 @@ let state = null,
   lastEventAt = 0;
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const q = (s) => root.querySelector(s);
-function text(s, x, y, color = "#fff2c7", size = 15) {
+function text(s, x, y, color = "#baff91", size = 18) {
   ctx.font = `${size}px Georgia`;
   ctx.fillStyle = "#251e19bb";
   ctx.fillRect(x - 7, y - size - 3, ctx.measureText(s).width + 14, size + 12);
@@ -97,15 +97,29 @@ function focused(id) {
 }
 function outline(x, y, w, h, id) {
   if (!focused(id)) return;
-  ctx.strokeStyle = "#fff3ac";
-  ctx.lineWidth = 4;
-  ctx.strokeRect(x - 4, y - 4, w + 8, h + 8);
+  ctx.strokeStyle = "#23170d";
+  ctx.lineWidth = 10;
+  ctx.strokeRect(x - 5, y - 5, w + 10, h + 10);
+  ctx.strokeStyle = "#ff9a1a";
+  ctx.lineWidth = 5;
+  ctx.strokeRect(x - 5, y - 5, w + 10, h + 10);
+}
+function fence(x,y,w,h) {
+  ctx.save();
+  ctx.fillStyle='#312119';ctx.fillRect(x-5,y-5,w+10,10);ctx.fillRect(x-5,y+h-5,w+10,10);
+  ctx.fillRect(x-5,y,10,h);ctx.fillRect(x+w-5,y,10,h);
+  ctx.strokeStyle='#f1ce8b';ctx.lineWidth=5;ctx.strokeRect(x,y,w,h);
+  const post=(px,py)=>{ctx.fillStyle='#412a1a';ctx.fillRect(px-6,py-10,12,22);ctx.fillStyle='#e7bb72';ctx.fillRect(px-3,py-8,6,18);};
+  for(let px=x;px<=x+w;px+=38){post(px,y);post(px,y+h);}
+  for(let py=y+32;py<y+h;py+=38){post(x,py);post(x+w,py);}
+  ctx.restore();
 }
 function farm() {
+
   for (const p of plots(state)) {
     ctx.fillStyle = p.watered ? "#503d2c" : "#815532";
     ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.strokeStyle = "#bd9158";
+    ctx.strokeStyle = "#cc5500";
     ctx.lineWidth = 4;
     ctx.strokeRect(p.x, p.y, p.w, p.h);
     ctx.fillStyle = p.watered ? "#3a3026" : "#624126";
@@ -115,7 +129,7 @@ function farm() {
       const growth = p.growth || 0;
       const idx = cropImage(p);
       const sz = p.mature ? 57 : growth === 0 ? 29 : 34 + 20 * Math.min(1, growth / (p.growth_days || 3));
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 3; i++) {
         const x = p.x + 8 + (i % 3) * 58,
           y = p.y + 7 + Math.floor(i / 3) * 48;
         sprite(idx, x + (54 - sz) / 2, y + 50 - sz, sz);
@@ -126,13 +140,14 @@ function farm() {
       for (let i = 0; i < 6; i++)
         ctx.fillRect(p.x + 10 + i * 29, p.y + p.h - 7, 3, 3);
     }
+    fence(p.x-3,p.y-3,p.w+6,p.h+6);
     outline(p.x, p.y, p.w, p.h, p.id);
     text(
       `${p.id.replaceAll("_", " ")} · ${p.mature ? "Ready" : p.seed_id || "Empty"}`,
       p.x + 8,
       p.y + p.h - 9,
-      "#f4e1a9",
-      11,
+      "#baff91",
+      16,
     );
   }
 }
@@ -202,15 +217,11 @@ function map() {
       );
     }
     ctx.strokeStyle =
-      state.current_location === name
-        ? "#477f50"
-        : focused(node.id)
-          ? "#fff8cf"
-          : "#876a43";
+      focused(node.id) ? "#ff9a1a" : state.current_location === name ? "#baff91" : "#bd4e00";
     ctx.lineWidth = state.current_location === name ? 6 : 3;
     ctx.strokeRect(x - 72, y - 50, 144, 92);
-    text(node.label, x - 40, y + 67, "#f9e9be", 15);
-    if (state.current_location === name) text("You are here",x-44,y-63,"#fff6b3",12);
+    text(node.label, x - 40, y + 67, "#baff91", 18);
+    if (state.current_location === name) text("You are here",x-44,y-63,"#baff91",16);
   }
 }
 function mini() {
@@ -303,29 +314,16 @@ function mini() {
   }
 }
 function detail() {
-  const id = state.plot_detail_id,
-    p = state.spectator?.plots?.find((p) => p.id === id);
+  const id=state.plot_detail_id,p=state.spectator?.plots?.find(p=>p.id===id);
   environment('soil');
-  ctx.fillStyle='#34241930';ctx.fillRect(85,130,465,410);
-  for (let i = 0; i < 12; i++) {
+  ctx.fillStyle='#332214dd';ctx.fillRect(75,337,810,213);
 
-    if (p?.seed_id)
-      sprite(
-        cropImage(p),
-        128 + (i % 4) * 100,
-        211 + Math.floor(i / 4) * 75,
-        76,
-      );
-  }
-  text(`${id || "Plot"} · ${p?.seed_id || "Empty soil"}`, 125, 177);
-  text(
-    `${p?.watered ? "Watered" : "Needs water"} · ${p?.fertilized ? "Fertilized" : "No fertilizer"}`,
-    125,
-    520,
-    "#eedbad",
-    14,
-  );
+  for(let i=0;i<10;i++)if(p?.seed_id)
+    sprite(cropImage(p),115+(i%5)*150,365+Math.floor(i/5)*72,70);
+  text(`${id||'Plot'} · ${p?.seed_id||'Empty soil'}`,95,324,'#baff91',20);
+  text(`${p?.watered?'Watered':'Needs water'} · ${p?.fertilized?'Fertilized':'No fertilizer'}`,95,580,'#baff91',18);
 }
+
 const renderers=new Set([...Object.keys(TITLES),"background"]);
 function fallbackPage() {
  const spec=assetCatalog.pages?.[state.page];
@@ -342,7 +340,7 @@ function tactileFallback() {
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
   ctx.fillStyle=rows[y]?.[x]?'#f0e9bd':'#2b382d';ctx.beginPath();ctx.arc(ox+(x+.5)*step,oy+(y+.5)*step,Math.max(1,step*.25),0,Math.PI*2);ctx.fill();
  }
- text('DotPad live view',ox,76,'#e4dec1',17);
+ text('DotPad live view',ox,76,'#baff91',18);
 }
 function itemKey(o) {
  const id=(o.id||'').replace(/^inventory_/,'').replace(/^(food_|crop_|recipe_|ingredient_)/,'');
@@ -353,7 +351,7 @@ function itemKey(o) {
 function itemFrame(o) {
  if(['oval','diamond','rectangle'].includes(o.frame_shape))return o.frame_shape;
  const kind=o.resource_kind||o.shop_kind||o.item_kind||o.kind;
- if(kind==='food'||o.type==='recipe'||o.recipe_id||/^inventory_food_/.test(o.id||''))return 'oval';
+ if(kind==='food'||o.type==='recipe'||o.recipe_id||/^inventory_food_/.test(o.id||''))return 'food';
  if(kind==='coin'||kind==='currency'||kind==='special'||/^inventory_coin$/.test(o.id||''))return 'diamond';
  return 'rectangle';
 }
@@ -436,6 +434,23 @@ function burst(color = "#f6d786") {
     });
   if (!animationFrame) animationFrame = requestAnimationFrame(frame);
 }
+function quantityBadge(label,value) {
+  const b=document.createElement('span');b.className='dv-quantity';
+  const n=document.createElement('b');n.textContent=String(value);
+  const t=document.createElement('span');t.textContent=label;b.append(n,t);return b;
+}
+function appendQuantities(card,o) {
+  const row=document.createElement('div');row.className='dv-quantities';
+  if(Number.isFinite(o.count))row.append(quantityBadge('Owned',o.count));
+  if(Number.isFinite(o.required_count))row.append(quantityBadge('Needed',o.required_count));
+  if(Number.isFinite(o.price))row.append(quantityBadge('Gold',o.price));
+  if(row.childNodes.length)card.append(row);
+  for(const cost of o.display_quantities||[]) {
+    const line=document.createElement('div');line.className='dv-cost';
+    const c=document.createElement('canvas');c.width=c.height=48;sprite(cost.item,0,0,48,48,c.getContext('2d'));
+    line.append(c,quantityBadge('Needed',cost.required),quantityBadge('Owned',cost.owned));card.append(line);
+  }
+}
 function menus() {
   const show =
     !fallbackPage() && (renderers.has(state.page)||assetCatalog.pages[state.page]?.items===true) && !SCENES.includes(state.page) &&
@@ -459,13 +474,9 @@ function menus() {
     ]);
   if (key === menuKey) return;
   menuKey = key;
-  menu.style.left =
-    state.page === "plot_detail"
-      ? "61%"
-      : state.page?.startsWith("shop_")
-        ? "36%"
-        : "";
-  menu.style.right = state.page === "plot_detail" ? "3%" : "";
+  root.dataset.page=state.page;
+  menu.style.left=state.page.startsWith('shop_')?'3%':'';
+  menu.style.right=state.page.startsWith('shop_')?'28%':'';
   q(".dv-menu h3").textContent = TITLES[state.page] || state.page_name;
   q(".dv-subtitle").textContent =
     state.page === "inventory"
@@ -477,12 +488,13 @@ function menus() {
           : "Player selection";
   const grid = q(".dv-cards");
   grid.replaceChildren();
-  grid.style.gridTemplateColumns =
-    state.page === "plot_detail"
-      ? "1fr"
-      : state.page?.startsWith("shop_")
-        ? "repeat(3,minmax(0,1fr))"
-        : "";
+  grid.style.gridTemplateColumns = state.page==='research'?'repeat(3,minmax(0,1fr))'
+    :state.page==='plot_detail'?'repeat(3,minmax(0,1fr))'
+    :state.page==='shop_choice'?'repeat(2,minmax(0,1fr))':'repeat(4,minmax(0,1fr))';
+  // Use actual tactile row/column order, including sparse final rows.
+  const xs=[...new Set(cards.map(o=>o.x).filter(Number.isFinite))].sort((a,b)=>a-b);
+  const ys=[...new Set(cards.map(o=>o.y).filter(Number.isFinite))].sort((a,b)=>a-b);
+  grid.style.gridTemplateRows=['inventory','shop_buy','shop_sell','load_game'].includes(state.page)?'repeat(3,minmax(0,1fr))':'';
   for (const o of cards) {
     const card = document.createElement("article");
     card.className =
@@ -490,11 +502,20 @@ function menus() {
       (focused(o.id) ? " is-focused" : "") +
       (o.selected ? " is-selected" : "");
     card.dataset.objectId = o.id;
-    card.dataset.frame=itemFrame(o);
+    if(['research','inventory','shop_buy','shop_sell','plot_detail'].includes(state.page)&&xs.length&&ys.length){
+      card.style.gridColumn=String(xs.indexOf(o.x)+1);card.style.gridRow=String(ys.indexOf(o.y)+1);
+    }
+    card.dataset.category=itemFrame(o);
+    card.dataset.frame='rectangle';
     const c=document.createElement('canvas');c.width=c.height=80;
     const key=itemSprite(o),hasArt=key!==null&&sprite(key,0,0,80,80,c.getContext('2d'));
     const title=document.createElement('strong');title.textContent=o.label||itemKey(o);
-    if(hasArt){const small=document.createElement('small');small.textContent=o.description;card.append(c,title,small);}
+    if(hasArt){
+      const top=document.createElement('div');top.className='dv-item-top';top.append(c);card.append(top,title);
+      appendQuantities(card,o);
+      const description = ['shop_buy','shop_sell','ingredient_select'].includes(state.page) ? '' : (o.effect_description || '');
+      if(description){const small=document.createElement('small');small.textContent=description;card.append(small);}
+    }
     else {card.classList.add('dv-placeholder');card.append(title);}
     grid.append(card);
   }
@@ -504,16 +525,22 @@ function menus() {
     grid.append(empty);
   }
 }
+function drawTimeGauge() {
+  const gauge=q('.dv-time-gauge');
+  const total=Math.max(1,Number(state.time?.total_cells)||20);
+  const used=Math.max(0,Math.min(total,Number(state.time?.used_cells)||0));
+  q('.dv-time-fill').style.width=`${100*used/total}%`;
+  gauge.setAttribute('aria-valuemax',String(total));
+  gauge.setAttribute('aria-valuenow',String(used));
+  gauge.setAttribute('aria-valuetext',`${used} of ${total} used`);
+}
 function updateUI() {
   const ph = phase(state);
   q("[data-place]").textContent =
     TITLES[state.page] || state.page_name || "Dotdew Valley";
   q("[data-clock]").textContent =
     `Day ${state.day} · ${ph.name} · ${state.resources?.coin ?? 0} gold`;
-  q(".dv-caption").textContent = message;
-  q("[data-detail]").textContent =
-    state.buff_text ||
-    "Read-only companion · selections and actions follow the game pad.";
+  drawTimeGauge();
   const shade = q(".dv-shade");
   shade.hidden = !state.sleeping && !state.paused;
   shade.replaceChildren();
@@ -552,26 +579,6 @@ export function receive(envelope) {
     else if (e.sound === "shine" || e.reward_sound === "shine")
       burst("#9cedff");
     else if (e.sound !== "step") burst("#e7c88a");
-  }
-  if (
-    packet.message &&
-    packet.priority !== "hover" &&
-    (packet.events?.length || packet.sfx || changedDay)
-  ) {
-    const now = performance.now();
-    if (now - lastEventAt > 180 || history[0] !== packet.message) {
-      history.unshift(packet.message);
-      history = history.slice(0, 3);
-      lastEventAt = now;
-      q(".dv-events").replaceChildren(
-        ...history.map((t) => {
-          const el = document.createElement("span");
-          el.className = "dv-event";
-          el.textContent = t;
-          return el;
-        }),
-      );
-    }
   }
   updateUI();
 }

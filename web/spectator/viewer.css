@@ -267,85 +267,91 @@
   padding: 8px;
   margin-left: 12px;
 }
-@media (max-width: 650px) {
-  .dv-heading {
-    padding: 14px;
-  }
-  .dv-heading h2 {
-    font-size: 22px;
-  }
-  .dv-tools button {
-    padding: 7px;
-  }
-  .dv-menu {
-    inset: 48px 3% 10px;
-    padding: 10px;
-  }
-  .dv-menu h3 {
-    font-size: 19px;
-  }
-  .dv-cards {
-    gap: 5px;
-  }
-  .dv-card {
-    padding: 4px;
-  }
-  .dv-card canvas {
-    width: 36px;
-    height: 36px;
-  }
-  .dv-card small {
-    display: none;
-  }
-  .dv-card strong {
-    font-size: 10px;
-  }
-  .dv-hud {
-    top: 8px;
-    left: 8px;
-    right: 8px;
-    font-size: 10px;
-  }
-  .dv-badge {
-    padding: 5px;
-  }
-  .dv-footer {
-    padding: 12px;
-    grid-template-columns: 1fr;
-  }
-  .dv-status {
-    display: none;
-  }
-  .dv-details {
-    padding: 0 12px 12px;
-  }
-  .dv-heading .dv-eyebrow {
-    font-size: 9px;
-  }
-}
+
 @media (prefers-reduced-motion: reduce) {
   .dotdew-observer * {
     scroll-behavior: auto !important;
   }
 }
-@media (max-width: 650px) {
-  .dotdew-observer .dv-menu {
-    position: relative;
-    inset: auto !important;
-    margin: 0 8px 12px;
-    max-height: none;
-  }
-  .dotdew-observer .dv-card small {
-    display: block;
-    font-size: 9px;
-  }
-  .dotdew-observer .dv-stage:has(.dv-menu:not([hidden])) .dv-menu {
-    margin-top: -4px;
-  }
-  .dotdew-observer .dv-menu .dv-cards {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  }
-}
+
 .dv-card[data-frame="oval"]{border-radius:50%;padding:17px 12px}
-.dv-card[data-frame="diamond"]{border:0;background-color:transparent;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M50 1 L99 50 L50 99 L1 50 Z' fill='%23e7d3ae' stroke='%23b38c57' stroke-width='2'/%3E%3C/svg%3E");background-size:100% 100%;padding:24px 18px}
+.dv-card[data-frame="diamond"]{border:0;background-color:transparent;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M50 1 L99 50 L50 99 L1 50 Z' fill='%23fff3df' stroke='%23c65300' stroke-width='2'/%3E%3C/svg%3E");background-size:100% 100%;padding:24px 18px}
 .dv-card.dv-placeholder{min-height:118px;display:flex;align-items:center;justify-content:center}.dv-placeholder strong{overflow-wrap:anywhere;max-width:90%}
+
+/* Readable accents; green text is reserved for dark surfaces. */
+.dotdew-observer {--ink:#baff91;--gold:#ff7200;--muted:#baff91;font-size:17px;border:2px solid #c65300;}
+.dv-heading {border-color:#c65300;}
+.dv-heading h2,.dv-eyebrow,.dv-status,.dv-details,.dv-event,.dv-caption em {color:#baff91;}
+.dv-heading h2 {font-size:32px;}
+.dv-eyebrow,.dv-status {font-size:13px;}
+.dv-caption,.dv-details {font-size:16px;}
+.dv-badge,.dv-event,.dotdew-observer button {border:2px solid #c65300;color:#baff91;background:#15251e;}
+.dv-hud {font-size:16px;}
+.dv-menu {border-color:#bd4e00;outline:2px solid #ff8c36;color:#151515;background:#f8eddbfa;padding:16px;}
+.dv-menu h3 {font-size:28px;}
+.dv-subtitle {font-size:14px;color:#191919;}
+.dv-card {border-color:#c65300;background:#fff3df;padding:10px;}
+.dv-card strong {font-size:17px;line-height:1.25;color:#111;}
+.dv-card small {font-size:14px;line-height:1.35;color:#171717;}
+.dv-card.is-focused {border-color:#ff8a00;box-shadow:0 0 0 3px #17120d,0 0 0 7px #ff9a1a;}
+.dv-card.is-selected::after {background:#9a3c00;color:#fff;font-size:20px;}
+.dv-item-top {display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;min-height:80px;}
+.dv-item-top>canvas {width:72px;height:72px;flex-shrink:0;margin:0;}
+.dv-quantities {display:flex;gap:5px;flex-wrap:wrap;justify-content:center;}
+.dv-quantity {display:flex;flex-direction:column;align-items:center;justify-content:center;background:#17291d;color:#baff91;border-radius:6px;padding:4px 7px;min-width:44px;}
+.dv-quantity b {font:700 27px/1.05 system-ui,sans-serif;font-variant-numeric:tabular-nums;}
+.dv-quantity>span {font:12px/1.2 system-ui,sans-serif;}
+.dv-cost {display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.dv-cost>canvas {width:36px;height:36px;margin:0;}
+.dv-cost .dv-quantity b {font-size:24px;}
+.dotdew-observer[data-page="plot_detail"] .dv-menu {inset:60px 7% auto;max-height:35%;background:#f8eddbfa;}
+.dotdew-observer[data-page="plot_detail"] .dv-menu h3,.dotdew-observer[data-page="plot_detail"] .dv-subtitle {display:none;}
+.dotdew-observer[data-page="plot_detail"] .dv-card small {display:none;}
+.dotdew-observer[data-page="plot_detail"] .dv-item-top {min-height:58px;}
+.dotdew-observer[data-page="plot_detail"] .dv-item-top>canvas {width:54px;height:54px;}
+/* Retain tactile columns on narrow windows; scroll rather than reorder. */
+.dv-cards {min-width:480px;}
+.dotdew-observer[data-page="research"] .dv-cards {min-width:600px;}
+
+@media(max-width:650px){.dotdew-observer .dv-card small{font-size:14px}.dotdew-observer[data-page="plot_detail"] .dv-card small{display:none}}
+.dv-card[data-frame="diamond"].is-focused {filter:drop-shadow(0 0 3px #ff9a1a);}
+
+/* Scale menu contents with the scene, retaining 4 x 3 slots without scrollbars. */
+.dv-stage {container-type:inline-size;}
+.dv-menu {inset:9% 7% 5%;padding:1.2cqw;overflow:hidden;display:flex;flex-direction:column;gap:.6cqw;}
+.dv-menu[hidden]{display:none;}
+.dv-menu h3 {font-size:2.2cqw;line-height:1.15;flex:none;margin:0;}
+.dv-subtitle {font-size:1.15cqw;margin:0;line-height:1.1;flex:none;}
+.dv-cards,.dotdew-observer[data-page="research"] .dv-cards {min-width:0;gap:.7cqw;min-height:0;align-content:start;}
+.dotdew-observer[data-page="inventory"] .dv-cards,.dotdew-observer[data-page="shop_buy"] .dv-cards,.dotdew-observer[data-page="shop_sell"] .dv-cards,.dotdew-observer[data-page="load_game"] .dv-cards {flex:1;align-content:stretch;}
+.dv-card {padding:.65cqw;min-height:0;overflow:visible;display:flex;flex-direction:column;justify-content:center;gap:.4cqw;border-width:.18cqw;}
+.dv-card strong {font-size:1.3cqw;line-height:1.12;overflow-wrap:anywhere;}
+.dv-card small,.dotdew-observer .dv-card small {font-size:1.2cqw;line-height:1.2;margin:0;}
+.dv-item-top {min-height:0;display:flex;flex-wrap:nowrap;gap:.4cqw;align-items:center;}
+.dv-item-top>canvas {width:4.3cqw;height:4.3cqw;margin:0;flex:0 0 4.3cqw;}
+.dv-quantities {display:flex;flex-wrap:nowrap;gap:.3cqw;min-width:0;}
+.dv-quantity {min-width:0;padding:.28cqw .35cqw;border-radius:.4cqw;white-space:nowrap;}
+.dv-quantity b {font-size:1.9cqw;line-height:1.05;}
+.dv-quantity>span {font-size:.85cqw;line-height:1.1;}
+.dv-cost {flex-wrap:nowrap;gap:.4cqw;margin:0;}
+.dv-cost>canvas {width:2.9cqw;height:2.9cqw;flex:0 0 2.9cqw;margin:0;}
+.dv-cost .dv-quantity b {font-size:1.65cqw;}
+.dv-card[data-frame="diamond"] {padding:1cqw 1.4cqw;}
+.dv-card.dv-placeholder {min-height:0;}
+.dotdew-observer[data-page="plot_detail"] .dv-menu {inset:9% 7% auto;max-height:none;}
+.dotdew-observer[data-page="plot_detail"] .dv-item-top {min-height:0;}
+.dotdew-observer[data-page="plot_detail"] .dv-item-top>canvas {width:4.3cqw;height:4.3cqw;}
+.dv-time-footer {padding:10px 20px 12px;background:#15251c;border-top:2px solid #c65300;}
+.dv-time-label {display:block;margin-bottom:7px;color:#baff91;font:13px system-ui,sans-serif;}
+.dv-time-gauge {width:100%;height:10px;display:block;overflow:hidden;border-radius:3px;background:#345b40;}
+.dv-time-fill {width:0;height:100%;background:#ff8a00;border-radius:3px;}
+
+/* Catalog cards share geometry; category is indicated by border color. */
+.dv-card[data-category="diamond"] {border-color:#bc8900;}
+.dv-card[data-category="food"] {border-color:#538443;}
+.dv-card.is-focused,.dv-card.is-selected {border-color:#ff8a00;}
+.dotdew-observer[data-page="inventory"] .dv-menu {inset:9% 3% 3%;}
+:is([data-page="inventory"],[data-page="shop_buy"],[data-page="shop_sell"]) .dv-card {gap:.35cqw;padding:.65cqw;}
+:is([data-page="inventory"],[data-page="shop_buy"],[data-page="shop_sell"]) .dv-item-top canvas {width:6.5cqw;height:6.5cqw;}
+[data-page="inventory"] .dv-item-top canvas {width:7.3cqw;height:7.3cqw;}
+:is([data-page="inventory"],[data-page="shop_buy"],[data-page="shop_sell"]) .dv-card strong {font-size:1.35cqw;}

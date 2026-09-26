@@ -4,8 +4,8 @@
     "scenes": "assets/scenes.png",
     "items": "assets/items.png",
     "extras": "assets/extras.png",
-    "environments": "assets/environments.png",
-    "facilities": "assets/facilities.png"
+    "facilities": "assets/facilities.png",
+    "scenes2": "assets/scenes2.png"
   },
   "backgrounds": {
     "home": {
@@ -45,7 +45,7 @@
       ]
     },
     "soil": {
-      "texture": "environments",
+      "texture": "scenes2",
       "source": [
         0,
         0,
@@ -54,7 +54,7 @@
       ]
     },
     "shop": {
-      "texture": "environments",
+      "texture": "scenes2",
       "source": [
         770,
         0,
@@ -63,7 +63,7 @@
       ]
     },
     "room": {
-      "texture": "environments",
+      "texture": "scenes2",
       "source": [
         0,
         492,
@@ -72,7 +72,7 @@
       ]
     },
     "square": {
-      "texture": "environments",
+      "texture": "scenes2",
       "source": [
         770,
         492,

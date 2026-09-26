@@ -7,9 +7,25 @@ def spectator_snapshot(engine, objects):
     now = time.monotonic()
     fields = ('id', 'type', 'x', 'y', 'width', 'height', 'label', 'selected',
               'resource_kind', 'recipe_id', 'seed_id', 'ingredient_id', 'choice',
-              'item_kind', 'shop_kind', 'item_id', 'count', 'price', 'direction')
+              'item_kind', 'shop_kind', 'item_id', 'count', 'price', 'direction',
+              'research_kind', 'required_count', 'display_quantities')
     public_objects = [{k: copy.deepcopy(o[k]) for k in fields if k in o}
                       for o in objects if o.get('type') not in ('arrow', 'route')]
+    for public in public_objects:
+        kind = public.get('type')
+        recipe_id = public.get('recipe_id') or (public.get('item_id') if public.get('shop_kind') == 'food' else None)
+        if recipe_id:
+            recipe = engine.get_recipe_config(recipe_id)
+            if recipe:
+                public['effect_description'] = engine.recipe_effect_text(recipe)
+        if kind == 'seed':
+            public['count'] = int(engine.resources['seeds'].get(public.get('seed_id'), 0))
+        elif kind == 'recipe':
+            ingredients = engine.get_recipe_config(public.get('recipe_id')).get('ingredients', {})
+            public['display_quantities'] = [dict(item=key, label=engine.get_seed_label(key),
+                required=int(count), owned=int(engine.resources['crops'].get(key, 0))) for key, count in ingredients.items()]
+        elif public.get('id') == 'plot_detail_fertilizer':
+            public['count'] = int(engine.resources.get('fertilizer', 0))
     plots = []
     for definition in engine.get_unlocked_plot_defs():
         state = engine.farm_plots[definition['id']]

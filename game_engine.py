@@ -131,6 +131,11 @@ class GameEngine(KeypadUI, SaveMixin):
             for i, o in enumerate(arrows):
                 o.update(x=6 + len(buttons)*12 + i*9, y=6, hit_width=7, hit_height=7)
             return buttons + arrows + [o for o in items if o not in buttons]
+        if page == "research":
+            for i, o in enumerate(items):
+                o.update(x=8+15*(i%3), y=6+12*(i//3), width=12, height=8,
+                         hit_width=12, hit_height=8)
+            return items + arrows
         if page == "recipe_select":
             for o in items:
                 if o.get("type") == "recipe": o.update(width=12, height=8, hit_width=12, hit_height=8)
@@ -826,7 +831,7 @@ class GameEngine(KeypadUI, SaveMixin):
                 tts += f". {extra}"
             objects.append({
                 "id": f"inventory_{entry['id']}", "type": "resource",
-                "resource_kind": entry["kind"], "recipe_id": entry.get("recipe_id"), "seed_id": entry.get("seed_id"), "x": x, "y": y,
+                "count": entry["count"], "resource_kind": entry["kind"], "recipe_id": entry.get("recipe_id"), "seed_id": entry.get("seed_id"), "x": x, "y": y,
                 "width": 10, "height": 8 if entry["kind"] == "food" else 6, "hit_width": 13, "hit_height": 9,
                 "label": entry["label"], "tts": tts, "action": entry.get("action", "")
             })
@@ -961,7 +966,20 @@ class GameEngine(KeypadUI, SaveMixin):
             text = f"{label}. Level {level}. Maximum level." if not action else f"{label}. Level {level + 1}. Requires {cfg.get('costs', [20, 40])[level]} gold, {self.MINERAL_LABELS[mineral]} {cfg.get(mineral + '_costs', [3, 6])[level]} required"
             objects.append({"id": f"research_{kind}", "type": "research", "research_kind": kind, "label": label, "tts": text, "action": action})
         for i, obj in enumerate(objects):
-            obj.update(x=(16, 44, 30)[i], y=(9, 9, 24)[i], width=20, height=10, hit_width=24, hit_height=12)
+            obj.update(x=8+15*(i%3), y=6+12*(i//3), width=12, height=8, hit_width=12, hit_height=8)
+            kind = obj["research_kind"]
+            key = "field_expansion" if kind == "field_expand" else kind
+            cfg = self.config.get("research", {}).get(key, {})
+            index = expansion_index if kind == "field_expand" else self.research_levels.get(kind, 0)
+            material = {"seed_return": "copper", "field_expand": "stone", "mineral_luck": "iron"}[kind]
+            obj["display_quantities"] = []
+            if obj.get("action"):
+                costs = cfg.get("costs", [])
+                materials = cfg.get(material + "_costs", [3, 6] if material != "stone" else [5, 10])
+                for resource, required in [("coin", costs[index] if index < len(costs) else 999999),
+                                           (material, materials[index])]:
+                    obj["display_quantities"].append({"item": resource, "label": "Gold" if resource == "coin" else resource.title(),
+                                                    "required": int(required), "owned": int(self.resources.get(resource, 0))})
         objects.append(self.back_arrow("research_back", "Back home", "return_scene"))
         return objects
 
@@ -1025,7 +1043,7 @@ class GameEngine(KeypadUI, SaveMixin):
             status = "Selected" if selected else "Not selected"
             objects.append({
                 "id": f"ingredient_{seed_id}", "type": "ingredient", "ingredient_id": seed_id,
-                "selected": selected, "x": x, "y": y, "width": 12, "height": 9,
+                "count": count, "required_count": int(needed), "selected": selected, "x": x, "y": y, "width": 12, "height": 9,
                 "hit_width": 14, "hit_height": 11, "label": f"{label} ingredient",
                 "tts": f"{label}. Need {needed}, stock {count}. {status}",
                 "action": f"toggle_ingredient:{seed_id}"
@@ -1828,6 +1846,16 @@ class GameEngine(KeypadUI, SaveMixin):
         self.clear_hover()
         self.render()
         return self.response(tts="Research.", sfx="open_page")
+
+    def navigate_key(self, direction):
+        # Function-key panels close with either physical navigation button.
+        if self.current_page in ('minimap', 'inventory', 'load_game'):
+            if self.paused: return self.response(tts='Resume first.')
+            if self.sleep_until is not None: return self.response(tts='Sleeping. Please wait.')
+            if self.current_page == 'load_game': return self.close_load_game()
+            self._menu_stack.clear()
+            return self.return_to_scene()
+        return super().navigate_key(direction)
 
     def return_to_scene(self):
         self.pointer_pressed = False
@@ -2794,7 +2822,7 @@ class GameEngine(KeypadUI, SaveMixin):
                 text = "Pickaxe owned. Limit one."
             objects.append({"id": f"shop_{mode}_{kind}_{item_id}", "type": "shop_item", "shop_kind": kind, "item_id": item_id,
                             "x": x, "y": y, "width": 10, "height": 6, "hit_width": 10, "hit_height": 6,
-                            "label": label, "tts": text, "action": f"{mode}:{kind}:{item_id}"})
+                            "count": int(count), "price": int(price), "label": label, "tts": text, "action": f"{mode}:{kind}:{item_id}"})
         objects.append(self.back_arrow(f"shop_{mode}_back", "Back to shop", "return_shop_choice"))
         for delta, x, direction, label in [(-1, 30, "left", "Previous page"), (1, 51, "right", "Next page")]:
             if 0 <= self.shop_page + delta < pages:
