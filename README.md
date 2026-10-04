@@ -1,185 +1,292 @@
-# 닷듀밸리
+# Dotdew Valley
 
-60×40 도트 화면과 하단 시간 패널로 플레이하는 농장 게임. 집, 농장, 마을, 광산을 이동하며 농사,채굴,요리,거래,연구를 진행한다. 마우스 입력을 기본으로 사용하며 USB 닷패드와 손 추적 입력을 연결할 수 있다.
+English | [한국어](README.ko.md)
 
-# 파일 구조
+A farming and life simulation game for the Dot Pad. Players farm, cook, mine, trade, and research upgrades across four locations: home, farm, village, and mine. The activities draw on Stardew Valley, with each task adapted to a 60×40 tactile display.
 
-| `game_app.py` | FastAPI 서버, 화면 제공, 입력·상태 API |
+The browser simulator supports mouse and keyboard input. A USB Dot Pad and an external hand-tracking system can also be connected. A separate Visual Companion window shows the same game state using images.
 
-| `game_engine.py` | 게임 상태, 행동 판정, 시간, 도트 렌더링, 음성·소리 이벤트 |
+## Design
 
-| `game_config.json` | 작물·요리·연구·상점·광산 규칙, 화면 배치, 입력 피드백, 오디오 설정 |
+The project explores how blind and low-vision players can understand a game world through touch and sound, then act directly on the surface they are reading. Shapes and speech provide guidance without requiring Braille literacy.
 
-| `game_saves.py` | 게임 상태 직렬화, JSON 저장·복원, 저장 슬롯 목록, 최근 12개 파일 관리 |
+| Channel | Use |
+|---|---|
+| Touch | Position, shape, layout, paths, and progress |
+| Speech and sound | Names, quantities, states, and action results |
+| Visual display | Images, quantities, and selection highlights for low-vision players and companions |
+| Buttons | Navigation, menus, saving, loading, and pause |
+| Pointer and hand gestures | Selecting, sweeping, tracing, and tapping |
 
-| `dotpad.py` | 도트 행렬과 기본 도형 처리 |
+Exploration and travel cost no game time. Moving over an object and pressing it are separate inputs, so reading the display does not trigger an action.
 
-| `web/game.html` | 패드 시뮬레이터, 입력, 상태 표시, TTS |
+Farming, cooking, mining, trading, and research are implemented. Fishing, ranching, music, NPC dialogue, quests, and crafting are planned. The controls below describe the current build; some differ from the initial proposal.
 
-| `web/game-audio.js` | 배경음악, 작업음, 성공음, 단발 효과음 재생 |
+## Running the game
 
-| `web/game-keys.js` | F1~F4·좌우 키 입력, F3 짧게·길게 누르기, 반복 입력·취소 처리 |
+Create a Python environment and install the dependencies from the project root.
 
-| `web/hardware.mjs` | USB 패드 출력과 손 추적 연결 |
+```bash
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
 
-| `web/audio/` | MP3 음원 |
+python -m pip install -r requirements.txt
+python -m uvicorn game_app:app --host 127.0.0.1 --port 8000
+```
 
+Open `http://127.0.0.1:8000` in a browser. Builds with the Windows launcher use `game.bat` to run `launch_game.py`; use the address printed by that launcher. Serve the HTML through the local server rather than opening it directly.
 
-서버가 게임 상태를 관리하고 브라우저가 입력을 전달한다. 응답에는 화면 상태, 오브젝트 설명, TTS, 소리 이벤트가 포함된다. 진행 상태는 서버 메모리에 저장되며 서버 재시작이나 새 게임 실행 시 초기화된다.
+1. Click or press a key on the game page to enable audio.
+2. Use the mouse and keyboard, or connect the USB pad and hand-tracking server.
+3. Select **Open visual display** to open the companion window. Allow pop-ups for the site if needed.
+4. Keep the original game page open while using the companion.
 
-# 실행과 조작
+Restart the server after changing the configuration. After replacing web files, hard-refresh the game page and reopen the companion window.
 
-기존 실행 환경에서 requirments 설치 후 start.bat 실행해 서버를 실행한다.
+## Controls
 
-브라우저에서 `http://127.0.0.1:8000`에 접속한다. 오디오는 첫 클릭 또는 키 입력 후 활성화된다. 설정 변경 후에는 서버를 재시작하고 브라우저를 새로고침한다.
+| Input | Action |
+|---|---|
+| Hover | Hear an object's name and state |
+| Click | Select, use a facility, or strike a rock |
+| Press and drag | Water, fertilize, harvest, or trace a cooking path |
+| F1 | Open the minimap; press again in that menu to return to the current location |
+| F2 | Open inventory; press again in that menu to return to the current location |
+| F3, short press | Open or close the save list |
+| F3, hold | Save to a new slot after about 0.8 seconds; stay on the current screen after `Game saved.` |
+| F4 | Pause or resume |
+| Left/right arrow keys or pad buttons | Travel, go back, or turn a page, depending on the screen |
+| W / A / S / D | Move the pointer while the game canvas has focus |
+| Shift + W / A / S / D | Move the pointer in larger steps |
+| Enter | Select at the pointer position |
+| Space | Toggle pressed/released input |
 
-| 포인터 올리기 | 오브젝트 설명 |
+Locations run from left to right: **Farm ↔ Home ↔ Village ↔ Mine**. Travel announces the destination. A direction with no route produces an unavailable-direction message.
 
-| 클릭 | 선택·상호작용 |
+Either arrow closes the minimap, inventory, or load screen and returns to the current location. Going back from buying or selling returns to the shop's buy/sell selection screen. Shop page-turn commands remain separate. Use the on-screen previous/next items to turn inventory pages.
 
-| 누른 채 이동 | 물·비료·수확·요리 진행 |
+Hand tracking supplies coordinates and press state from an external device. A server that sends coordinates only requires the press button or Space as well. The Dot Pad does not detect touch coordinates itself. Guidance uses English speech; a new announcement interrupts the previous one.
 
-| F1 | 미니맵 열기·원래 화면으로 복귀 |
+## Locations and activities
 
-| F2 | 인벤토리 열기·원래 화면으로 복귀 |
+| Location | Activities |
+|---|---|
+| Home | Sleep, research, and cook |
+| Farm | Plant seeds, water, fertilize, check growth, and harvest |
+| Village | Buy and sell; travel to home or the mine |
+| Mine | Break rocks with a pickaxe and collect minerals |
 
-| F3 짧게 누르기 | 로드 화면 열기·원래 화면으로 복귀 |
+Crops can be sold or cooked. Minerals can be traded or spent on research. Research adds plots and improves seed recovery and mineral drops. Food is consumed from inventory to apply an effect.
 
-| F3 길게 누르기 | 0.8초 이상 누르면 새 슬롯에 저장하고 로드 목록 표시 |
+### Time and sleep
 
-| F4 | 일시정지 |
+Time advances when activities finish. The current configuration gives each day 20 ticks. Travel costs 0; planting, watering, and fertilizing cost 2; harvesting, research, and cooking cost 3. Mining costs 2 ticks when a rock breaks, rather than on every hit.
 
-| 패드 좌우 키 | 현재 화면의 이동 경로 또는 이전·다음 아이템 페이지 |
+When the daily allowance runs out, the player returns home. During sleep, the tactile panels briefly turn off and background music pauses. The sleep sound plays once and continues to its end after the next day begins. The pad uses a lower tactile time panel; the companion uses a thin orange bar that fills as time is spent.
 
-| Enter / Space | 선택 / 누름 상태 전환 |
+### Farming
 
-손 추적 서버가 좌표만 보내는 경우 누르기 버튼 또는 Space로 누름 상태를 제어한다. 새 음성 명령이 들어오면 이전 안내를 중단하고 최신 안내를 재생한다.
+Select a plot to open its management screen. Empty plots accept seeds; planted plots show growth, water, and fertilizer status. On the farm, the plot fills from the bottom as the crop grows. The detail screen provides growth information and care buttons.
 
-# 장소와 시간
+Watering and fertilizing use press-and-drag targets. Completion follows `care_minigame.success_ratio`. If the threshold has not been reached, the player can continue over the remaining targets. Watered crops grow after sleep. Fertilizer advances growth immediately.
 
-- 집: 침대, 연구, 주방. 농장과 마을로 이동한다.
-- 농장: 밭별 상세 관리 화면에서 심기·물·비료·수확을 선택한다.
-- 마을: 상점과 뒤편 광산으로 연결된다.
-- 광산: 화면에 배치된 돌을 직접 터치해 채굴한다.
+Harvesting requires every target. Yield comes from the crop's base amount and the active food effect, with no minigame-score multiplier. Seed recovery uses the crop's base chance or its research level.
 
-이동은 시간을 소비하지 않는다. 기본 행동 시간은 심기·물·비료 2시간, 수확·연구·요리 3시간이다. 광산은 돌을 완전히 부술 때 2시간을 소비한다. 하루 활동 시간이 소진되면 집으로 돌아간다.
+### Cooking and food
 
-수면 중에는 두 도트 패널이 잠시 꺼지고 입력과 배경음악이 멈춘다. 작물은 다음 날 물 관리 상태에 따라 성장한다.
+Choose a recipe and select all required ingredients to start cooking. Complete the chopping path and the second path in order. Ingredients and time are spent when both stages are complete. There is no time limit. A marker shows where to resume after progress stalls, and passed sections disappear after a configured delay.
 
-# 농사
+| Food | Ingredients | Effect | Duration |
+|---|---|---|---|
+| Tomato carrot stew | Tomato, carrot | Harvest boost | 6 hours |
+| Potato tomato soup | Potato, tomato | Pickaxe protection | 10 hours |
+| Vegetable fritters | Potato, carrot | Time saving | 10 hours |
 
-밭 상세 화면에서 성장 게이지와 물·비료 상태를 확인한다. 비료는 사용 즉시 성장에 반영된다.
+Durations use game time. The second path for vegetable fritters has eight petals. Food is used from inventory, with one effect active at a time. Eating another dish replaces the effect. Its duration decreases as game time is spent. Player-facing descriptions show the effect and duration without detailed multipliers.
 
-물, 비료, 수확은 제한시간 없이 모든 목표를 지나쳐야 완료된다. 작물 기본 수확량과 음식 효과로 수량을 계산한다.
+### Shop and inventory
 
-통과한 목표와 요리 선은 설정된 지연 후 사라진다. 초기 인벤토리에는 요리용 토마토,당근,감자가 각각 3개 들어 있다.
+The shop sells seeds, fertilizer, pickaxes, and selected minerals, and buys crops, food, and minerals. Only one pickaxe can be held at a time. Buy another when it breaks.
 
-# 요리와 음식 효과
+Inventory hides zero-count items and shows up to 12 items per page. Tactile frames distinguish food with an oval, gold with a diamond, and other items with rectangles and category symbols. The companion uses rectangular cards throughout, with colored borders and the name, quantity, and price below the image.
 
-레시피 선택 > 재료 선택 > 자르기 > 두 번째 경로 순서로 진행한다. 두 단계를 모두 완료하면 재료와 행동 시간을 소비하고 음식을 지급한다. 요리마다 도트 아이콘을 구분하며 레시피·인벤토리·상점에서 같은 아이콘을 사용한다.
+### Mining and research
 
-| 토마토 당근 스튜 | 토마토, 당근 | 수확량 증가 | 6시간 |
+Up to seven rocks are placed each day, with gaps between them. A rock normally takes three hits to break. Damage reduces the density of its internal dots using fixed patterns; the outline remains readable.
 
-| 감자 토마토 수프 | 감자, 토마토 | 곡괭이 보호 | 10시간 |
+Rocks drop stone, copper, iron, or diamonds. Research can add bonus drops. Pickaxe durability is handled internally and is not shown as a player-facing value. When a tool breaks, the shared destruction sound replaces the normal hit sound.
 
-| 야채 튀김 | 감자, 당근 | 시간 소모 감소 | 10시간 |
+| Research | Materials | Effect |
+|---|---|---|
+| Seed recovery | Gold, copper | Improve seed recovery |
+| Farm expansion | Gold, stone | Increase plots from two to six |
+| Mineral luck | Gold, iron | Improve mineral drops and bonus quantities |
 
-요리 중 진행이 끊기면 중단 지점에 네모 표시가 생긴다. 젓기 경로 크기와 성공음 간격은 설정으로 조절한다.
+Research uses three cards per row. There is no harvest-yield research upgrade.
 
-음식은 인벤토리에서 사용한다. 한 번에 하나의 음식 효과가 적용되며 다른 음식을 먹으면 교체된다. 같은 음식을 다시 먹으면 지속시간을 새로 시작한다. 지속시간은 실제로 소비한 게임 시간을 기준으로 줄어든다. 시간 소모 감소 효과가 행동 도중 끝나면 남은 행동 구간에는 원래 시간 비용을 적용한다. 반 시간 단위는 하단 시간 패널에 반 칸으로 표시한다.
+## Code structure
 
-음성 및 화면 안내에는 효과 이름과 지속시간만 표시한다. 효과 배율은 설정 파일에서 관리한다.
+The server owns game state and action checks. The browser sends input and receives dot frames, public state, speech, and sound events. Mouse, keyboard, and device input share move, press, drag, and release events.
 
-# 상점과 인벤토리
+### Game and server
 
-상점에서 작물·음식·광물을 판매하고 씨앗·비료·곡괭이·일부 광물을 구매한다. 구매,판매 화면의 돌아가기는 마을로 연결된다. 곡괭이는 최대 1개만 보유할 수 있으며 파괴되면 재구매한다.
+| File | Responsibility |
+|---|---|
+| `game_app.py` | FastAPI server, game page, static files, input and state APIs |
+| `game_engine.py` | Locations and activities, game rules, resources, time, tactile rendering, and announcements |
+| `game_ui.py` | Keypad navigation, temporary menus, tactile frames, and category icons |
+| `game_saves.py` | State serialization, save files, loading, and slot management |
+| `dotpad.py` | Dot matrices and drawing primitives |
+| `spectator_state.py` | Public object, plot, rock, path, and quantity data for the companion |
+| `game_config.json` | Rules, starting resources, activity settings, audio, and layout data |
 
-인벤토리는 보유량이 없는 항목을 숨기고 12개씩 표시한다. 항목이 더 있으면 하단 이전,다음 화살표로 페이지를 전환한다.
+### Browser, hardware, and audio
 
-| 음식 | 타원형 | 레시피 아이콘 |
+| File | Responsibility |
+|---|---|
+| `web/game.html` | Pad simulator, pointer input, status, English TTS, and companion connection |
+| `web/game-keys.js` | Function and arrow keys, F3 short/long press, repeat suppression, and cancellation |
+| `web/hardware.mjs` | Web Serial pad output and physical buttons; WebSocket hand coordinates |
+| `web/game-audio.js` | Separate music, action, reward, and one-shot sound channels |
+| `web/audio/` | MP3 assets |
+| `game.bat`, `launch_game.py` | Windows startup and server/browser launch helpers |
+
+### Visual Companion
+
+The companion is a separate, read-only window under `web/spectator/`. It follows locations, selections, minigames, time of day, and sleep. Clicking this window does not change game state.
 
-| 골드 | 가로로 긴 마름모 | 중앙 점 |
+| File | Responsibility |
+|---|---|
+| `standalone.html` | Companion window entry point |
+| `viewer.js` | Scene, card, object, and effect rendering source |
+| `model.mjs` | Convert game state into visual layout data |
+| `viewer.css` | Cards, quantities, colors, selection highlights, and time bar |
+| `display.js` | Runtime bundle loaded by the page |
+| `build_display.py` | Build `display.js` from the source files |
+| `visual-assets.json` | Background, facility, item, and sprite-region registry |
+| `scene-objects.json` | Facility positions, sizes, and draw order |
+| `assets/` | Images including `scenes.png`, `scenes2.png`, `facilities.png`, `items.png`, and `extras.png` |
+
+Each plot and rock corresponds to a game object. Individual farm plots have fences. The shop places its catalog on the left and the merchant and counter on the right. Inventory and shop pages fit their items without scrolling.
+
+Backgrounds, facilities, and objects have separate asset entries so existing images can be reused. A page without a visual renderer falls back to the dot display. An unregistered item shows its name in a frame. Rebuild `display.js` after editing its source files.
+
+## Saving and loading
+
+Holding F3 saves before the key is released. Releasing it after a save does not open the load screen. A short press opens the slot list.
+
+Saves are JSON files in `saves/`; the latest 12 are retained. They restore progress including items, gold, day, plots, research, and food effects. Save files are excluded from version control. Server memory resets on restart, so save and load to continue a session. USB connections, camera calibration, and browser voice selection are separate from game saves.
+
+## Audio
+
+| Asset | Use |
+|---|---|
+| `background-basic`, `background-minigame`, `background-shop` | Music for the three page groups |
+| `water`, `soil`, `crop` | Watering, fertilizing, harvesting |
+| `cut`, `cook` | Chopping and stirring |
+| `correct` | Target progress and ordinary loot feedback |
+| `step`, `door`, `coin` | Travel, shop entry, transactions, and paid research |
+| `sleep` | Sleep transition |
+| `pickaxe`, `break`, `shine`, `destroy` | Hits, broken rocks, diamonds, and broken items |
 
-| 씨앗 | 사각형 | 역삼각형의 세 꼭짓점 |
+Assets use matching MP3 names in `web/audio/`. Reward sounds do not interrupt action sounds. Moving within the same music group does not restart the track. TTS uses an English browser voice and has separate controls from game audio.
 
-| 작물 | 사각형 | 역삼각형 |
+## Configuration
 
-| 광물 | 사각형 | 사각형 |
+Edit `game_config.json` and restart the server. Values below reflect the current configuration.
 
-| 도구 | 사각형 | 별 모양 |
+Time uses game ticks, `_ms` values use milliseconds, probabilities use 0–1, and coordinates use dot units. Engine-side limits are noted below the tables.
 
-# 광산과 연구
+### Rules and starting state
 
-광산에는 하루 7개의 정사각형 돌이 서로 떨어져 배치된다. 곡괭이가 있어야 돌을 칠 수 있다. 돌을 부수면 돌,구리,철,다이아몬드 중 하나를 얻는다. 획득 안내가 나오는 동안 같은 돌의 호버 설명이 반복되지 않도록 처리한다.
+| Path | Setting / current value |
+|---|---|
+| `game.start_day` | Starting day: 1 |
+| `resources` | Starting gold, fertilizer, seeds, and crops; three of each crop for cooking tests |
+| `time.total_cells` | Daily allowance: 20 |
+| `time.action_costs` | Costs for `travel`, `plant`, `water`, `fertilize`, `harvest`, `research`, `cook`, and `mine` |
+| `seeds.<id>.growth_days`, `yield` | Growth days and base yield |
+| `seeds.<id>.seed_price`, `crop_price` | Seed purchase and crop sale prices |
+| `seeds.<id>.seed_return_chance` | Base seed recovery chance: 0.1 for each crop |
+| `fertilizer.growth_day_bonus` | Immediate growth advance: 1 day |
+| `shop.fertilizer_price` | Fertilizer price: 12 |
+| `recipes.<id>.ingredients` | Ingredient IDs and amounts |
+| `recipes.<id>.buff_kind` | `harvest_multiplier`, `pickaxe_protection`, or `time_slow` |
+| `recipes.<id>.buff_multiplier`, `buff_ticks` | Effect multiplier and duration |
+| `recipes.<id>.gesture_steps` | Per-stage `kind`, `path`, and `tolerance` |
+| `research.seed_return` | `costs`, `copper_costs`, `return_chances`, `max_level` |
+| `research.field_expansion` | `initial_plot_count`, `costs`, `stone_costs` |
+| `research.mineral_luck` | `costs`, `iron_costs`, `max_level`, `diamond_weight_per_level`, `double_drop_chance_per_level` |
 
-곡괭이의 내구도는 내부 판정으로 관리한다. 곡괭이가 파괴되는 타격에서는 일반 타격음이나 돌 파괴음 대신 공통 아이템 파괴음을 재생한다. 돌도 함께 부서지면 광물 지급과 시간 소비를 처리한 후 획득 안내를 이어간다.
+Farm expansion costs `[30, 50, 70, 90]` gold and `[5, 10, 15, 20]` stone, adding four plots to the initial two. Seed recovery research uses `[0.3, 0.6]`. These are development settings; detailed probabilities are not announced during play.
 
-| 씨앗 회수 | 골드, 구리 | 씨앗 회수 확률 증가 |
+### Minigames and feedback
 
-| 밭 확장 | 골드, 돌 | 사용 가능한 밭 추가 |
+| Path | Setting / current value |
+|---|---|
+| `care_minigame.target_count`, `target_positions` | Watering/fertilizing target count and candidate positions |
+| `care_minigame.tolerance` | Target hit tolerance |
+| `care_minigame.success_ratio` | Completion threshold: 0.65; use 1.0 to require every target |
+| `harvest_minigame.target_count`, `target_positions` | Harvest target count and candidate positions; all targets are required |
+| `interaction.feedback.disappear_delay_ms` | Delay before care targets and cooking paths disappear: 200; use 1000 for one second |
+| `interaction.feedback.visual_refresh_interval_ms` | Delayed-feedback refresh interval: 100; engine minimum 50 |
+| `interaction.cooking.resume_marker_delay_ms` | Delay before the resume marker appears: 400 |
+| `interaction.cooking.stir_scale` | Stirring path scale: 1.6, limited to the display bounds |
+| `interaction.inventory.items_per_page` | Items per page: 12; engine range 1–12 |
+| `interaction.inventory.hide_zero_items` | Hide empty items: `true` |
+| `interaction.sleep.blackout_ms` | Sleep blackout and input wait: 2000 |
 
-| 광물 획득 | 골드, 철 | 광물 획득 확률 및 보너스 획득 개선 |
+Harvest tolerance is fixed at 3.5 in the engine and does not follow `harvest_minigame.tolerance`. Adjust the F3 hold threshold through `holdMs` in `web/game-keys.js`.
 
-연구별 아이콘을 구분하며 확률은 안내에 노출하지 않고 단계로 표시한다. 수확량 연구는 사용하지 않는다.
+### Mining and prices
 
-# 시각화
+| Key under `mine` | Setting / current value |
+|---|---|
+| `daily_rock_limit` | Daily rocks: 7; also capped at 7 by the engine |
+| `rock_width`, `rock_height`, `rock_gap` | Rock size and spacing: 10, 10, 5 |
+| `hits_to_break` | Hits per rock: 3 |
+| `pickaxe_price_multiplier` | Pickaxe price relative to fertilizer: 5 |
+| `pickaxe_safe_hits`, `pickaxe_break_increment` | Safe-hit threshold and subsequent break-chance increment: 9, 0.05 |
+| `loot_weights` | Diamond 1, iron 15, copper 34, stone 50 |
+| `mineral_sell_multipliers` | Mineral sale-price multipliers relative to the reference crop price |
+| `mineral_sell_price_bonus` | Added sale price: 3 |
+| `mineral_buy_multiplier` | Purchase price relative to sale price: 2 |
 
-web/spectactor에서 관리.
+### Volume and playback
 
-assets 이미지 기반으로 background와 object 형태로 기존 데이터 기반 출력
+All keys below are under `interaction.audio`. Start with gains between 0 and 1 and check the loudness of the source audio.
 
-점자모드와 입력을 공유하고, 시각화 페이지에서는 추가입력이 불가능하다.
+| Key | Setting |
+|---|---|
+| `default_volume` | Master game-audio volume: 0.7 |
+| `bgm_gain.basic`, `minigame`, `shop` | Music gains: 0.9, 0.5, 0.9 |
+| `work_gain` | Per-action gains for `water`, `soil`, `crop`, `cut`, and `cook` |
+| `work_gain_during_tts` | Action gains during speech |
+| `reward_gain`, `reward_gain_during_tts` | Reward gains normally and during speech |
+| `one_shot_gain` | Per-sound gains for sleep, entry, transactions, mining, and destruction |
+| `one_shot_gain_links` | Shared settings; `step` uses `door` |
+| `cooking_correct_interval_ms`, `other_correct_interval_ms` | Minimum reward intervals: cooking 650, other activities 90 |
+| `click_duration_ms` | Short click-sound duration: 650 |
+| `motion_idle_ms`, `motion_check_interval_ms` | Cooking movement timeout and check interval |
+| `correct_max_load_age_ms`, `max_reward_sources` | Stale-reward cutoff and simultaneous reward limit |
+| `bgm_minigame_pages`, `bgm_shop_pages` | Page IDs assigned to each music group |
 
-# 오디오
+### Layout and images
 
-배경음악은 기본·미니게임·상점 그룹으로 나뉜다. 같은 그룹의 화면으로 이동할 때 음악을 다시 시작하지 않는다. 작업음과 성공음은 별도 채널에서 재생된다.
+`dotpad` and `time.bar` define panel dimensions. `home`, `farm`, `town`, and `minimap` contain base layouts. The engine normalizes some screens to fixed grids and English names, so changing a coordinate or `label` may not directly change the rendered screen. Check the device dimensions and engine layout code when modifying these settings.
 
-| `background-basic`, `background-minigame`, `background-shop` | 화면 그룹별 배경음악 |
+Companion positions and sizes belong in `scene-objects.json`; image registration belongs in `visual-assets.json`; card sizes and colors belong in `viewer.css`.
 
-| `water`, `soil`, `crop` | 물·비료·수확 입력 중 |
+## Planned work and evaluation
 
-| `cut`, `cook` | 요리 자르기·젓기 |
+User testing will examine game comprehension and enjoyment, the workload of tactile and spoken information, and the usability and accuracy of hand gestures.
 
-| `correct` | 목표 통과, 일반 광물 획득 |
+- Improve coordinate calibration, jitter and occlusion handling, and the separation of exploration from action input.
+- Measure and reduce input queues, state-transfer delays, and rendering delays on older laptops.
+- Add fishing, ranching, music, NPC dialogue, quests, and crafting.
+- Evaluate task completion, time, errors, comprehension, workload, and gesture accuracy with approximately six to eight visually impaired participants.
 
-| `step` | 이동 화살표 선택 |
-
-| `door` | 상점 입장 |
-
-| `coin` | 구매·판매·유료 연구 성공 |
-
-| `sleep` | 수면 시작 |
-
-| `pickaxe`, `break` | 광산 타격·돌 파괴 |
-
-| `shine` | 다이아몬드 획득 |
-
-| `destroy` | 아이템 파괴 |
-
-음원은 `web/audio/`의 같은 이름 MP3를 사용한다. `step` 음량은 `door` 설정을 따른다. 작업음·성공음·배경음악·단발 효과음과 TTS 중 음량을 각각 조절할 수 있다.
-
-# 주요 설정
-
-| `time` | 하루 시간, 행동 비용, 시간 패널 |
-
-| `seeds`, `fertilizer` | 작물 성장·수확·씨앗 회수, 비료 |
-
-| `recipes` | 재료, 아이콘, 단계별 경로, 음식 효과 |
-
-| `recipes.*.buff_kind` | 수확 증가·곡괭이 보호·시간 감소 구분 |
-
-| `recipes.*.buff_multiplier`, `buff_ticks`, `buff_label` | 효과 배율, 지속시간, 안내 이름 |
-
-| `research` | 단계, 비용, 효과, 아이콘 |
-
-| `shop`, `mine` | 거래 가격과 광산 규칙 |
-
-| `interaction.feedback` | 목표 소멸 지연, 화면 갱신 간격 |
-
-| `interaction.cooking` | 중단 지점 표시 지연, 젓기 크기 |
-
-| `interaction.inventory` | 페이지 크기, 보유량 없는 항목 숨김 |
-
-| `interaction.audio` | 음량, 성공음 간격, 배경음악 적용 페이지 |
-
-| `interaction.sleep` | 수면 중 패널 꺼짐 시간 |
+User testing has not yet been conducted. Physical pad refresh speed, tracking under different lighting and camera positions, occlusion, and speech quality remain part of the planned evaluation. The current design assumes usable hearing and hand control.
