@@ -91,3 +91,6 @@ desktop.ini
 
 # Local game saves
 /saves/
+
+# Dot Inc. DotPadSDK: download locally, not committed (see README)
+/web/vendor/DotPadSDK-*

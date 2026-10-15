@@ -4,7 +4,7 @@
 
 Dot Pad를 사용하는 농장·생활 시뮬레이션 게임. 집, 농장, 마을, 광산에서 농사·요리·채굴·거래·연구를 진행한다. Stardew Valley의 생활 활동을 참고했으며, 각 활동은 60×40 도트 화면 안에서 이루어진다.
 
-마우스와 키보드로 브라우저에서 플레이하거나 USB 패드와 외부 손 추적 장치를 연결할 수 있다. Visual Companion은 게임 상태를 이미지로 보여주는 별도 창이다.
+마우스와 키보드로 브라우저에서 플레이하거나 블루투스 패드와 외부 손 추적 장치를 연결할 수 있다. Visual Companion은 게임 상태를 이미지로 보여주는 별도 창이다.
 
 ## 기획
 
@@ -40,11 +40,21 @@ python -m uvicorn game_app:app --host 127.0.0.1 --port 8000
 브라우저에서 `http://127.0.0.1:8000`에 접속한다. 실행 스크립트를 사용하는 배포본은 `game.bat`가 `launch_game.py`를 호출한다. 이 경우 실제 접속 포트는 실행창에 표시되는 주소를 따른다. HTML을 파일 탐색기에서 직접 열지 말고 서버를 통해 실행한다.
 
 1. 게임 페이지를 열고 클릭 또는 키 입력으로 음성을 활성화한다.
-2. 마우스·키보드로 먼저 플레이하거나 USB 패드와 손 추적 서버를 연결한다.
+2. 마우스·키보드로 먼저 플레이하거나 블루투스 패드와 손 추적 서버를 연결한다.
 3. **Open visual display**를 눌러 별도 시각화 창을 연다. 팝업이 차단되면 해당 사이트의 팝업을 허용한다.
 4. 시각화 창을 사용할 때는 원래 게임 페이지도 열어 둔다.
 
 설정 파일을 수정하면 서버를 재시작한다. 웹 파일을 교체한 뒤에는 Ctrl+F5로 새로고침하고 시각화 창도 다시 연다.
+
+### 닷패드 SDK
+
+블루투스 패드 연결에는 Dot Inc. 공식 DotPadSDK 3.0.3이 필요하다. SDK는 저장소에 포함하지 않으므로 실행 전에 아래처럼 넣는다.
+
+1. [dotincorp/dotpad-sdk-guide/Web/3.0.3/DemoApp/src/sdk](https://github.com/dotincorp/dotpad-sdk-guide/tree/main/Web/3.0.3/DemoApp/src/sdk)를 연다.
+2. `DotPadSDK-3.0.3.js`와 `DotPadSDK-3.0.3.d.ts`를 내려받는다.
+3. 두 파일을 `web/vendor/`에 넣는다.
+
+Web Bluetooth는 Chrome 또는 Edge에서 `localhost`나 HTTPS 주소로 열었을 때만 동작한다. PC에 블루투스가 없으면 안드로이드 폰에서 게임을 연다. USB 디버깅을 켠 폰을 USB로 연결하고 `adb reverse tcp:8000 tcp:8000`을 실행한 뒤, 폰 Chrome에서 `http://localhost:8000`을 연다. 그다음 **Connect Bluetooth pad**를 누르고 `DotPad…` 기기를 선택한다.
 
 ## 조작 가이드
 
@@ -149,7 +159,8 @@ python -m uvicorn game_app:app --host 127.0.0.1 --port 8000
 |---|---|
 | `web/game.html` | Dot Pad 시뮬레이터, 포인터 입력, 상태 표시, 영어 TTS, 시각화 창 연결 |
 | `web/game-keys.js` | 기능 키와 방향 키, F3 짧게·길게 누르기, 중복 입력·취소 처리 |
-| `web/hardware.mjs` | Web Serial 패드 통신과 물리 버튼 수신, WebSocket 손 좌표 연결 |
+| `web/hardware.mjs` | DotPadSDK 기반 블루투스 패드 출력과 물리 버튼 수신, WebSocket 손 좌표 연결 |
+| `web/vendor/DotPadSDK-3.0.3.js`, `.d.ts` | Dot Inc. 공식 DotPadSDK 3.0.3 (Web Bluetooth 연결, 패킷, ACK/재전송, 재연결). 저장소에 포함하지 않으며 [닷패드 SDK](#닷패드-sdk) 절차대로 내려받는다 |
 | `web/game-audio.js` | 배경음악·작업음·성공음·단발 효과음의 독립 재생과 음량 제어 |
 | `web/audio/` | 활동·배경·피드백 MP3 음원 |
 | `game.bat`, `launch_game.py` | Windows 실행 및 서버·브라우저 시작 보조 |
@@ -178,7 +189,7 @@ python -m uvicorn game_app:app --host 127.0.0.1 --port 8000
 
 F3을 길게 누르면 누르는 도중 저장이 실행된다. 저장 후 키를 떼어도 로드 화면이 추가로 열리지 않는다. F3을 짧게 누르면 저장 목록에서 슬롯을 고를 수 있다.
 
-저장은 `saves/`의 JSON 파일 단위로 관리하며 최근 12개를 유지한다. 아이템·골드·날짜·밭 상태·연구·음식 효과 등 게임 진행을 복원한다. 저장 파일은 버전 관리 대상에서 제외한다. 서버 메모리의 진행은 재시작 시 초기화되므로 이어서 플레이하려면 저장 후 로드해야 한다. USB 연결, 카메라 보정, 브라우저 음성 선택은 게임 진행 저장과 별개다.
+저장은 `saves/`의 JSON 파일 단위로 관리하며 최근 12개를 유지한다. 아이템·골드·날짜·밭 상태·연구·음식 효과 등 게임 진행을 복원한다. 저장 파일은 버전 관리 대상에서 제외한다. 서버 메모리의 진행은 재시작 시 초기화되므로 이어서 플레이하려면 저장 후 로드해야 한다. 블루투스 연결, 카메라 보정, 브라우저 음성 선택은 게임 진행 저장과 별개다.
 
 ## 오디오
 
