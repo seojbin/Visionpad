@@ -4,7 +4,7 @@ English | [한국어](README.ko.md)
 
 A farming and life simulation game for the Dot Pad. Players farm, cook, mine, trade, and research upgrades across four locations: home, farm, village, and mine. The activities draw on Stardew Valley, with each task adapted to a 60×40 tactile display.
 
-The browser simulator supports mouse and keyboard input. A USB Dot Pad and an external hand-tracking system can also be connected. A separate Visual Companion window shows the same game state using images.
+The browser simulator supports mouse and keyboard input. A Bluetooth Dot Pad and an external hand-tracking system can also be connected. A separate Visual Companion window shows the same game state using images.
 
 ## Design
 
@@ -40,11 +40,21 @@ python -m uvicorn game_app:app --host 127.0.0.1 --port 8000
 Open `http://127.0.0.1:8000` in a browser. Builds with the Windows launcher use `game.bat` to run `launch_game.py`; use the address printed by that launcher. Serve the HTML through the local server rather than opening it directly.
 
 1. Click or press a key on the game page to enable audio.
-2. Use the mouse and keyboard, or connect the USB pad and hand-tracking server.
+2. Use the mouse and keyboard, or connect the Bluetooth pad and hand-tracking server.
 3. Select **Open visual display** to open the companion window. Allow pop-ups for the site if needed.
 4. Keep the original game page open while using the companion.
 
 Restart the server after changing the configuration. After replacing web files, hard-refresh the game page and reopen the companion window.
+
+### Dot Pad SDK
+
+The Bluetooth pad uses Dot Inc.'s official DotPadSDK 3.0.3, which is not committed to this repository. Before running the game:
+
+1. Open [dotincorp/dotpad-sdk-guide/Web/3.0.3/DemoApp/src/sdk](https://github.com/dotincorp/dotpad-sdk-guide/tree/main/Web/3.0.3/DemoApp/src/sdk).
+2. Download `DotPadSDK-3.0.3.js` and `DotPadSDK-3.0.3.d.ts`.
+3. Put both files in `web/vendor/`.
+
+Web Bluetooth requires Chrome or Edge on `localhost` or HTTPS. If the computer has no Bluetooth, open the game on an Android phone instead: connect the phone over USB with USB debugging enabled, run `adb reverse tcp:8000 tcp:8000`, and open `http://localhost:8000` in the phone's Chrome. Then press **Connect Bluetooth pad** and choose the `DotPad…` device.
 
 ## Controls
 
@@ -149,7 +159,8 @@ The server owns game state and action checks. The browser sends input and receiv
 |---|---|
 | `web/game.html` | Pad simulator, pointer input, status, English TTS, and companion connection |
 | `web/game-keys.js` | Function and arrow keys, F3 short/long press, repeat suppression, and cancellation |
-| `web/hardware.mjs` | Web Serial pad output and physical buttons; WebSocket hand coordinates |
+| `web/hardware.mjs` | Bluetooth pad output and physical buttons through DotPadSDK; WebSocket hand coordinates |
+| `web/vendor/DotPadSDK-3.0.3.js`, `.d.ts` | Dot Inc. official DotPadSDK 3.0.3 (Web Bluetooth link, packets, ACK/retry, reconnection). Not committed; download it as described in [Dot Pad SDK](#dot-pad-sdk) |
 | `web/game-audio.js` | Separate music, action, reward, and one-shot sound channels |
 | `web/audio/` | MP3 assets |
 | `game.bat`, `launch_game.py` | Windows startup and server/browser launch helpers |
@@ -178,7 +189,7 @@ Backgrounds, facilities, and objects have separate asset entries so existing ima
 
 Holding F3 saves before the key is released. Releasing it after a save does not open the load screen. A short press opens the slot list.
 
-Saves are JSON files in `saves/`; the latest 12 are retained. They restore progress including items, gold, day, plots, research, and food effects. Save files are excluded from version control. Server memory resets on restart, so save and load to continue a session. USB connections, camera calibration, and browser voice selection are separate from game saves.
+Saves are JSON files in `saves/`; the latest 12 are retained. They restore progress including items, gold, day, plots, research, and food effects. Save files are excluded from version control. Server memory resets on restart, so save and load to continue a session. Bluetooth connections, camera calibration, and browser voice selection are separate from game saves.
 
 ## Audio
 
