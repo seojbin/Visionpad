@@ -77,7 +77,7 @@ class IconRenderer:
 
     @classmethod
     def category(cls, kind):
-        return cls.ALIASES.get(kind, kind or 'material')
+        return 'seed' if kind == 'flower_seed' else cls.ALIASES.get(kind, kind or 'material')
 
     def spec(self, obj):
         kind = obj.get('type')

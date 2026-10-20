@@ -176,7 +176,7 @@ const sheets = {};
 let sceneDefinitions={scenes:{}}, assetCatalog={backgrounds:{},facilities:{},objects:{},pages:{}};
 const assetsReady=Promise.all([
  fetch(new URL('scene-objects.json?v=rowan-2',base)).then(r=>{if(!r.ok)throw new Error('Scene registry unavailable');return r.json();}).then(d=>{sceneDefinitions=d;}),
- fetch(new URL('visual-assets.json?v=rowan-2',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
+ fetch(new URL('visual-assets.json?v=flowers-1',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
 ]).catch(error=>{console.warn(error);}).then(()=>{menuKey='';if(state)updateUI();});
 let animationFrame = 0;
 let state = null,
@@ -517,7 +517,7 @@ function tactileFallback() {
 function itemKey(o) {
  const id=(o.id||'').replace(/^inventory_/,'').replace(/^(food_|crop_|recipe_|ingredient_)/,'');
  const kind=o.resource_kind||o.shop_kind||o.item_kind||o.type;
- if(kind==='seed'||id.startsWith('seed_'))return 'seed_'+(o.seed_id||o.item_id||id.replace(/^seed_/,''));
+ if(kind==='flower_seed'||kind==='seed'||id.startsWith('seed_'))return 'seed_'+(o.seed_id||o.item_id||id.replace(/^seed_/,''));
  return o.recipe_id||o.ingredient_id||o.seed_id||o.item_id||id;
 }
 function itemFrame(o) {
@@ -536,6 +536,7 @@ function itemSprite(o) {
 function render() {
   if (document.getElementById("visual-relay")) return;
   if (!state) return;
+  if(state.page==='flower_detail'){flowerDetail();return;}
   if(fallbackPage()){tactileFallback();return;}
   const pageSpec=assetCatalog.pages[state.page];
   if(pageSpec.renderer==="background"){drawAsset(assetCatalog.backgrounds[pageSpec.background],0,0,960,600,ctx,false);return;}
@@ -545,6 +546,10 @@ function render() {
   else if (state.page === "mine") mine();
   else if (state.page === "fishing") fishing();
   if (loc === "home" || loc === "town") sceneObjects(loc);
+  if (state.page==='home' && state.flowers) {
+    sprite('flower_'+state.flowers.stage,20,355,160,180);
+    outline(20,355,160,180,'houseplant');
+  }
   if (state.page.startsWith('shop_')) sceneObjects('shop');
   const ph = phase(state);
   ctx.fillStyle = ph.color;
@@ -663,13 +668,12 @@ function menus() {
           : "Player selection";
   const grid = q(".dv-cards");
   grid.replaceChildren();
-  grid.style.gridTemplateColumns = state.rowan_submission?'repeat(3,minmax(0,1fr))':['research','recipe_select','ingredient_select'].includes(state.page)?'repeat(3,minmax(0,1fr))'
-    :state.page==='plot_detail'?'repeat(3,minmax(0,1fr))'
-    :['shop_choice','rowan_submit'].includes(state.page)?'repeat(3,minmax(0,1fr))':'repeat(4,minmax(0,1fr))';
+  const usesSlots=cards.some(o=>Number.isInteger(o.grid_slot));
+  grid.style.gridTemplateColumns='repeat(4,minmax(0,1fr))';
   // Use actual tactile row/column order, including sparse final rows.
   const xs=[...new Set(cards.map(o=>o.x).filter(Number.isFinite))].sort((a,b)=>a-b);
   const ys=[...new Set(cards.map(o=>o.y).filter(Number.isFinite))].sort((a,b)=>a-b);
-  grid.style.gridTemplateRows=['inventory','shop_buy','shop_sell','load_game'].includes(state.page)?'repeat(3,minmax(0,1fr))':'';
+  grid.style.gridTemplateRows=usesSlots?'repeat(3,minmax(0,1fr))':'';
   for (const o of cards) {
     const card = document.createElement("article");
     card.className =
@@ -677,7 +681,9 @@ function menus() {
       (focused(o.id) ? " is-focused" : "") +
       (o.selected ? " is-selected" : "");
     card.dataset.objectId = o.id;
-    if(['research','inventory','shop_buy','shop_sell','plot_detail'].includes(state.page)&&xs.length&&ys.length){
+    if(Number.isInteger(o.grid_slot)){
+      card.style.gridColumn=String(o.grid_column+1);card.style.gridRow=String(o.grid_row+1);
+    } else if(['research','inventory','shop_buy','shop_sell','plot_detail'].includes(state.page)&&xs.length&&ys.length){
       card.style.gridColumn=String(xs.indexOf(o.x)+1);card.style.gridRow=String(ys.indexOf(o.y)+1);
     }
     card.dataset.category=itemFrame(o);
@@ -706,13 +712,19 @@ function menus() {
   }
 }
 function drawTimeGauge() {
-  const gauge=q('.dv-time-gauge');
-  const total=Math.max(1,Number(state.time?.total_cells)||20);
-  const used=Math.max(0,Math.min(total,Number(state.time?.used_cells)||0));
-  q('.dv-time-fill').style.width=`${100*used/total}%`;
+  const gauge=q('.dv-time-gauge'),fill=q('.dv-time-fill');
+  const panel=state.lower_panel || {mode:'time',label:'Activity time'};
+  q('.dv-time-label').textContent=panel.label;
+  gauge.style.display=['braille','blank'].includes(panel.mode)?'none':'block';
+  fill.style.marginLeft='0';
+  const total=panel.mode==='pages'?panel.pages:Math.max(1,Number(state.time?.total_cells)||20);
+  const used=panel.mode==='pages'?panel.page:Math.max(0,Math.min(total,Number(state.time?.used_cells)||0));
+  fill.style.width=`${panel.mode==='pages'?100/total:100*used/total}%`;
+  if(panel.mode==='pages')fill.style.marginLeft=`${100*(used-1)/total}%`;
+  gauge.setAttribute('aria-label',panel.label);
   gauge.setAttribute('aria-valuemax',String(total));
   gauge.setAttribute('aria-valuenow',String(used));
-  gauge.setAttribute('aria-valuetext',`${used} of ${total} used`);
+  gauge.setAttribute('aria-valuetext',panel.mode==='pages'?panel.label:`${used} of ${total} used`);
 }
 function dialogueUI() {
   const panel=q('.dv-dialogue'), dialogue=state.dialogue;
@@ -818,6 +830,21 @@ function frame(now) {
   if (particles.length) animationFrame = requestAnimationFrame(frame);
 }
 const ready = assetsReady;
+
+function flowerDetail() {
+ const f=state.flowers||{stage:'empty'};
+ if(!environment('flower_'+f.stage)) {ctx.fillStyle='#eee4cd';ctx.fillRect(0,0,960,600);sprite('flower_'+f.stage,300,150,360,420);}
+ const buttons=(state.spectator?.objects||[]).filter(o=>o.type==='care_button');
+ buttons.forEach((o,i)=>{
+  const x=30+i*180;
+  // Light overlay controls leave the botanical scene visible.
+  ctx.fillStyle=focused(o.id)?'#254438ee':'#25443888';ctx.fillRect(x,28,165,64);
+  if(focused(o.id)){ctx.strokeStyle='#ff9c25';ctx.lineWidth=4;ctx.strokeRect(x,28,165,64);}
+  text(o.label,x+12,69,'#baff91',22);
+ });
+ if(f.watering)text('Hold over the pot · '+Math.round(f.water_progress*100)+'%',300,570,'#baff91',24);
+ else text(f.watered?'Watered':f.stage==='withered'?'Withered':f.stage==='empty'?'Empty pot':'Flower pot · '+f.stage,300,570,'#baff91',24);
+}
 
 
 const loadStatus = document.getElementById('visual-load-status');

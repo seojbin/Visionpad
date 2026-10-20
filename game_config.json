@@ -1921,23 +1921,23 @@
         "position_scale": 10,
         "smoothing_seconds": 0.03
       },
-      "default_volume": 0.9,
+      "default_volume": 1.0,
       "work_gain": {
-        "water": 0.6,
-        "soil": 0.35,
-        "cut": 0.45,
+        "water": 0.7,
+        "soil": 0.7,
+        "cut": 0.7,
         "cook": 0.7,
-        "crop": 1.4
+        "crop": 1.5
       },
       "work_gain_during_tts": {
-        "water": 0.4,
-        "soil": 0.25,
-        "cut": 0.3,
-        "cook": 0.55,
-        "crop": 0.8
+        "water": 0.6,
+        "soil": 0.6,
+        "cut": 0.6,
+        "cook": 0.6,
+        "crop": 1.4
       },
-      "reward_gain": 0.5,
-      "reward_gain_during_tts": 0.3,
+      "reward_gain": 0.6,
+      "reward_gain_during_tts": 0.5,
       "cooking_correct_interval_ms": 650,
       "other_correct_interval_ms": 90,
       "click_duration_ms": 650,
@@ -1946,9 +1946,9 @@
       "correct_max_load_age_ms": 650,
       "max_reward_sources": 2,
       "bgm_gain": {
-        "basic": 0.3,
-        "minigame": 0.2,
-        "shop": 0.45
+        "basic": 0.7,
+        "minigame": 0.4,
+        "shop": 0.7
       },
       "one_shot_gain": {
         "sleep": 1.0,
@@ -1986,8 +1986,8 @@
         "tts_multiplier": 1,
         "bgm_multiplier": 0.2
       },
-      "bgm_during_tts": 0.25,
-      "one_shot_during_tts": 0.65,
+      "bgm_during_tts": 0.6,
+      "one_shot_during_tts": 0.7,
       "hover_interval_ms": 220
     },
     "sleep": {
@@ -2855,5 +2855,16 @@
         "description": "Everything sells for {percent} percent more."
       }
     ]
+  },
+  "flowers": {
+    "seed_price": 150,
+    "watering_seconds": 3,
+    "contact_gap_seconds": 0.5,
+    "sprout_days": 2,
+    "stem_days": 2,
+    "bloom_cycle_days": 3,
+    "bloom_wilt_increment": 0.1,
+    "dry_wilt_increment": 0.3,
+    "harvest_bonus": 1
   }
 }

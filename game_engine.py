@@ -12,10 +12,11 @@ from game_fishing import FishingMixin
 from game_seafood import SeafoodMixin
 from game_village import VillageMixin
 from game_npc import NpcMixin
+from game_flowers import FlowerMixin
 from spectator_state import spectator_snapshot
 
 
-class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, SaveMixin):
+class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, SaveMixin):
 
     def __init__(self, config, save_dir=None):
         config = self.prepare_display_config(config)
@@ -207,6 +208,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.regenerate_mine()
         self.reset_fishing()
         self.reset_npcs()
+        self.reset_flowers()
 
         self.render()
 
@@ -275,6 +277,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         return " "
 
     def get_page_name(self, page_id):
+        if page_id == "flower_detail": return "Flower pot"
         if page_id == "load_game": return "Load game"
         if page_id == "npc_dialogue": return "Conversation"
         return self.config.get("pages", {}).get(page_id, page_id)
@@ -396,6 +399,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         return self.response(tts="Sleeping.", sound_events=[{"kind": "one_shot", "sound": "sleep"}])
 
     def finish_sleep(self):
+        self.advance_flowers()
         self.sleep_until = None
         matured = []
         for state in self.farm_plots.values():
@@ -516,6 +520,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         pages = {
             "load_game": self.get_load_objects,
             "home": self.get_home_objects,
+            "flower_detail": self.get_flower_objects,
             "farm": self.get_farm_objects,
             "town": self.get_town_objects,
             "mine": self.get_mine_objects,
@@ -600,6 +605,8 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
 
             objects.append(copied)
 
+        if not self.day_ended:
+            objects.append(self.flower_object())
         return objects
 
     def get_farm_objects(self):
@@ -823,6 +830,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         entries.append({"id":"fishing_rod", "label":"Fishing rod", "count":self.resources.get("fishing_rod",0), "kind":"tool", "action":""})
         for key, fish in self.fishing_config()['fish'].items():
             entries.append({"id":key, "label":fish['label'], "count":self.resources['fish'].get(key,0), "kind":"fish", "action":""})
+        entries.append(dict(id='seed_morning_glory', label='Morning glory seeds', count=self.flower_seeds, kind='seed', seed_id='morning_glory', action=''))
         entries = [entry for entry in entries if entry['kind']=='coin' or entry['count']>0]
         page_size = min(12, max(2, self.inventory_items_per_page))
         gold = next(e for e in entries if e['kind']=='coin')
@@ -1098,6 +1106,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         entries += [("mineral", key, self.MINERAL_LABELS[key], self.resources[key], self.get_mineral_price(key, buying=True))
                     for key in ("stone", "copper", "iron")]
         entries.append(("fishing_rod", "fishing_rod", "Fishing rod", self.resources.get("fishing_rod",0), self.get_rod_price()))
+        entries.append(("flower_seed", "morning_glory", "Morning glory seeds", self.flower_seeds, int(self.flower_config().get("seed_price",150))))
         return self.build_shop_objects(entries, "buy")
 
     def get_shop_sell_objects(self):
@@ -1148,7 +1157,9 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             if self.icons.draw(obj):
                 continue
             obj_type = obj.get("type")
-            if obj_type == "rowan":
+            if obj_type == "flower_pot":
+                self.draw_flower_pot(obj)
+            elif obj_type == "rowan":
                 self.draw_rowan(obj)
             elif obj_type in ("calendar_day", "calendar_button"):
                 self.draw_calendar(obj)
@@ -1509,6 +1520,8 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             return f"Kitchen. Available recipes: {count} "
         if kind == "shop_npc":
             return "Shop. Buy or sell."
+        if kind == "care_button" and obj.get("id", "").startswith("flower_"):
+            return obj.get("tts", label)
         if kind == "care_button":
             mode = obj.get("care_kind")
             state = self.farm_plots.get(self.detail_plot_id, {})
@@ -1577,6 +1590,8 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         return result
 
     def pointer_move(self, x, y):
+        if self.current_page == "flower_detail" and self.flower_watering:
+            return self.water_flower_at(x,y)
         if self.current_page in ('water_minigame','fertilizer_minigame','harvest','cooking'):
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
@@ -1659,6 +1674,8 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         return self.perform_action(action, obj)
 
     def pointer_drag(self, x, y):
+        if self.current_page == "flower_detail" and self.flower_watering:
+            return self.water_flower_at(x,y)
         if self.current_page in ('water_minigame','fertilizer_minigame','harvest','cooking'):
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
@@ -1754,6 +1771,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         return result
 
     def _perform_action(self, action, obj):
+        if action.startswith("flower:"): return self.flower_action(action.split(":",1)[1])
         if action == 'talk_rowan': return self.talk_rowan()
         if action == 'repeat_rowan':
             result = self.response(tts='Rowan. '+self.rowan_dialogue, speech_profile='shopkeeper', priority='dialogue')
@@ -1839,6 +1857,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         return self.response(tts="Night. Select the bed.", sfx="error")
 
     def travel_to(self, location):
+        self.stop_flower_contact()
         if self.day_ended:
             return self.night_only_response()
         if location not in ("home", "farm", "town", "mine", "fishing"):
@@ -1923,6 +1942,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         return super().navigate_key(direction)
 
     def return_to_scene(self):
+        self.stop_flower_contact()
         self.pointer_pressed = False
         self.current_page = "home" if self.day_ended else self.current_location
         self.seed_select_plot_id = None
@@ -2286,7 +2306,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         base_yield = self.get_harvest_base_yield(seed_id)
         buff_multiplier = self.buff_multiplier_for("harvest_multiplier")
         buff_applied = buff_multiplier > 1.0
-        yield_count = self.loot_amount(max(1, int(math.ceil(base_yield * buff_multiplier))))
+        yield_count = self.loot_amount(max(1, int(math.ceil(base_yield * buff_multiplier)))) + self.flower_harvest_bonus()
         self.resources["crops"][seed_id] = int(self.resources["crops"].get(seed_id, 0)) + yield_count
 
         chance = self.get_effective_seed_return_chance(seed_id)
@@ -2599,6 +2619,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         return self.response(tts=text, sfx="open_page")
 
     def buy_shop_item(self, kind, item_id):
+        if kind == "flower_seed" and item_id == "morning_glory": return self.buy_flower_seed()
         if kind == "fishing_rod" and item_id == "fishing_rod":
             return self.buy_fishing_rod()
         if kind in ("pickaxe", "mineral"):
@@ -2734,6 +2755,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             "rowan_submission": self.current_page=="rowan_submit" and self.rowan_submit_open,
             "calendar": {"weekday":self.calendar_days()[self.weekday_index()]['name'], "offer":self.calendar_text()},
             "fishing": self.fishing_public_state(),
+            "flowers": self.flower_public_state(),
             "audio_guidance": self.audio_guidance(),
             "objects": [{"id": o["id"], "label": o.get("label", ""),
                          "type": o.get("type"), "x": o.get("x"), "y": o.get("y"),
@@ -2955,7 +2977,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.shop_page = max(0, min(self.shop_page, pages - 1))
         objects = []
         for i, (kind, item_id, label, count, price) in enumerate(entries[self.shop_page * page_size:(self.shop_page + 1) * page_size]):
-            price = self.market_price(price, kind, mode)
+            price = price if kind == "flower_seed" else self.market_price(price, kind, mode)
             x, y = (9, 23, 37, 51)[i % 4], (5, 15, 25)[i // 4]
             text = f"{label}, {price} gold. stock {count} " if mode == "buy" else f"{label}, stock {count}. Sell {price} gold"
             if kind == "pickaxe" and count:

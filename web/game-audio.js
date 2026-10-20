@@ -359,6 +359,11 @@ class GameAudio {
             if (this.held || this.workName || this.clickSources.size || this.rewardSources.size) this.stopTasks();
             return;
         }
+        if(state.page==='flower_detail') {
+            if(state.flowers?.contact) {this.motionActive=true;this.lastMotion=this.now();this.startWork('water');}
+            else this.stopWork();
+            return;
+        }
         const carePage = ['water_minigame','fertilizer_minigame','harvest'].includes(state.page);
         // The evaluation build performs work while moving, without a held press.
         const active = (this.held || this.motionActive) && this.now()-this.lastMotion<=this.settings.motion_idle_ms && (carePage || (state.page==='cooking' && state.cooking?.dragging));

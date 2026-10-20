@@ -37,7 +37,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
         except PackageNotFoundError:
             add(name, False, "Not installed", "Run the setup file in this project folder.")
 
-    required = ("game_app.py", "game_engine.py", "game_speech.py", "speech_queue.py", "game_npc.py", "game_ui.py",
+    required = ("game_app.py", "game_engine.py", "game_speech.py", "speech_queue.py", "game_npc.py", "game_ui.py", "game_flowers.py",
                 "game_saves.py", "game_fishing.py", "game_seafood.py", "dotpad.py",
                 "spectator_state.py", "game_config.json", "npc_config.json", "requirements.txt",
                 "web/game.html", "web/game-audio.js", "web/game-speech.js", "web/game-keys.js",
