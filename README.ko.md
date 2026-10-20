@@ -24,7 +24,7 @@ Dot Pad를 사용하는 농장·생활 시뮬레이션 게임. 집, 농장, 마�
 
 ## 실행
 
-처음에는 Python 3.11 이상을 설치하고 Mac은 **setup-mac.command**, Windows는 **setup-windows.bat**를 연다. 프로젝트 안에 실행 환경을 만들고 패키지와 두 음성을 준비한다. 최초 설치에는 인터넷이 필요하다. 이후에는 **start-mac.command** 또는 **game.bat**만 연다. 실행 준비 확인, 서버 연결 대기와 시연 음성 준비 후 게임을 열며, 같은 포트의 게임이 이미 켜져 있으면 재시작 없이 사용한다. [설치와 전달 안내](docs/audio/SETUP.md)를 참고한다.
+처음에는 Python 3.11 이상을 설치하고 Mac은 **setup-mac.command**, Windows는 **setup-windows.bat**를 연다. 프로젝트 안에 실행 환경을 만들고 패키지·블루투스 SDK·두 음성을 준비한다. 최초 설치에는 인터넷이 필요하다. 이후에는 **start-mac.command** 또는 **game.bat**만 연다. 실행 준비 확인, 서버 연결 대기와 시연 음성 준비 후 게임을 열며, 같은 포트의 게임이 이미 켜져 있으면 재시작 없이 사용한다. [설치와 전달 안내](docs/audio/SETUP.md)를 참고한다.
 
 직접 설치하려면 프로젝트 루트에서 Python 가상환경을 준비하고 의존성을 설치한다.
 
@@ -36,6 +36,7 @@ venv\Scripts\activate
 source venv/bin/activate
 
 python -m pip install -r requirements.txt
+python tools/prepare_pad.py
 python tools/prepare_speech.py --download
 python launch_game.py --prepare-demo
 ```
@@ -49,7 +50,7 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 
 설정 파일을 수정하면 서버를 재시작한다. 웹 파일을 교체한 뒤에는 Ctrl+F5로 새로고침하고 시각화 창도 다시 연다.
 
-현재 준비한 Mac 환경은 `.venv/`이며 실행 파일은 기존 `venv/`도 인식한다. 활성화한 환경에서 `python tools/check_setup.py --synthesize`를 실행하면 게임을 시작하거나 변경하지 않고 파일·패키지·실제 음성 생성을 점검한다. Mac arm64/Python 3.14.3에서 확인했으며 Windows 실행 파일은 실제 Windows에서 확인이 남아 있다.
+새로 설치한다면 Python 3.12 64비트를 권장한다. 실행 파일은 `.venv/`와 `venv/`를 인식한다. 두 환경 모두 설정을 UTF-8로 읽으며, 손상된 음성 파일은 설치 시 다시 받는다. 활성화한 환경에서 `python tools/check_setup.py --synthesize`로 파일·패키지·두 목소리를 점검할 수 있다. Windows와 Mac의 자동 설치 검사 결과는 GitHub Actions의 **Audio setup**에서 확인한다.
 
 ## 영어 음성과 Rowan 대화
 

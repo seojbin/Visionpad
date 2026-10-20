@@ -24,7 +24,7 @@ Farming, cooking, mining, trading, research, fishing, and one authored NPC conve
 
 ## Running the game
 
-For the first setup, install Python 3.11 or newer and open **setup-mac.command** on Mac or **setup-windows.bat** on Windows. These create a project environment, install the dependencies and download both voices. Internet is needed for that setup. For later starts, open **start-mac.command** or **game.bat**. The launcher checks the setup, waits for the server, prepares demo voices and opens the game. An existing game on the selected port is reused without a restart. See the [setup and handoff guide](docs/audio/SETUP.md).
+For the first setup, install Python 3.11 or newer and open **setup-mac.command** on Mac or **setup-windows.bat** on Windows. These create a project environment, install the dependencies and download the Bluetooth SDK and both voices. Internet is needed for that setup. For later starts, open **start-mac.command** or **game.bat**. The launcher checks the setup, waits for the server, prepares demo voices and opens the game. An existing game on the selected port is reused without a restart. See the [setup and handoff guide](docs/audio/SETUP.md).
 
 For manual setup, create a Python environment and install the dependencies from the project root.
 
@@ -36,6 +36,7 @@ venv\Scripts\activate
 source venv/bin/activate
 
 python -m pip install -r requirements.txt
+python tools/prepare_pad.py
 python tools/prepare_speech.py --download
 python launch_game.py --prepare-demo
 ```
@@ -49,7 +50,7 @@ The Mac launcher and manual command default to `http://127.0.0.1:8000`. Windows 
 
 Restart the server after changing the configuration. After replacing web files, hard-refresh the game page and reopen the companion window.
 
-On this Mac, the prepared environment is `.venv/`. The launchers also recognize an existing `venv/`. Run `python tools/check_setup.py --synthesize` from the active environment to diagnose files, packages and actual voice generation without starting or changing a game. Mac arm64 with Python 3.14.3 has been checked; the Windows helpers still need an actual Windows run.
+Python 3.12 (64-bit) is recommended for a new installation. The launchers recognize `.venv/` and `venv/`. Settings use UTF-8 on both platforms; setup verifies voice downloads and replaces damaged files. Run `python tools/check_setup.py --synthesize` from the active environment to check files, packages and both voices. See **Audio setup** in GitHub Actions for Windows and Mac installation checks.
 
 ## English voices and Rowan
 
