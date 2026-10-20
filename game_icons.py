@@ -81,7 +81,7 @@ class IconRenderer:
 
     def spec(self, obj):
         kind = obj.get('type')
-        symbol = kind
+        symbol = 'chest' if kind == 'shop_npc' else kind
         frame = 'rectangle'
         if kind == 'resource': symbol = self.category(obj.get('resource_kind'))
         elif kind == 'shop_item': symbol = self.category(obj.get('shop_kind'))
