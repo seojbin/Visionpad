@@ -16,7 +16,7 @@
 <div class="pad-panel" id="pad-panel"><div class="device-top"><b>dot<span style="font-weight:300"> pad</span></b><span>TACTILE GAME SIMULATOR</span><span>60 × 40</span></div>
 <div class="hardware-layout"><div class="screen"><canvas id="dotpad" width="900" height="600" tabindex="0" aria-label="Tactile game pad. W/A/S/D move the pointer, Enter selects, and Space presses or releases."></canvas></div></div>
 <div class="hardware-controls"><button id="nav-prev" class="physical-arrow" aria-label="Go left"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4L6 12l10 8Z"/></svg></button><div class="controls"><button data-command="minimap">F1<span>Map</span></button><button data-command="resources">F2<span>Inventory</span></button><button data-command="load" title="Press to load; hold to save">F3<span>Load / Save</span></button><button data-command="click">F4<span>Click</span></button></div><button id="nav-next" class="physical-arrow" aria-label="Go right"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l10 8L8 20Z"/></svg></button></div>
-<div class="device-leds" aria-hidden="true"><i></i><i></i></div><div class="braille-bezel"><canvas id="timepad" width="600" height="60" aria-label="Activity time used, shown in the lower 20 cells"></canvas></div>
+<div class="device-leds" aria-hidden="true"><i></i><i></i></div><div class="braille-bezel"><canvas id="timepad" width="600" height="60" aria-label="Activity time, page position, or shop location in the lower 20 cells"></canvas></div>
 <div class="device-bottom"><span>DOTDEW VALLEY</span><span id="pointer-info">TOUCH · DRAG · RELEASE</span></div></div>
 
 
@@ -163,6 +163,7 @@ function drawDotMatrix(targetCanvas, targetCtx, dots, width, height) {
 }
 
 function drawState(state) {
+    timeCanvas.setAttribute("aria-label", state.lower_panel?.label || "Activity time");
     if (currentState && (currentState.page !== state.page || currentState.paused !== state.paused || currentState.sleeping !== state.sleeping)) gameSpeech.stop();
     currentState = state;
     applyClientSettings(state.client_settings);

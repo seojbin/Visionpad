@@ -51,6 +51,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.save_dir = Path(save_dir) if save_dir is not None else Path(__file__).resolve().parent / "saves"
         self.icon_layout = IconLayout(IconGrid())
         self.icons = IconRenderer(self)
+        self.shop_page_count = 1  # Derived UI cache; excluded from save snapshots.
         self._static_fields = set(vars(self))
         self.reset()
 
@@ -124,6 +125,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self._pickaxe_hits = 0
         self.inventory_page = 0
         self.inventory_page_count = 1
+        self.shop_page_count = 1
         self.day = int(self.config.get("game", {}).get("start_day", 1))
         self.current_location = "home"
         self.current_page = "home"
@@ -432,8 +434,47 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             text += f". {names} ready to harvest."
         return self.response(tts=text, sfx="morning")
 
+    def lower_panel_state(self):
+        if self.sleep_until is not None:
+            return {"mode": "blank", "label": "Sleeping"}
+        if self.current_page == "inventory":
+            page, pages = self.inventory_page, self.inventory_page_count
+        elif self.current_page in ("shop_buy", "shop_sell"):
+            page, pages = self.shop_page, self.shop_page_count
+        else:
+            page, pages = 0, 1
+        if pages > 1:
+            return {"mode": "pages", "page": page + 1, "pages": pages,
+                    "label": f"Page {page + 1} of {pages}"}
+        labels = {"shop_choice": "shop", "shop_buy": "buy", "shop_sell": "sell"}
+        if self.current_page in labels:
+            return {"mode": "braille", "label": labels[self.current_page]}
+        return {"mode": "time", "label": "Activity time"}
+
     def draw_time_bar(self):
         self.timepad.clear()
+        panel = self.lower_panel_state()
+        if panel["mode"] == "blank":
+            return
+        if panel["mode"] == "pages":
+            # Integer boundaries partition all columns without overlap or gaps.
+            start = (panel["page"] - 1) * self.timepad.width // panel["pages"]
+            end = panel["page"] * self.timepad.width // panel["pages"]
+            for x in range(start, max(start + 1, end)):
+                for y in range(self.timepad.height):
+                    self.timepad.set_dot(x, y)
+            return
+        if panel["mode"] == "braille":
+            # Uncontracted English, six-dot letters within the eight-dot cells.
+            letters = {'s': (2,3,4), 'h': (1,2,5), 'o': (1,3,5),
+                       'p': (1,2,3,4), 'b': (1,2), 'u': (1,3,6),
+                       'y': (1,3,4,5,6), 'e': (1,5), 'l': (1,2,3)}
+            positions = {1:(0,0), 2:(0,1), 3:(0,2), 4:(1,0), 5:(1,1), 6:(1,2)}
+            for cell, char in enumerate(panel['label']):
+                for dot in letters[char]:
+                    x, y = positions[dot]
+                    self.timepad.set_dot(cell * 2 + x, y)
+            return
         bar = self.config.get("time", {}).get("bar", {})
         cell_width = int(bar.get("cell_width", 2))
         cell_height = int(bar.get("cell_height", 4))
@@ -1046,7 +1087,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             },
             {"id":"shop_calendar", "type":"calendar_button", "x":38,"y":8,"width":12,"height":12,
              "label":"Calendar", "tts":"Calendar. Weekly offers.", "action":"open_calendar"}
-        ] + [self.npc_marker()]
+        ]
 
     def get_shop_buy_objects(self):
         entries = [("seed", seed_id, f"{self.get_seed_label(seed_id)} seeds", self.resources["seeds"].get(seed_id, 0),
@@ -2536,14 +2577,14 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.current_page = "shop_choice"
         self.clear_hover()
         self.render()
-        return self.response(tts="Shop. Sell, buy, check the calendar, or ask Rowan for advice.", sfx="shop_open", sound_events=[{"kind": "one_shot", "sound": "door"}])
+        return self.response(tts="Shop. Sell, buy, or check the calendar.", sfx="shop_open", sound_events=[{"kind": "one_shot", "sound": "door"}])
 
     def return_to_shop_choice(self):
         self.current_page = "shop_choice"
         self.shop_page = 0
         self.clear_hover()
         self.render()
-        return self.response(tts="Shop. Sell, buy, check the calendar, or ask Rowan for advice.", sfx="open_page")
+        return self.response(tts="Shop. Sell, buy, or check the calendar.", sfx="open_page")
 
     def open_shop_mode(self, mode):
         self.shop_page = 0
@@ -2754,6 +2795,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             "dots": self.dotpad.to_list(),
             "width": self.dotpad.width,
             "height": self.dotpad.height,
+            "lower_panel": self.lower_panel_state(),
             "time_dots": self.timepad.to_list(),
             "time_width": self.timepad.width,
             "time_height": self.timepad.height,
@@ -2909,6 +2951,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
     def build_shop_objects(self, entries, mode):
         page_size = 12
         pages = max(1, math.ceil(len(entries) / page_size))
+        self.shop_page_count = pages
         self.shop_page = max(0, min(self.shop_page, pages - 1))
         objects = []
         for i, (kind, item_id, label, count, price) in enumerate(entries[self.shop_page * page_size:(self.shop_page + 1) * page_size]):

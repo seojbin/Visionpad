@@ -80,11 +80,11 @@ class VillageMixin:
             return self.show_rowan("Glad you enjoyed the soup! Here are tomato, carrot, and potato seeds. Talk to me again when you're ready.")
         if self.rowan_stage=='seeds_given':
             self.rowan_stage='vegetable_requested'
-            return self.show_rowan("I'm short of vegetables. Could you bring me one? Go to the farm, select a plot, and plant a seed. Water it, then sleep at home. Water it each day as it grows. When it's ready, harvest it and bring me any one vegetable.")
+            return self.show_rowan("I'm short of vegetables. Could you bring me one? Go to the farm, select a plot, and plant a seed. Water it, then sleep at home. Water it each day as it grows. When it's ready, harvest it and bring me any one vegetable. " + self.rowan_advice("farming"))
         if self.rowan_stage=='vegetable_requested':
             text = 'Choose one vegetable to give me. You can leave and come back anytime.' if any(self.resources['crops'].values()) else 'You have no vegetables yet. Plant a seed, water it each day, and sleep until it grows. Come back after harvesting.'
             return self.show_rowan(text, 'rowan_submit')
-        return self.show_rowan('Thanks for your help. Good luck on the farm!')
+        return self.show_rowan(self.next_rowan_advice())
 
     def get_rowan_objects(self):
         result=[]

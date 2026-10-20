@@ -51,11 +51,20 @@ class NpcMixin:
                     "text": self.rowan_dialogue, "profile": "shopkeeper", "channel": "quest"}
         return None
 
-    def npc_marker(self):
-        return {"id": "rowan", "type": "shop_choice", "choice": "rowan", "x": 30, "y": 22,
-                "width": 12, "height": 10, "hit_width": 14, "hit_height": 12,
-                "label": "Ask Rowan for advice", "tts": "Ask Rowan for farming or fishing advice.",
-                "action": "npc:shopkeeper:greeting"}
+    def rowan_advice(self, topic):
+        npc = NPCS["shopkeeper"]
+        if topic == "fishing":
+            return npc["fishing"]["with_rod" if self.resources.get("fishing_rod") else "without_rod"]
+        plots = [plot for plot in self.farm_plots.values() if plot.get("seed_id")]
+        condition = ("ready" if any(plot.get("mature") for plot in plots)
+                     else "needs_water" if any(not plot.get("watered") for plot in plots)
+                     else "growing" if plots else "empty")
+        return npc["farming"][condition]
+
+    def next_rowan_advice(self):
+        visits = self.npc_visits.get("tutorial_advice", 0)
+        self.npc_visits["tutorial_advice"] = visits + 1
+        return self.rowan_advice("fishing" if visits % 2 == 0 else "farming")
 
     def get_dialogue_objects(self):
         if not self.dialogue:
@@ -72,39 +81,5 @@ class NpcMixin:
                 or self.current_page not in ("town", "shop_choice", "npc_dialogue")
                 or self.sleep_until is not None or self.day_ended or self.paused):
             return self.response()
-        if topic not in ("greeting", "farming", "fishing", "trade", "goodbye"):
-            return self.response()
-        if topic != "greeting" and (not self.dialogue or self.current_page != "npc_dialogue"):
-            return self.response()
-        npc = NPCS[npc_id]
-        if topic == "trade":
-            self.dialogue = None
-            return self.open_shop()
-        if topic == "goodbye":
-            self.dialogue = None
-            self.return_to_scene()
-            return self.response(tts=f"{npc['name']}. {npc['goodbye']}",
-                                 speech_profile=npc["voice_profile"], priority="dialogue")
-        if topic == "greeting":
-            visits = self.npc_visits.get(npc_id, 0)
-            text = npc["return_greeting"] if visits else npc["greeting"]
-            self.npc_visits[npc_id] = visits + 1
-            reaction = self.recent_reaction(npc_id)
-            if reaction:
-                text += " " + reaction
-        elif topic == "fishing":
-            text = npc["fishing"]["with_rod" if self.resources.get("fishing_rod") else "without_rod"]
-        else:
-            plots = [plot for plot in self.farm_plots.values() if plot.get("seed_id")]
-            condition = ("ready" if any(plot.get("mature") for plot in plots)
-                         else "needs_water" if any(not plot.get("watered") for plot in plots)
-                         else "growing" if plots else "empty")
-            text = npc["farming"][condition]
-        self.current_page = "npc_dialogue"
-        self.pointer_pressed = False
-        self.clear_hover()
-        self.dialogue = {"npc_id": npc_id, "name": npc["name"], "topic": topic,
-                         "text": text, "profile": npc["voice_profile"]}
-        self.render()
-        return self.response(tts=f"{npc['name']}. {text}",
-                             speech_profile=npc["voice_profile"], priority="dialogue")
+        self.dialogue = None
+        return self.talk_rowan()

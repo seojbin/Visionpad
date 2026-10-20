@@ -83,6 +83,9 @@ class SaveMixin:
                 if key in recipe: buff[field] = recipe[key]
             if 'sale_uses' in recipe: buff['remaining_sales'] = min(buff.get('remaining_sales',0),recipe['sale_uses'])
             buff['remaining_ticks'] = min(buff.get('remaining_ticks',0),recipe.get('buff_ticks',0))
+        if state.get('current_page') == 'npc_dialogue':
+            state['dialogue'] = None
+            state['current_page'] = state['current_location'] = 'town'
         if state.get('current_page') == 'rowan_dialogue':
             state['rowan_submit_open'] = False
             state['current_page'] = state['current_location'] = 'town'

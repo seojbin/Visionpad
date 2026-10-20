@@ -67,6 +67,7 @@ def demo_lines():
         quest_line(engine.talk_rowan())
         quest_line(engine.submit_rowan_crop("tomato"))
         quest_line(engine.talk_rowan())
+        quest_line(engine.talk_rowan())  # Farming advice after the fishing advice.
         for day in range(1, 8):
             engine.day = day
             quest_line(engine.open_calendar())

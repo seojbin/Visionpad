@@ -47,7 +47,7 @@ class IconRenderer:
         'calendar_button','save_slot','plot','seed','resource','research','care_button',
         'recipe','ingredient','cooking_start','shop_choice','shop_item','watering_can','fertilizer'))
     PATTERNS = {
-        'seed': ('10001','00000','00100'),
+        'seed': ('111','111','010'),
         'crop': ('11111','01110','00100'),
         'fish': ('011010','111110','011010'),
         'mineral': ('111','111','111'),
@@ -56,17 +56,17 @@ class IconRenderer:
         'food': ('1111111','0111110'),
         'coin': ('111','111','111'),
         'bed': ('1100000','1100000','1111111','1111111','1111111'),
-        'chest': ('0011100','0011100','1111111','1111111','1111111','0011100','0011100'),
+        'chest': ('0011100','1111111','1111111','1111111','0011100'),
         'stove': ('00100','01110','11111','11111','01110'),
         'shop_npc': ('1111111','1111111','1100011','1100011','1111111'),
-        'rowan': ('00100','01110','00100','11111','00100','01010','01010'),
-        'calendar': ('11111','00000','10101','00000','10101'),
-        'save': ('11111','10001','10001','10001','11111'),
+        'rowan': ('0011100','0011100','1111111','0111110','0110110'),
+        'calendar': ('11011','11111','11111','11011','11111'),
+        'save': ('11111','11011','11111','11111','11111'),
         'water': ('00100','01110','11111','11111','01110'),
         'harvest': ('00100','01110','11111','01110','00100'),
         'start': ('00100','00110','11111','00110','00100'),
-        'sell': ('01111','10000','10000','01110','00001','00001','11110'),
-        'buy': ('11110','10001','10001','11110','10001','10001','11110'),
+        'sell': ('0111110','1100000','0111110','0000011','0111110'),
+        'buy': ('1111100','1100110','1111100','1100110','1111100'),
         'check': ('000001','000010','100100','011000'),
     }
     ALIASES = dict.fromkeys(('stone','copper','iron','diamond'), 'mineral') | dict.fromkeys(('pickaxe','fertilizer','fishing_rod'), 'tool')
@@ -97,7 +97,8 @@ class IconRenderer:
         elif kind == 'research':
             key = obj.get('research_kind')
             symbol = {'seed_return':'seed','field_expand':'tool','mineral_luck':'mineral'}.get(key,'chest')
-        if symbol == 'food' or kind == 'rowan' and obj.get('quest_available'): frame = 'double_rectangle'
+        if symbol == 'food': frame = 'double_rectangle'
+        elif kind == 'rowan' and obj.get('quest_available'): frame = 'quest_rectangle'
         elif symbol == 'coin': frame = 'rectangle'
         return IconSpec(frame, symbol)
 
@@ -105,14 +106,24 @@ class IconRenderer:
         # Width/height are center-to-center spans: all frames occupy w+1 by h+1 dots.
         # Legacy callers receive the same updated frame classification.
         if shape == 'ellipse': shape = 'double_rectangle'
-        if shape == 'double_rectangle':
-            self.frame(obj, 'rectangle')
-            inner = dict(obj, width=max(2,int(obj.get('width',12))-4),
-                         height=max(2,int(obj.get('height',10))-4))
-            self.frame(inner, 'rectangle')
-            return
         x,y = round(obj['x']),round(obj['y'])
         rx,ry = int(obj.get('width',12))//2,int(obj.get('height',10))//2
+        if shape == 'quest_rectangle':
+            # Two-dot outer border plus the retained one-dot inner border:
+            # three contiguous dots, with the person icon preserved inside.
+            for inset in (0, 1, 2):
+                self.dotpad.draw_box(x,y,2*(rx-inset),2*(ry-inset))
+            return
+        if shape in ('rectangle', 'double_rectangle'):
+            # Two-dot outer border. The inner border starts after one blank dot.
+            insets = (0, 3) if shape == 'double_rectangle' else (0,)
+            for inset in insets:
+                left,right,top,bottom = x-rx+inset,x+rx-inset,y-ry+inset,y+ry-inset
+                for py in range(top, bottom+1):
+                    for px in range(left, right+1):
+                        if min(px-left,right-px,py-top,bottom-py) < 2:
+                            self.dotpad.set_dot(px,py)
+            return
         def extent_at(distance):
             if shape == 'rectangle': return rx
             if shape == 'diamond': return round(rx*(1-distance/max(1,ry)))
@@ -130,24 +141,27 @@ class IconRenderer:
     def catalog(self, obj, kind):
         symbol = self.category(kind)
         self.frame(obj, 'double_rectangle' if symbol=='food' else 'rectangle')
-        self.pattern(obj['x'],obj['y'],self.PATTERNS.get(symbol,self.PATTERNS['material']))
+        if symbol != 'food':
+            self.pattern(obj['x'],obj['y'],self.PATTERNS.get(symbol,self.PATTERNS['material']))
 
     def draw(self, obj):
         if obj.get('type') not in self.TYPES: return False
         spec = self.spec(obj)
         self.frame(obj,spec.frame)
+        if spec.frame == 'double_rectangle':
+            return True
         if obj['type'] == 'plot':
             state = self.engine.farm_plots.get(obj['id'],self.engine.new_plot_state())
             if state.get('seed_id'):
                 days=max(1,self.engine.get_seed_config(state['seed_id']).get('growth_days',3))
                 ratio=1 if state.get('mature') else min(1,max(0,state['growth']/days))
                 rx,ry=obj['width']//2,obj['height']//2
-                count=math.ceil((2*ry-1)*ratio)
-                for y in range(obj['y']+ry-count,obj['y']+ry):
-                    for x in range(obj['x']-rx+1,obj['x']+rx):self.dotpad.set_dot(x,y)
+                count=math.ceil((2*ry-3)*ratio)
+                for y in range(obj['y']+ry-1-count,obj['y']+ry-1):
+                    for x in range(obj['x']-rx+2,obj['x']+rx-1):self.dotpad.set_dot(x,y)
         else:
             rows = spec.pattern or self.PATTERNS.get(spec.symbol,self.PATTERNS['material'])
-            if spec.frame == 'double_rectangle' and spec.symbol == 'rowan':
+            if spec.frame == 'quest_rectangle' and spec.symbol == 'rowan':
                 # Keep the person inside the inner border, with a blank-dot gap.
                 rows = ('00100','11111','00100','01010','01010')
             self.pattern(obj['x'],obj['y'],rows)

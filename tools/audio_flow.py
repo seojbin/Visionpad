@@ -118,8 +118,9 @@ def run_flow():
                 assert engine.resources['foods'][recipe]==1
                 flow.mark('cook')
 
-                flow.go('town');flow.click('open_shop');flow.click('npc:shopkeeper:greeting')
-                flow.click('npc:shopkeeper:farming');flow.click('npc:shopkeeper:trade')
+                # Rowan now speaks in the village tutorial; the shop has no advice tab.
+                flow.go('town');flow.click('talk_rowan')
+                flow.click('open_shop')
                 flow.click('shop_mode:sell')
                 flow.click('sell:crop:tomato');flow.mark('sell')
                 flow.command('left');flow.click('shop_mode:buy')

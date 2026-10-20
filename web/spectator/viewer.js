@@ -558,13 +558,19 @@ function menus() {
   }
 }
 function drawTimeGauge() {
-  const gauge=q('.dv-time-gauge');
-  const total=Math.max(1,Number(state.time?.total_cells)||20);
-  const used=Math.max(0,Math.min(total,Number(state.time?.used_cells)||0));
-  q('.dv-time-fill').style.width=`${100*used/total}%`;
+  const gauge=q('.dv-time-gauge'),fill=q('.dv-time-fill');
+  const panel=state.lower_panel || {mode:'time',label:'Activity time'};
+  q('.dv-time-label').textContent=panel.label;
+  gauge.style.display=['braille','blank'].includes(panel.mode)?'none':'block';
+  fill.style.marginLeft='0';
+  const total=panel.mode==='pages'?panel.pages:Math.max(1,Number(state.time?.total_cells)||20);
+  const used=panel.mode==='pages'?panel.page:Math.max(0,Math.min(total,Number(state.time?.used_cells)||0));
+  fill.style.width=`${panel.mode==='pages'?100/total:100*used/total}%`;
+  if(panel.mode==='pages')fill.style.marginLeft=`${100*(used-1)/total}%`;
+  gauge.setAttribute('aria-label',panel.label);
   gauge.setAttribute('aria-valuemax',String(total));
   gauge.setAttribute('aria-valuenow',String(used));
-  gauge.setAttribute('aria-valuetext',`${used} of ${total} used`);
+  gauge.setAttribute('aria-valuetext',panel.mode==='pages'?panel.label:`${used} of ${total} used`);
 }
 function dialogueUI() {
   const panel=q('.dv-dialogue'), dialogue=state.dialogue;
