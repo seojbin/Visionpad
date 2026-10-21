@@ -1919,7 +1919,9 @@
         "max_gain": 1.0,
         "distance_scale": 40,
         "position_scale": 10,
-        "smoothing_seconds": 0.03
+        "smoothing_seconds": 0.03,
+        "dry_gain": 0,
+        "spatial_gain": 1
       },
       "default_volume": 1.0,
       "work_gain": {

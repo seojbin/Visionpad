@@ -24,7 +24,7 @@ class GameAudio {
         this.settings = {
             default_volume:0.9,
             master_gain:1.0,
-            task_spatial:{enabled:true,dry_gain:0.35,spatial_gain:1,min_gain:0.65,max_gain:1,distance_scale:40,position_scale:10,smoothing_seconds:0.03},
+            task_spatial:{enabled:true,dry_gain:0,spatial_gain:1,min_gain:0.65,max_gain:1,distance_scale:40,position_scale:10,smoothing_seconds:0.03},
             guidance:{min_gain:0.025,max_gain:0.065,near_interval_ms:350,far_interval_ms:900,distance_scale:50,position_scale:10},
             fishing:{max_gain:0.85,min_gain:0.12,distance_scale:40,position_scale:10,tts_multiplier:1,bgm_multiplier:0.2},
             bgm_gain:{basic:0.30,minigame:0.20,shop:0.45},
@@ -139,8 +139,9 @@ class GameAudio {
         const sound=cfg.enabled?this.relativeSound(position||center,center,cfg):{x:0,z:0,gain:1};
         const smooth=Math.max(0.01,Number(cfg.smoothing_seconds)||0.03);
         this.placeSound(bus.panner,sound,smooth,immediate);
-        const spatialGain=cfg.enabled?sound.gain*Math.max(0,Number(cfg.spatial_gain)||0):0;
-        const dryGain=cfg.enabled?Math.max(0,Number(cfg.dry_gain)||0):1;
+        const spatialEnabled=cfg.enabled && !!bus.panner;
+        const spatialGain=spatialEnabled?sound.gain*Math.max(0,Number(cfg.spatial_gain)||0):0;
+        const dryGain=spatialEnabled?Math.max(0,Number(cfg.dry_gain)||0):1;
         if(immediate){bus.gain.gain.value=spatialGain;bus.dry.gain.value=dryGain;}
         else {
             bus.gain.gain.setTargetAtTime(spatialGain,this.context.currentTime,smooth);
@@ -245,11 +246,13 @@ class GameAudio {
     }
     feedback(name, events=[]) {
         if (!name || !this.enabled || this.suspended) return;
+        // Structured events own audible feedback; sfx is a legacy fallback only.
+        if (events.some(e => ['one_shot','one_shot_group','mining_loot','item_destroyed'].includes(e.kind) || (e.kind==='correct' && e.count>0))) return;
         if (name.startsWith('hover_')) {this.cue('hover');return;}
         const recorded = new Set(events.flatMap(event => event.kind==='one_shot' ? [event.sound] : event.kind==='one_shot_group' ? event.sounds || [] : []));
         if (name==='travel') {if (!recorded.has('step')) this.oneShot('step');return;}
         if (name==='open_page' && recorded.has('step')) return;
-        if (name==='shop_open') {if (!recorded.has('door')) this.oneShot('door');return;}
+        if (name==='shop_open') {if (!recorded.has('door')) this.oneShot('door',null,false);return;}
         if (['shop_buy','shop_sell','research'].includes(name)) {if (!recorded.has('coin')) this.cue('complete');return;}
         // Continuous work and individual targets already have recorded cues.
         if (['care_spray','harvest_collect','cooking_trace','cooking_wait'].includes(name)) return;
@@ -271,14 +274,14 @@ class GameAudio {
         else if (state?.page === 'harvest') {this.clickSound('crop');this.startWork('crop');}
     }
     async clickSound(name) {
-        if (!this.enabled || this.suspended) return;
+        if (!this.enabled || this.suspended || this.workName === name) return;
         const token = ++this.clickToken, effect = this.effectToken;
         for (const source of this.clickSources) {try {source.stop();} catch {}}
         this.clickSources.clear();
         this.clickGains.clear();
         const buffer = await this.load(name);
         // A normal release must not cancel a short click while MP3 decoding.
-        if (!buffer || !this.enabled || this.suspended || token !== this.clickToken || effect !== this.effectToken) return;
+        if (!buffer || !this.enabled || this.suspended || this.workName === name || token !== this.clickToken || effect !== this.effectToken) return;
         const source = this.context.createBufferSource();
         const gain = this.context.createGain();
         gain.gain.value = this.ducked ? this.settings.work_gain_during_tts[name] : this.settings.work_gain[name];
