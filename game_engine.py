@@ -110,11 +110,10 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         if self.current_page == 'plot_detail':
             for obj in objects:
                 if obj['type'] == 'growth_gauge':
-                    obj.update(x=30,y=15,hit_width=42,hit_height=5)
+                    obj.update(x=30, y=16, hit_width=42, hit_height=5)
                 elif obj['type'] == 'plot_detail_field':
-                    obj.update(x=30,y=29,hit_width=44,hit_height=18)
+                    obj.update(x=30, y=30, hit_width=44, hit_height=18)
         return objects
-
     def reset(self):
         self.reset_village()
         self._menu_stack = []
@@ -546,19 +545,17 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         }
         getter = pages.get(self.current_page)
         objects = self.compact_objects(getter()) if getter else []
-        # Normalize after layout so rendering and touch share the same anchors.
         for obj in objects:
             if obj.get("type") == "arrow":
                 if obj.get("action", "").startswith("shop_page:"):
-                    obj.update(x=15 if obj["direction"] == "left" else 25, y=self.dotpad.height-6)
-                elif obj.get("direction") == "up" or (
-                self.current_page == "home" and obj.get("direction") == "right"):
+                    obj.update(x=15 if obj["direction"] == "left" else 25, y=self.dotpad.height-5)
+                elif obj.get("direction") == "left":
+                    obj.update(direction="left", x=3, y=self.dotpad.height-5)
+                elif obj.get("direction") == "right":
                     obj.update(direction="right", x=self.dotpad.width-4, y=5)
-                elif obj.get("direction") == "left" or (self.current_page == "home" and obj.get("direction") == "down"):
-                    obj.update(direction="left", x=3, y=self.dotpad.height-6)
-                w,h=(5,9) if obj.get("direction") in ("left","right") else (9,5)
-                obj["hit_width"],obj["hit_height"]=w,h
-        # Key navigation follows a linear route; the minimap keeps its own geometry.
+                w, h = (5, 9) if obj.get("direction") in ("left", "right") else (9, 5)
+                obj["hit_width"], obj["hit_height"] = w, h
+        # 가로 메인 축(농장-집-마을)만 좌우 방향 자동 정렬, 광산(상)/낚시터(하)는 유지
         horizontal_route = ("farm", "home", "town")
         if self.current_page in horizontal_route:
             origin = horizontal_route.index(self.current_page)
@@ -576,38 +573,136 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
 
     def get_home_objects(self):
         objects = []
-        stove_y = next(
-        (
-            obj.get("y")
-            for obj in self.config.get("home", {}).get("objects", [])
-            if obj.get("id") == "home_stove"
-        ),
-        None
-    )
-
         for obj in self.config.get("home", {}).get("objects", []):
             copied = dict(obj)
-
-        # 연구대를 stove와 같은 y축에 정렬
-            if copied.get("type") == "chest" and stove_y is not None:
-                copied["y"] = stove_y
-
             if self.day_ended and copied.get("id") != "home_bed":
                 continue
             if self.day_ended and copied.get("id") == "home_bed":
                 copied["tts"] = "Bed. Sleep until morning."
             if copied.get("id") == "home_stove" and not self.day_ended:
                 craftable = sum(
-                1 for rid in self.config.get("recipes", {})
-                if self.can_craft_recipe(rid)
-            )
+                    1 for rid in self.config.get("recipes", {})
+                    if self.can_craft_recipe(rid)
+                )
                 copied["tts"] = f"Kitchen. Available recipes: {craftable}."
-
             objects.append(copied)
 
         if not self.day_ended:
             objects.append(self.flower_object())
-        return objects
+        return objects + self.home_spatial_objects()
+
+    def home_spatial_objects(self):
+        """비주얼 컴패니언 집 사진과 동일한 구도의 하단 도트 그래픽 히트박스"""
+        bed_item = dict(id='home_scene_bed', type='home_hitbox', skip_grid=True,
+                        x=15, y=21, width=9, height=11, hit_width=11, hit_height=12,
+                        label='Bed', tts='Bed. Sleep until morning.', action='rest')
+        if self.day_ended:
+            return [bed_item]
+        craftable = sum(1 for rid in self.config.get("recipes", {}) if self.can_craft_recipe(rid))
+        return [
+            bed_item,
+            dict(id='home_scene_chest', type='home_hitbox', skip_grid=True,
+                 x=30, y=20, width=11, height=9, hit_width=12, hit_height=10,
+                 label='Research', tts='Research. Choose an upgrade.', action='open_research'),
+            dict(id='home_scene_stove', type='home_hitbox', skip_grid=True,
+                 x=45, y=20, width=11, height=9, hit_width=12, hit_height=10,
+                 label='Kitchen', tts=f'Kitchen. Available recipes: {craftable}.', action='open_recipes'),
+            dict(id='home_scene_flower', type='home_hitbox', skip_grid=True,
+                 x=8, y=34, width=9, height=9, hit_width=11, hit_height=10,
+                 label='Flower pot', tts=self.flower_description(), action='flower:open'),
+            dict(id='home_road_farm', type='home_hitbox', skip_grid=True,
+                 x=3, y=26, width=6, height=7, hit_width=8, hit_height=9,
+                 label='Farm', tts='Farm. Go west.', action='travel:farm'),
+            dict(id='home_road_town', type='home_hitbox', skip_grid=True,
+                 x=56, y=26, width=6, height=7, hit_width=8, hit_height=9,
+                 label='Village', tts='Village. Go east.', action='travel:town'),
+        ]
+
+    def draw_home_scene(self):
+        """
+        비주얼 컴패니언의 집(Home) 인테리어와 동일한 하단 도트 그래픽:
+        - y=12: 상단 버튼(하단 y=10)과 2칸 떨어진 가로 실선 경계선
+        - 중앙 거실 러그(카펫) 점선 테두리 (x: 11~49, y: 15~36)
+        - 좌상단 침대(x=15, y=21), 중앙 연구대(x=30, y=20), 우상단 주방(x=45, y=20)
+        - 좌하단 나팔꽃 화분(x=8, y=34, 성장 단계 반영)
+        - 좌측 농장 이동 화살표 ◀ (x=3, y=26), 우측 마을 이동 화살표 ▶ (x=56, y=26)
+        """
+        pad = self.dotpad
+        pad.draw_line(0, 12, pad.width - 1, 12)
+
+        # 중앙 러그(카펫) 질감 테두리
+        for x in range(11, 50, 2):
+            pad.set_dot(x, 15)
+            pad.set_dot(x, 36)
+        for y in range(15, 37, 2):
+            pad.set_dot(11, y)
+            pad.set_dot(49, y)
+
+        # 1. 좌상단 침대 (세로형 침대 프레임 + 베개 + 이불 질감, x=15, y=21)
+        self.draw_icon_pattern(15, 21, (
+            '1000001',
+            '1111111',
+            '1011101',
+            '1000001',
+            '1111111',
+            '1101011',
+            '1010101',
+            '1101011',
+            '1111111',
+            '1000001',
+        ))
+
+        if self.day_ended:
+            return
+
+        # 2. 중앙 연구 작업대 (플라스크/책이 놓인 테이블, x=30, y=20)
+        self.draw_icon_pattern(30, 20, (
+            '000001100',
+            '011011110',
+            '111111111',
+            '101110111',
+            '111111111',
+            '101010101',
+            '100000001',
+        ))
+
+        # 3. 우상단 주방 싱크대 & 스토브 (후드 + 냄비 + 오븐장, x=45, y=20)
+        self.draw_icon_pattern(45, 20, (
+            '000111000',
+            '001111100',
+            '000010000',
+            '111111111',
+            '101011101',
+            '111010101',
+            '111111111',
+        ))
+
+        # 4. 좌하단 나팔꽃 화분 (성장 단계에 따라 잎/꽃 변화, x=8, y=34)
+        stage = self.houseplant.get('stage', 'empty')
+        flower_rows = self.icons.FLOWER_STAGE_PATTERNS.get(stage, self.icons.FLOWER_STAGE_PATTERNS['empty'])
+        self.draw_icon_pattern(8, 34, flower_rows)
+
+        # 5. 좌측 농장 이동 화살표 ◀ (x=3, y=26)
+        self.draw_icon_pattern(3, 26, (
+            '0001',
+            '0011',
+            '0111',
+            '1111',
+            '0111',
+            '0011',
+            '0001',
+        ))
+
+        # 6. 우측 마을 이동 화살표 ▶ (x=56, y=26)
+        self.draw_icon_pattern(56, 26, (
+            '1000',
+            '1100',
+            '1110',
+            '1111',
+            '1110',
+            '1100',
+            '1000',
+        ))
 
     def get_farm_objects(self):
         farm = self.config.get("farm", {})
@@ -1242,12 +1337,17 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             elif obj_type == "shop_item":
                 self.draw_shop_item(obj)
 
+        if self.current_page == "home":
+            self.draw_home_scene()
+        if self.current_page == "town":
+            self.draw_town_scene()
+        if self.current_page in ("shop_choice", "shop_buy", "shop_sell", "shop_calendar", "rowan_submit", "plot_detail"):
+            # 집과 상점 등 세부 디스플레이에서도 맨 윗줄 아이콘(하단 y=10)과 2칸 떨어진 y=12에 경계선 표시
+            self.dotpad.draw_line(0, 12, self.dotpad.width - 1, 12)
         if self.current_page == "fishing":
             self.draw_lake()
         if self.current_page == "cooking":
             self.draw_cooking_path()
-        if self.current_page == "town":
-            self.draw_town_scene()
         self.draw_time_bar()
 
     def draw_triangle(self, x, y, direction, size=2):

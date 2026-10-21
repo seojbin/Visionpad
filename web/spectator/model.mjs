@@ -134,6 +134,10 @@ export function publicCards(s) {
         ![
           "route",
           "arrow",
+          "home_hitbox",
+          "town_hitbox",
+          "nav_up",
+          "nav_down",
           "growth_gauge",
           "plot_detail_field",
           "care_field",

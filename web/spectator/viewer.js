@@ -93,7 +93,17 @@ function background(name) {
   return drawAsset(assetCatalog.backgrounds[name],0,0,960,600,ctx,false);
 }
 function focused(id) {
-  return state.hover_object === id;
+  const hover = state.hover_object;
+  if (hover === id) return true;
+  const aliases = {
+    home_bed: "home_scene_bed",
+    home_chest: "home_scene_chest",
+    home_stove: "home_scene_stove",
+    houseplant: "home_scene_flower",
+    town_shop: "town_scene_shop",
+    town_rowan: "town_scene_rowan",
+  };
+  return aliases[id] === hover;
 }
 function outline(x, y, w, h, id) {
   if (!focused(id)) return;
@@ -199,7 +209,7 @@ function facilities() {
 
 function map() {
   ctx.fillStyle = "#e3d4a6";
-  ctx.fillRect(65, 90, 830, 450);
+  ctx.fillRect(65, 85, 830, 460);
   const nodes = (state.spectator?.objects || []).filter(
     (o) => o.type === "node",
   );
@@ -210,9 +220,10 @@ function map() {
     minY = Math.min(...ys),
     dx = Math.max(...xs) - minX || 1,
     dy = Math.max(...ys) - minY || 1;
+  // 가로 T자(농장-집-마을 + 마을 상하 광산/낚시터) 3행 3열이 겹치지 않도록 배치
   const at = (x, y) => [
-    200 + ((x - minX) / dx) * 560,
-    190 + ((y - minY) / dy) * 240,
+    185 + ((x - minX) / dx) * 560,
+    155 + ((y - minY) / dy) * 290,
   ];
   ctx.strokeStyle = "#8e8558";
   ctx.lineWidth = 7;
@@ -222,12 +233,13 @@ function map() {
     ctx.lineTo(...at(r.x2, r.y2));
     ctx.stroke();
   }
+  const cw = 136, ch = 80;
   for (const node of nodes) {
     const name = node.id.replace("map_", ""),
       [x, y] = at(node.x, node.y),
       i = sheets.scenes;
     if (name === "fishing") {
-      drawAsset(assetCatalog.backgrounds.fishing,x-72,y-50,144,92,ctx,false);
+      drawAsset(assetCatalog.backgrounds.fishing, x - cw / 2, y - ch / 2, cw, ch, ctx, false);
     } else if (i) {
       const n = SCENES.indexOf(name),
         seam = i.height * 0.46875;
@@ -237,18 +249,18 @@ function map() {
         n < 2 ? 0 : seam,
         i.width / 2,
         n < 2 ? seam : i.height - seam,
-        x - 72,
-        y - 50,
-        144,
-        92,
+        x - cw / 2,
+        y - ch / 2,
+        cw,
+        ch,
       );
     }
     ctx.strokeStyle =
       focused(node.id) ? "#ff9a1a" : state.current_location === name ? "#baff91" : "#bd4e00";
     ctx.lineWidth = state.current_location === name ? 6 : 3;
-    ctx.strokeRect(x - 72, y - 50, 144, 92);
-    text(node.label, x - 40, y + 67, "#baff91", 18);
-    if (state.current_location === name) text("You are here",x-44,y-63,"#baff91",16);
+    ctx.strokeRect(x - cw / 2, y - ch / 2, cw, ch);
+    text(node.label, x - 38, y + ch / 2 + 20, "#baff91", 16);
+    if (state.current_location === name) text("You are here", x - 44, y - ch / 2 - 10, "#baff91", 15);
   }
 }
 function mini() {
