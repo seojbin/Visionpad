@@ -1475,7 +1475,7 @@
       "quest_only": true
     }
   },
-  "home": {
+"home": {
     "objects": [
       {
         "id": "home_bed",
@@ -1513,12 +1513,12 @@
       {
         "id": "home_farm",
         "type": "arrow",
-        "x": 54,
-        "y": 12,
+        "x": 6,
+        "y": 20,
         "label": "농장으로 이동",
         "action": "travel:farm",
         "tts": "농장으로 이동",
-        "direction": "right",
+        "direction": "left",
         "size": 3,
         "hit_width": 9,
         "hit_height": 9
@@ -1526,19 +1526,19 @@
       {
         "id": "home_town",
         "type": "arrow",
-        "x": 47,
-        "y": 35,
+        "x": 54,
+        "y": 20,
         "label": "마을로 이동",
         "action": "travel:town",
         "tts": "마을로 이동",
-        "direction": "down",
+        "direction": "right",
         "size": 3,
         "hit_width": 9,
         "hit_height": 9
       }
     ]
   },
-  "farm": {
+"farm": {
     "plots": [
       {
         "id": "plot_1",
@@ -1599,7 +1599,7 @@
         "y": 20,
         "label": "Plot 5",
         "action": "",
-        "tts": "1번 밭",
+        "tts": "5번 밭",
         "width": 12,
         "height": 8,
         "hit_width": 16,
@@ -1612,7 +1612,7 @@
         "y": 20,
         "label": "Plot 6",
         "action": "",
-        "tts": "1번 밭",
+        "tts": "6번 밭",
         "width": 12,
         "height": 8,
         "hit_width": 16,
@@ -1623,32 +1623,32 @@
       {
         "id": "farm_home",
         "type": "arrow",
-        "x": 5,
+        "x": 54,
         "y": 20,
         "label": "집으로 이동",
         "action": "travel:home",
         "tts": "집으로 이동",
-        "direction": "left",
+        "direction": "right",
         "size": 3,
         "hit_width": 9,
         "hit_height": 9
       }
     ]
   },
-  "town": {
+"town": {
     "objects": [
       {
         "id": "town_shop",
         "type": "shop_npc",
-        "x": 31,
-        "y": 18,
+        "x": 8,
+        "y": 6,
         "label": "상점",
         "action": "open_shop",
         "tts": "상점",
-        "width": 18,
-        "height": 14,
-        "hit_width": 22,
-        "hit_height": 18
+        "width": 12,
+        "height": 10,
+        "hit_width": 10,
+        "hit_height": 8
       },
       {
         "id": "town_home",
@@ -1662,119 +1662,114 @@
         "size": 3,
         "hit_width": 9,
         "hit_height": 9
-      },
-      {
-        "id": "town_mine",
-        "type": "arrow",
-        "x": 52,
-        "y": 6,
-        "label": "광산으로 이동",
-        "tts": "광산으로 이동",
-        "action": "travel:mine",
-        "direction": "up",
-        "size": 3,
-        "hit_width": 9,
-        "hit_height": 9
       }
     ]
   },
-  "minimap": {
+"minimap": {
     "locations": [
-      {
-        "id": "map_home",
-        "type": "node",
-        "x": 18,
-        "y": 12,
-        "label": "집",
-        "action": "travel:home",
-        "tts": "집",
-        "location": "home",
-        "width": 8,
-        "height": 6,
-        "hit_width": 12,
-        "hit_height": 10
-      },
       {
         "id": "map_farm",
         "type": "node",
-        "x": 44,
-        "y": 12,
+        "x": 10,
+        "y": 20,
         "label": "농장",
         "action": "travel:farm",
         "tts": "농장",
         "location": "farm",
-        "width": 8,
-        "height": 6,
-        "hit_width": 12,
-        "hit_height": 10
+        "width": 7,
+        "height": 7,
+        "hit_width": 9,
+        "hit_height": 9
+      },
+      {
+        "id": "map_home",
+        "type": "node",
+        "x": 28,
+        "y": 20,
+        "label": "집",
+        "action": "travel:home",
+        "tts": "집",
+        "location": "home",
+        "width": 7,
+        "height": 7,
+        "hit_width": 9,
+        "hit_height": 9
       },
       {
         "id": "map_town",
         "type": "node",
-        "x": 18,
-        "y": 30,
+        "x": 46,
+        "y": 20,
         "label": "마을",
         "action": "travel:town",
         "tts": "마을",
         "location": "town",
-        "width": 8,
-        "height": 6,
-        "hit_width": 12,
-        "hit_height": 10
+        "width": 7,
+        "height": 7,
+        "hit_width": 9,
+        "hit_height": 9
       },
       {
         "id": "map_mine",
         "type": "node",
-        "x": 44,
-        "y": 30,
+        "x": 46,
+        "y": 6,
         "label": "광산",
+        "action": "travel:mine",
+        "tts": "광산",
         "location": "mine",
-        "width": 8,
-        "height": 6,
-        "hit_width": 12,
-        "hit_height": 10
+        "width": 7,
+        "height": 7,
+        "hit_width": 9,
+        "hit_height": 9
       },
       {
         "id": "map_fishing",
         "type": "node",
-        "x": 62,
-        "y": 30,
+        "x": 46,
+        "y": 34,
         "label": "Fishing lake",
-        "location": "fishing"
+        "action": "travel:fishing",
+        "tts": "Fishing lake",
+        "location": "fishing",
+        "width": 7,
+        "height": 7,
+        "hit_width": 9,
+        "hit_height": 9
       }
     ],
     "routes": [
       {
-        "id": "home_farm_route",
-        "x1": 22,
-        "y1": 12,
-        "x2": 40,
-        "y2": 12,
+        "id": "farm_home_route",
+        "x1": 14,
+        "y1": 20,
+        "x2": 24,
+        "y2": 20,
         "label": "농장 길"
       },
       {
         "id": "home_town_route",
-        "x1": 18,
-        "y1": 16,
-        "x2": 18,
-        "y2": 26,
+        "x1": 32,
+        "y1": 20,
+        "x2": 42,
+        "y2": 20,
         "label": "마을 길"
       },
       {
         "id": "town_mine_route",
-        "x1": 22,
-        "y1": 30,
-        "x2": 40,
-        "y2": 30,
+        "x1": 46,
+        "y1": 10,
+        "x2": 46,
+        "y2": 16,
         "label": "광산 길"
       },
       {
-        "id": "mine_fishing_route",
-        "x1": 48,
-        "y1": 30,
-        "x2": 58,
+        "id": "town_fishing_route",
+        "x1": 46,
+        "y1": 24,
+        "x2": 46,
         "y2": 30,
-        "label": "Lake path"
+        "label": "낚시터 길"
       }
     ]
   },

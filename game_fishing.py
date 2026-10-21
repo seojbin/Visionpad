@@ -31,7 +31,9 @@ class FishingMixin:
                                g['y']+math.sin(angle)*g['ry']*radius]
 
     def get_fishing_objects(self):
-        return [self.back_arrow('fishing_exit', 'Mine', 'travel:mine')]
+        exit_arrow = self.back_arrow('fishing_exit', 'Village', 'travel:town')
+        exit_arrow['direction'] = 'up'
+        return [exit_arrow]
 
     def draw_lake(self):
         g = self.lake_geometry()

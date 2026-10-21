@@ -39,11 +39,23 @@ class FlowerMixin:
         return 'Flower pot. '+p['stage'].capitalize()+'. '+('Watered.' if p['watered'] else 'Needs water.')
 
     def flower_object(self, detail=False):
-        return dict(id='houseplant', type='flower_pot', x=30 if detail else 15,
-                    y=26, width=36 if detail else 26, height=24,
-                    hit_width=36 if detail else 26, hit_height=24,
-                    label='Flower pot',
-                    tts=self.flower_description(), action='' if detail else 'flower:open')
+        if not detail:
+            return dict(
+                id='houseplant', type='flower_pot',
+                x=50, y=6, width=12, height=10,
+                hit_width=10, hit_height=8,
+                label='Flower pot',
+                tts=self.flower_description(),
+                action='flower:open'
+            )
+        return dict(
+            id='houseplant', type='flower_pot',
+            x=30, y=26, width=36, height=24,
+            hit_width=36, hit_height=24,
+            label='Flower pot',
+            tts=self.flower_description(),
+            action=''
+        )
 
     def get_flower_objects(self):
         p = self.houseplant

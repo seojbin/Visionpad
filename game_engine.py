@@ -559,15 +559,15 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                 w,h=(5,9) if obj.get("direction") in ("left","right") else (9,5)
                 obj["hit_width"],obj["hit_height"]=w,h
         # Key navigation follows a linear route; the minimap keeps its own geometry.
-        route = ("farm", "home", "town", "mine", "fishing")
-        if self.current_page in route:
-            origin = route.index(self.current_page)
+        horizontal_route = ("farm", "home", "town")
+        if self.current_page in horizontal_route:
+            origin = horizontal_route.index(self.current_page)
             for obj in objects:
                 action = obj.get("action", "")
                 if obj.get("type") == "arrow" and action.startswith("travel:"):
                     target = action.split(":", 1)[1]
-                    if target in route:
-                        obj["direction"] = "left" if route.index(target) < origin else "right"
+                    if target in horizontal_route:
+                        obj["direction"] = "left" if horizontal_route.index(target) < origin else "right"
                         obj["hit_width"], obj["hit_height"] = 5, 9
         return objects
 
@@ -776,8 +776,25 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             })
         return objects
 
+
     def get_town_objects(self):
-        return [dict(obj) for obj in self.config.get("town", {}).get("objects", [])] + [self.rowan_object()]
+        base = [dict(obj) for obj in self.config.get("town", {}).get("objects", [])]
+        return base + [self.rowan_object()] + self.town_nav_objects() + self.town_spatial_objects()
+
+    def get_mine_objects(self):
+        objects = []
+        for rock in self.mine_rocks:
+            objects.append({"id": rock["id"], "type": "mine_rock",
+                            "x": rock["left"] + rock["width"] // 2,
+                            "y": rock["top"] + rock["height"] // 2,
+                            "width": rock["width"], "height": rock["height"],
+                            "hits": rock.get("hits", 0),
+                            "label": "Rock", "tts": "Rock. Tap to break." if self.resources["pickaxe"] else "Pickaxe required.",
+                            "action": f"mine_hit:{rock['id']}"})
+        exit_arrow = self.back_arrow("mine_exit", "Village", "travel:town")
+        exit_arrow.update(x=3, y=self.dotpad.height-6, direction="down", size=3, hit_width=7, hit_height=7)
+        objects.append(exit_arrow)
+        return objects
 
     def get_seed_select_objects(self):
         objects = []
@@ -1229,6 +1246,8 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             self.draw_lake()
         if self.current_page == "cooking":
             self.draw_cooking_path()
+        if self.current_page == "town":
+            self.draw_town_scene()
         self.draw_time_bar()
 
     def draw_triangle(self, x, y, direction, size=2):
@@ -2885,24 +2904,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                 filled = stage == 0 or (stage == 1 and (grid_x or grid_y)) or (grid_x and grid_y)
                 if border or filled:
                     self.dotpad.set_dot(left + col, top + row)
-
-    def get_mine_objects(self):
-        objects = []
-        for rock in self.mine_rocks:
-            objects.append({"id": rock["id"], "type": "mine_rock",
-                            "x": rock["left"] + rock["width"] // 2,
-                            "y": rock["top"] + rock["height"] // 2,
-                            "width": rock["width"], "height": rock["height"],
-                            "hits": rock.get("hits", 0),
-                            "label": "Rock", "tts": "Rock. Tap to break." if self.resources["pickaxe"] else "Pickaxe required.",
-                            "action": f"mine_hit:{rock['id']}"})
-        exit_arrow = self.back_arrow("mine_exit", "Village", "travel:town")
-        exit_arrow.update(x=3, y=self.dotpad.height-6, direction="left", size=3, hit_width=7, hit_height=7)
-        objects.append(exit_arrow)
-        entrance = self.back_arrow("mine_fishing", "Fishing lake", "travel:fishing")
-        entrance["direction"] = "right"
-        objects.append(entrance)
-        return objects
 
     def item_destroyed_event(self, item_id, reward_sound=None, loot_tts=None):
         """Shared destruction event for pickaxes and future breakable items."""

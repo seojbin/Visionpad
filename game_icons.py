@@ -28,7 +28,7 @@ class IconGrid:
             obj.update(x=2+self.width//2+col*pitch_x,
                        y=1+self.height//2+row*pitch_y,
                        width=self.width, height=self.height,
-                       hit_width=self.width, hit_height=self.height,
+                       hit_width=self.width-2, hit_height=self.height-2,
                        grid_row=row, grid_column=col, grid_slot=row*self.columns+col)
             result.append(obj)
         return result
@@ -42,33 +42,85 @@ class IconSpec:
 
 
 class IconRenderer:
-    """One frame plus one semantic symbol; optional selection/progress overlays."""
+    """One thin frame plus one filled semantic symbol; optional selection/progress overlays."""
     TYPES = frozenset(('bed','chest','stove','shop_npc','rowan','calendar_day',
         'calendar_button','save_slot','plot','seed','resource','research','care_button',
-        'recipe','ingredient','cooking_start','shop_choice','shop_item','watering_can','fertilizer'))
+        'recipe','ingredient','cooking_start','shop_choice','shop_item','watering_can',
+        'fertilizer','flower_pot','nav_up','nav_down'))
+
+    # 내부를 꽉 채워 형태별로 촉각 구분이 쉬운 솔리드 패턴 (침대/물주기 구분감 유지)
     PATTERNS = {
-        'seed': ('111','111','010'),
-        'crop': ('11111','01110','00100'),
-        'fish': ('011010','111110','011010'),
-        'mineral': ('111','111','111'),
-        'tool': ('00100','11111','01110','11011'),
+        'seed': ('01110','11111','01110'),
+        'crop': ('00100','01110','11111','11111','01110'),
+        'fish': ('0011000','0111101','1111111','0111101','0011000'),
+        'mineral': ('00100','01110','11111','01110','00100'),
+        'tool': ('11111','11111','00100','00100','00100'),
         'material': ('11111','11111','11111'),
-        'food': ('1111111','0111110'),
-        'coin': ('111','111','111'),
+        'food': ('0111110','1111111','0111110'),
+        'coin': ('01110','11111','11111','01110'),
+        # 침대: 좌측 베개/헤드보드 돌출 + 하단 매트리스 채움 유지
         'bed': ('1100000','1100000','1111111','1111111','1111111'),
-        'chest': ('0011100','1111111','1111111','1111111','0011100'),
-        'stove': ('00100','01110','11111','11111','01110'),
-        'shop_npc': ('1111111','1111111','1100011','1100011','1111111'),
-        'rowan': ('0011100','0011100','1111111','0111110','0110110'),
-        'calendar': ('11011','11111','11111','11011','11111'),
-        'save': ('11111','11011','11111','11111','11111'),
+        # 연구 상자: 꽉 찬 직사각형 상자 + 상단 손잡이
+        'chest': ('0111110','1111111','1111111','1111111','1111111'),
+        # 주방(스토브): 위로 솟은 불꽃/냄비 채움 실루엣
+        'stove': ('0010000','0111010','1111111','1111111','0111110'),
+        # 상점: 넓은 처마 지붕 + 채워진 건물 본체
+        'shop_npc': ('0011100','0111110','1111111','0111110','0111110'),
+        # 로완(NPC): 둥근 머리 + 채워진 어깨/몸통
+        'rowan': ('0011100','0011100','0111110','1111111','1111111'),
+        'calendar': ('10101','11111','11111','11111','11111'),
+        'save': ('11110','11111','11111','11111','11111'),
+        # 물주기: 물방울/물통 채움 형태 유지
         'water': ('00100','01110','11111','11111','01110'),
-        'harvest': ('00100','01110','11111','01110','00100'),
-        'start': ('00100','00110','11111','00110','00100'),
-        'sell': ('0111110','1100000','0111110','0000011','0111110'),
-        'buy': ('1111100','1100110','1111100','1100110','1111100'),
-        'check': ('000001','000010','100100','011000'),
+        'harvest': ('10101','11111','11111','01110','00100'),
+        'start': ('01000','01100','01110','01100','01000'),
+        'sell': ('0111110','1111000','0111110','0001111','0111110'),
+        'buy': ('1111100','1111110','1111100','1111110','1111100'),
+        'check': ('000001','000011','100110','111100','011000'),
+        # 마을 상단 바용 광산(상행)/낚시터(하행) 채움 화살표
+        'nav_up': ('0001000','0011100','0111110','1111111','0011100'),
+        'nav_down': ('0011100','1111111','0111110','0011100','0001000'),
     }
+
+    # 집(Home) 화면 나팔꽃 성장 단계별 소형 아이콘 (잎이 점진적으로 늘어나는 구조)
+    FLOWER_STAGE_PATTERNS = {
+        'empty': (
+            '0000000',
+            '0000000',
+            '0000000',
+            '0111110',
+            '0011100',
+        ),
+        'sprout': (
+            '0000000',
+            '0010100',
+            '0001000',
+            '0111110',
+            '0011100',
+        ),
+        'stem': (
+            '0001000',
+            '0111000',
+            '0001110',
+            '0111110',
+            '0011100',
+        ),
+        'flower': (
+            '0111110',
+            '1111111',
+            '0111110',
+            '0111110',
+            '0011100',
+        ),
+        'withered': (
+            '0000000',
+            '0011000',
+            '0001100',
+            '0111110',
+            '0011100',
+        ),
+    }
+
     ALIASES = dict.fromkeys(('stone','copper','iron','diamond'), 'mineral') | dict.fromkeys(('pickaxe','fertilizer','fishing_rod'), 'tool')
 
     def __init__(self, engine):
@@ -81,9 +133,13 @@ class IconRenderer:
 
     def spec(self, obj):
         kind = obj.get('type')
-        symbol = 'chest' if kind == 'shop_npc' else kind
+        symbol = kind
         frame = 'rectangle'
-        if kind == 'resource': symbol = self.category(obj.get('resource_kind'))
+        pattern = ()
+        if kind == 'flower_pot':
+            stage = self.engine.houseplant.get('stage', 'empty')
+            pattern = self.FLOWER_STAGE_PATTERNS.get(stage, self.FLOWER_STAGE_PATTERNS['empty'])
+        elif kind == 'resource': symbol = self.category(obj.get('resource_kind'))
         elif kind == 'shop_item': symbol = self.category(obj.get('shop_kind'))
         elif kind == 'recipe': symbol = 'food'
         elif kind == 'ingredient': symbol = 'check' if obj.get('selected') else self.category(obj.get('item_kind','crop'))
@@ -100,71 +156,66 @@ class IconRenderer:
         if symbol == 'food': frame = 'double_rectangle'
         elif kind == 'rowan' and obj.get('quest_available'): frame = 'quest_rectangle'
         elif symbol == 'coin': frame = 'rectangle'
-        return IconSpec(frame, symbol)
+        return IconSpec(frame, symbol, pattern)
 
     def frame(self, obj, shape='rectangle'):
-        # Width/height are center-to-center spans: all frames occupy w+1 by h+1 dots.
-        # Legacy callers receive the same updated frame classification.
+        """
+        외곽 1줄을 제거하여(inset=1) 기존보다 작고 얇은 1줄 프레임(11x9)을 그림.
+        버튼 간 간격이 상하좌우로 2도트씩 더 넓어짐.
+        """
         if shape == 'ellipse': shape = 'double_rectangle'
-        x,y = round(obj['x']),round(obj['y'])
-        rx,ry = int(obj.get('width',12))//2,int(obj.get('height',10))//2
+        x, y = round(obj['x']), round(obj['y'])
+        # 기존 rx=6, ry=5에서 외곽 1줄을 제거해 rx-1(5), ry-1(4) 적용
+        rx = max(2, int(obj.get('width', 12)) // 2 - 1)
+        ry = max(2, int(obj.get('height', 10)) // 2 - 1)
+
         if shape == 'quest_rectangle':
-            # Two-dot outer border plus the retained one-dot inner border:
-            # three contiguous dots, with the person icon preserved inside.
-            for inset in (0, 1, 2):
-                self.dotpad.draw_box(x,y,2*(rx-inset),2*(ry-inset))
+            self.dotpad.draw_box(x, y, 2 * rx, 2 * ry)
+            self.dotpad.draw_box(x, y, 2 * (rx - 1), 2 * (ry - 1))
             return
         if shape in ('rectangle', 'double_rectangle'):
-            # Two-dot outer border. The inner border starts after one blank dot.
-            insets = (0, 3) if shape == 'double_rectangle' else (0,)
+            insets = (0, 2) if shape == 'double_rectangle' else (0,)
             for inset in insets:
-                left,right,top,bottom = x-rx+inset,x+rx-inset,y-ry+inset,y+ry-inset
-                for py in range(top, bottom+1):
-                    for px in range(left, right+1):
-                        if min(px-left,right-px,py-top,bottom-py) < 2:
-                            self.dotpad.set_dot(px,py)
+                w = max(2, 2 * (rx - inset))
+                h = max(2, 2 * (ry - inset))
+                self.dotpad.draw_box(x, y, w, h)
             return
-        def extent_at(distance):
-            if shape == 'rectangle': return rx
-            if shape == 'diamond': return round(rx*(1-distance/max(1,ry)))
-            return round(rx*math.sqrt(max(0,1-(distance/max(1,ry))**2)))
-        for distance in range(ry+1):
-            extent=extent_at(distance)
-            outer=extent_at(distance+1) if distance<ry else extent
-            columns=range(-rx,rx+1) if shape=='rectangle' and distance==ry else {v for dx in range(min(extent,outer)+1,extent+1) for v in (-dx,dx)} | {-extent,extent}
-            for dy in {-distance,distance}:
-                for dx in columns:self.dotpad.set_dot(x+dx,y+dy)
+        self.dotpad.draw_box(x, y, 2 * rx, 2 * ry)
 
     def pattern(self, x, y, rows):
-        self.engine.draw_icon_pattern(x,y,rows)
+        self.engine.draw_icon_pattern(x, y, rows)
 
     def catalog(self, obj, kind):
         symbol = self.category(kind)
-        self.frame(obj, 'double_rectangle' if symbol=='food' else 'rectangle')
+        self.frame(obj, 'double_rectangle' if symbol == 'food' else 'rectangle')
         if symbol != 'food':
-            self.pattern(obj['x'],obj['y'],self.PATTERNS.get(symbol,self.PATTERNS['material']))
+            self.pattern(obj['x'], obj['y'], self.PATTERNS.get(symbol, self.PATTERNS['material']))
 
     def draw(self, obj):
         if obj.get('type') not in self.TYPES: return False
+        # flower_detail 화면의 큰 화분(width > 12)은 기존 상세 나팔꽃 렌더러가 그리도록 패스
+        if obj.get('type') == 'flower_pot' and obj.get('width', 12) > 12:
+            return False
         spec = self.spec(obj)
-        self.frame(obj,spec.frame)
+        self.frame(obj, spec.frame)
         if spec.frame == 'double_rectangle':
             return True
         if obj['type'] == 'plot':
-            state = self.engine.farm_plots.get(obj['id'],self.engine.new_plot_state())
+            state = self.engine.farm_plots.get(obj['id'], self.engine.new_plot_state())
             if state.get('seed_id'):
-                days=max(1,self.engine.get_seed_config(state['seed_id']).get('growth_days',3))
-                ratio=1 if state.get('mature') else min(1,max(0,state['growth']/days))
-                rx,ry=obj['width']//2,obj['height']//2
-                count=math.ceil((2*ry-3)*ratio)
-                for y in range(obj['y']+ry-1-count,obj['y']+ry-1):
-                    for x in range(obj['x']-rx+2,obj['x']+rx-1):self.dotpad.set_dot(x,y)
+                days = max(1, self.engine.get_seed_config(state['seed_id']).get('growth_days', 3))
+                ratio = 1 if state.get('mature') else min(1, max(0, state['growth'] / days))
+                rx = max(2, obj['width'] // 2 - 1)
+                ry = max(2, obj['height'] // 2 - 1)
+                count = math.ceil((2 * ry - 1) * ratio)
+                for y in range(obj['y'] + ry - count, obj['y'] + ry):
+                    for x in range(obj['x'] - rx + 1, obj['x'] + rx):
+                        self.dotpad.set_dot(x, y)
         else:
-            rows = spec.pattern or self.PATTERNS.get(spec.symbol,self.PATTERNS['material'])
+            rows = spec.pattern or self.PATTERNS.get(spec.symbol, self.PATTERNS['material'])
             if spec.frame == 'quest_rectangle' and spec.symbol == 'rowan':
-                # Keep the person inside the inner border, with a blank-dot gap.
-                rows = ('00100','11111','00100','01010','01010')
-            self.pattern(obj['x'],obj['y'],rows)
+                rows = ('00100', '01110', '11111')
+            self.pattern(obj['x'], obj['y'], rows)
         return True
 
 
@@ -181,10 +232,14 @@ class IconLayout:
         objects = [dict(o) for o in objects]
         if page not in self.PAGES and page != 'plot_detail': return objects
         chosen = [o for o in objects if o.get('type') in IconRenderer.TYPES
-                  and (page != 'plot_detail' or o.get('type')=='care_button')]
-        if page in ('home','town'):
-            order={'bed':0,'chest':1,'stove':2,'shop_npc':3,'rowan':4}
-            chosen.sort(key=lambda o:order.get(o['type'],5))
-        placed=self.grid.place(chosen,width,height,used_columns=2 if page=='farm' else None)
-        by_id={o['id']:o for o in placed}
-        return [by_id.get(o.get('id'),o) for o in objects]
+                  and not o.get('skip_grid')
+                  and (page != 'plot_detail' or o.get('type') == 'care_button')]
+        if page in ('home', 'town'):
+            order = {
+                'bed': 0, 'chest': 1, 'stove': 2, 'flower_pot': 3,
+                'shop_npc': 0, 'rowan': 1, 'nav_up': 2, 'nav_down': 3
+            }
+            chosen.sort(key=lambda o: order.get(o['type'], 9))
+        placed = self.grid.place(chosen, width, height, used_columns=2 if page == 'farm' else None)
+        by_id = {o['id']: o for o in placed}
+        return [by_id.get(o.get('id'), o) for o in objects]

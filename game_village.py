@@ -113,3 +113,129 @@ class VillageMixin:
 
     def draw_calendar(self, obj):
         self.icons.draw(obj)
+    def town_nav_objects(self):
+        return [
+            dict(id='town_nav_mine', type='nav_up', x=36, y=6, width=12, height=10,
+                 hit_width=10, hit_height=8, label='Mine', tts='Mine. Go north.',
+                 action='travel:mine'),
+            dict(id='town_nav_fishing', type='nav_down', x=50, y=6, width=12, height=10,
+                 hit_width=10, hit_height=8, label='Fishing lake', tts='Fishing lake. Go south.',
+                 action='travel:fishing'),
+        ]
+
+    def town_spatial_objects(self):
+        """중간줄·아랫줄의 닷 그래픽(상점 건물, 로완, 상/하/좌 길 끝 화살표) 클릭 히트박스"""
+        return [
+            dict(id='town_scene_shop', type='town_hitbox', skip_grid=True,
+                 x=43, y=24, width=22, height=16, hit_width=22, hit_height=16,
+                 label='Shop building', tts='Shop. Buy or sell.', action='open_shop'),
+            dict(id='town_scene_rowan', type='town_hitbox', skip_grid=True,
+                 x=28, y=26, width=7, height=9, hit_width=8, hit_height=10,
+                 label='Rowan', tts='Rowan. Quest available.' if self.rowan_stage != 'done' else 'Rowan.',
+                 action='talk_rowan'),
+            dict(id='town_road_mine', type='town_hitbox', skip_grid=True,
+                 x=18, y=15, width=9, height=6, hit_width=11, hit_height=7,
+                 label='Path to Mine', tts='Mine. Go north.', action='travel:mine'),
+            dict(id='town_road_fishing', type='town_hitbox', skip_grid=True,
+                 x=18, y=36, width=9, height=6, hit_width=11, hit_height=7,
+                 label='Path to Fishing lake', tts='Fishing lake. Go south.', action='travel:fishing'),
+            dict(id='town_road_home', type='town_hitbox', skip_grid=True,
+                 x=4, y=26, width=7, height=9, hit_width=9, hit_height=11,
+                 label='Path to Home', tts='Home. Go west.', action='travel:home'),
+        ]
+
+    def draw_town_scene(self):
+        """
+        마을 맨 윗줄(y:0~10) 아래에 실선(y=11)을 긋고,
+        중간줄·아랫줄(y:12~39)에 길과 실제 상점 집 건물, 길 끝 화살표를 렌더링.
+        """
+        pad = self.dotpad
+        # 1. 맨 윗줄 버튼 영역과 하단 공간 영역을 나누는 가로 실선 구분선 (y = 11)
+        pad.draw_line(0, 11, pad.width - 1, 11)
+
+        # 2. 가로·세로 T자형 마을 길 (세로 길 x: 14~22, 가로 길 y: 23~29)
+        for y in range(12, pad.height):
+            if not (23 <= y <= 29):
+                pad.set_dot(14, y)
+                pad.set_dot(22, y)
+            # 길 내부 잔돌 질감
+            if y % 3 == 1 and 18 <= y <= 33:
+                pad.set_dot(16 if (y // 3) % 2 == 0 else 20, y)
+
+        for x in range(0, 32):
+            if not (14 < x < 22):
+                pad.set_dot(x, 23)
+                pad.set_dot(x, 29)
+            if x % 4 == 2 and 7 <= x <= 25:
+                pad.set_dot(x, 26)
+
+        # 3. 상행 길 끝 화살표 ▲ (광산 이동: x=18, y=13~16)
+        self.draw_icon_pattern(18, 15, (
+            '0001000',
+            '0011100',
+            '0111110',
+            '1111111',
+        ))
+
+        # 4. 하행 길 끝 화살표 ▼ (낚시터 이동: x=18, y=35~38)
+        self.draw_icon_pattern(18, 37, (
+            '1111111',
+            '0111110',
+            '0011100',
+            '0001000',
+        ))
+
+        # 5. 좌측 길 끝 화살표 ◀ (집 이동: x=2~5, y=26)
+        self.draw_icon_pattern(3, 26, (
+            '0001',
+            '0011',
+            '0111',
+            '1111',
+            '0111',
+            '0011',
+            '0001',
+        ))
+
+        # 6. 상점 옆 로완(Rowan) 서 있는 실루엣 (x=28, y=26)
+        self.draw_icon_pattern(28, 26, (
+            '01110',
+            '01110',
+            '11111',
+            '01110',
+            '01010',
+        ))
+
+        # 7. 우측 실제 상점 집 건물 닷 그래픽 (x: 33~53, y: 14~33)
+        # 박공지붕 (y: 14~20, 기와 질감 포함)
+        for dy in range(7):
+            half = 4 + dy
+            y = 14 + dy
+            for x in range(43 - half, 43 + half + 1):
+                if dy in (0, 6) or x in (43 - half, 43 + half) or (x + dy) % 2 == 0:
+                    pad.set_dot(x, y)
+
+        # 건물 외벽 (x: 34~52, y: 21~33)
+        for y in range(21, 34):
+            pad.set_dot(34, y)
+            pad.set_dot(52, y)
+            # 벽돌 질감 표현
+            if y in (21, 33):
+                for x in range(34, 53):
+                    pad.set_dot(x, y)
+            elif y % 2 == 1:
+                for x in range(36, 51, 4):
+                    if not (40 <= x <= 46 and y >= 26):
+                        pad.set_dot(x, y)
+
+        # 좌/우 창문 (채움 사각형)
+        for wy in (24, 25):
+            for wx in (37, 38, 48, 49):
+                pad.set_dot(wx, wy)
+
+        # 중앙 출입문 (x: 41~45, y: 26~33)
+        for y in range(26, 34):
+            pad.set_dot(41, y)
+            pad.set_dot(45, y)
+        for x in range(41, 46):
+            pad.set_dot(x, 26)
+        pad.set_dot(44, 30)  # 문고리
