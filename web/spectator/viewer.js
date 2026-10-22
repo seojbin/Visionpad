@@ -68,17 +68,56 @@ function objectArt(name, bounds) {
 function environment(name, x=0,y=0,w=960,h=600) {
   return drawAsset(assetCatalog.backgrounds[name],x,y,w,h,ctx,false);
 }
+const HOVER_GROUPS = [
+  ["home_bed", "home_scene_bed", "bed"],
+  ["home_chest", "home_scene_chest", "chest"],
+  ["home_stove", "home_scene_stove", "stove"],
+  ["houseplant", "home_scene_flower", "flower_pot"],
+  ["town_shop", "town_scene_shop", "shop_npc"],
+  ["town_rowan", "town_scene_rowan", "rowan"],
+  ["town_nav_mine", "town_road_mine"],
+  ["town_nav_fishing", "town_road_fishing"],
+  ["shop_sell_choice", "shop_scene_sell"],
+  ["shop_buy_choice", "shop_scene_buy"],
+  ["shop_calendar", "shop_scene_calendar"],
+];
+
+function focused(id) {
+  const hover = state?.hover_object;
+  if (!hover || !id) return false;
+  if (hover === id) return true;
+  return HOVER_GROUPS.some((group) => group.includes(id) && group.includes(hover));
+}
+
+function outline(x, y, w, h, id) {
+  if (id !== true && !focused(id)) return;
+  ctx.strokeStyle = "#23170d";
+  ctx.lineWidth = 10;
+  ctx.strokeRect(x - 5, y - 5, w + 10, h + 10);
+  ctx.strokeStyle = "#ff9a1a";
+  ctx.lineWidth = 5;
+  ctx.strokeRect(x - 5, y - 5, w + 10, h + 10);
+}
+
 function sceneObjects(name) {
-  const config=sceneDefinitions.scenes[name];if(!config)return;
+  const config = sceneDefinitions.scenes[name];
+  if (!config) return;
   environment(config.background);
-  const gameObjects=state.spectator?.objects||state.objects||[];
-  for(const object of [...config.objects].sort((a,b)=>(a.layer||0)-(b.layer||0))) {
-    const linked=gameObjects.find(o=>o.id===object.game_id)||(object.game_type?gameObjects.find(o=>o.type===object.game_type):null);
-    if(object.game_id&&!linked&&SCENES.includes(state.page))continue;
-    objectArt(object.art,object.bounds);
-    if(linked&&focused(linked.id)) {
-      outline(...object.bounds,linked.id);
-      text(linked.label,object.bounds[0]+8,object.bounds[1]+object.bounds[3]+18);
+  const gameObjects = state.spectator?.objects || state.objects || [];
+  for (const object of [...config.objects].sort((a, b) => (a.layer || 0) - (b.layer || 0))) {
+    const linked =
+      gameObjects.find((o) => o.id === object.game_id) ||
+      (object.game_type ? gameObjects.find((o) => o.type === object.game_type) : null);
+    if (object.game_id && !linked && SCENES.includes(state.page)) continue;
+    objectArt(object.art, object.bounds);
+    const isHovered =
+      (linked && focused(linked.id)) ||
+      (object.game_id && focused(object.game_id)) ||
+      (object.game_type && focused(object.game_type));
+    if (isHovered) {
+      outline(...object.bounds, true);
+      const labelText = linked?.label || object.label || object.game_type || "";
+      if (labelText) text(labelText, object.bounds[0] + 8, object.bounds[1] + object.bounds[3] + 18);
     }
   }
 }
@@ -92,28 +131,7 @@ function cropImage(plot,forceMature=false) {
 function background(name) {
   return drawAsset(assetCatalog.backgrounds[name],0,0,960,600,ctx,false);
 }
-function focused(id) {
-  const hover = state.hover_object;
-  if (hover === id) return true;
-  const aliases = {
-    home_bed: "home_scene_bed",
-    home_chest: "home_scene_chest",
-    home_stove: "home_scene_stove",
-    houseplant: "home_scene_flower",
-    town_shop: "town_scene_shop",
-    town_rowan: "town_scene_rowan",
-  };
-  return aliases[id] === hover;
-}
-function outline(x, y, w, h, id) {
-  if (!focused(id)) return;
-  ctx.strokeStyle = "#23170d";
-  ctx.lineWidth = 10;
-  ctx.strokeRect(x - 5, y - 5, w + 10, h + 10);
-  ctx.strokeStyle = "#ff9a1a";
-  ctx.lineWidth = 5;
-  ctx.strokeRect(x - 5, y - 5, w + 10, h + 10);
-}
+
 function fence(x,y,w,h) {
   ctx.save();
   ctx.fillStyle='#312119';ctx.fillRect(x-5,y-5,w+10,10);ctx.fillRect(x-5,y+h-5,w+10,10);

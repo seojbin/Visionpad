@@ -591,126 +591,224 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             objects.append(self.flower_object())
         return objects + self.home_spatial_objects()
 
+    def flower_scene_bounds(self):
+        """
+        집 내부 하단 디스플레이의 나팔꽃 성장 단계별 동적 히트박스 계산:
+        - 화분 바닥(y=36)은 고정된 채 위로 자라나므로, 성장 단계에 따라 중심 y가 올라가고 높이가 커짐.
+        - 위쪽 가구(침대 하단 y=23, 연구대 하단 y=22)와 겹치지 않도록 최대 상단을 y=24로 제한.
+        """
+        stage = self.houseplant.get('stage', 'empty')
+        bounds = {
+            # (중심 x, 중심 y, width, height, hit_width, hit_height)
+            'empty':    (12, 35, 7, 4, 9, 5),    # 화분만 존재 (y: 33~36)
+            'sprout':   (12, 33, 7, 7, 9, 8),    # 화분 + 떡잎 새싹 (y: 30~36)
+            'withered': (12, 33, 9, 7, 11, 8),   # 화분 + 처진 줄기 (y: 30~36)
+            'stem':     (12, 31, 9, 10, 11, 11), # 화분 + S자 덩굴과 잎 (y: 26~36)
+            'flower':   (12, 30, 11, 13, 13, 14) # 화분 + 덩굴 + 만개한 나팔꽃 (y: 24~36)
+        }
+        return bounds.get(stage, bounds['empty'])
+
     def home_spatial_objects(self):
-        """비주얼 컴패니언 집 사진과 동일한 구도의 하단 도트 그래픽 히트박스"""
+        """집 내부 확장 레이아웃 및 나팔꽃 성장 연동 동적 히트박스"""
+        # 침대를 y=19로 배치해 하단(y=23) 아래쪽(y=24~36)에 화분이 자랄 세로 공간을 넉넉히 확보
         bed_item = dict(id='home_scene_bed', type='home_hitbox', skip_grid=True,
-                        x=15, y=21, width=9, height=11, hit_width=11, hit_height=12,
+                        x=13, y=19, width=9, height=9, hit_width=11, hit_height=10,
                         label='Bed', tts='Bed. Sleep until morning.', action='rest')
         if self.day_ended:
             return [bed_item]
         craftable = sum(1 for rid in self.config.get("recipes", {}) if self.can_craft_recipe(rid))
+        fx, fy, fw, fh, fhw, fhh = self.flower_scene_bounds()
         return [
             bed_item,
             dict(id='home_scene_chest', type='home_hitbox', skip_grid=True,
-                 x=30, y=20, width=11, height=9, hit_width=12, hit_height=10,
+                 x=30, y=19, width=11, height=8, hit_width=12, hit_height=9,
                  label='Research', tts='Research. Choose an upgrade.', action='open_research'),
             dict(id='home_scene_stove', type='home_hitbox', skip_grid=True,
-                 x=45, y=20, width=11, height=9, hit_width=12, hit_height=10,
+                 x=46, y=19, width=11, height=8, hit_width=12, hit_height=9,
                  label='Kitchen', tts=f'Kitchen. Available recipes: {craftable}.', action='open_recipes'),
             dict(id='home_scene_flower', type='home_hitbox', skip_grid=True,
-                 x=8, y=34, width=9, height=9, hit_width=11, hit_height=10,
+                 x=fx, y=fy, width=fw, height=fh, hit_width=fhw, hit_height=fhh,
                  label='Flower pot', tts=self.flower_description(), action='flower:open'),
             dict(id='home_road_farm', type='home_hitbox', skip_grid=True,
-                 x=3, y=26, width=6, height=7, hit_width=8, hit_height=9,
+                 x=2, y=26, width=5, height=7, hit_width=7, hit_height=9,
                  label='Farm', tts='Farm. Go west.', action='travel:farm'),
             dict(id='home_road_town', type='home_hitbox', skip_grid=True,
-                 x=56, y=26, width=6, height=7, hit_width=8, hit_height=9,
+                 x=57, y=26, width=5, height=7, hit_width=7, hit_height=9,
                  label='Village', tts='Village. Go east.', action='travel:town'),
         ]
 
     def draw_home_scene(self):
         """
-        비주얼 컴패니언의 집(Home) 인테리어와 동일한 하단 도트 그래픽:
-        - y=12: 상단 버튼(하단 y=10)과 2칸 떨어진 가로 실선 경계선
-        - 중앙 거실 러그(카펫) 점선 테두리 (x: 11~49, y: 15~36)
-        - 좌상단 침대(x=15, y=21), 중앙 연구대(x=30, y=20), 우상단 주방(x=45, y=20)
-        - 좌하단 나팔꽃 화분(x=8, y=34, 성장 단계 반영)
-        - 좌측 농장 이동 화살표 ◀ (x=3, y=26), 우측 마을 이동 화살표 ▶ (x=56, y=26)
+        확장된 집 내부 공간(x: 4~55, y: 13~39):
+        - 화분 본체(y=34~36)는 크기 고정
+        - 성장 단계(sprout -> stem -> flower)에 따라 화분 위로 줄기와 잎, 꽃이 y=24까지 실제로 자라남
         """
         pad = self.dotpad
+        # 1. 2칸 두께 상단 경계선 (y=12, 13)
         pad.draw_line(0, 12, pad.width - 1, 12)
+        pad.draw_line(0, 13, pad.width - 1, 13)
 
-        # 중앙 러그(카펫) 질감 테두리
-        for x in range(11, 50, 2):
-            pad.set_dot(x, 15)
-            pad.set_dot(x, 36)
-        for y in range(15, 37, 2):
-            pad.set_dot(11, y)
-            pad.set_dot(49, y)
+        # 2. 집 외벽 (x=4, x=55, 하단 y=39) 및 양옆 출입문 문틀 (y: 23~29)
+        pad.draw_line(4, 39, 55, 39)
+        for y in range(13, 40):
+            if not (24 <= y <= 28):
+                pad.set_dot(4, y)
+                pad.set_dot(55, y)
+        for dx in (3, 4, 5):
+            pad.set_dot(dx, 23)
+            pad.set_dot(dx, 29)
+        for dx in (54, 55, 56):
+            pad.set_dot(dx, 23)
+            pad.set_dot(dx, 29)
 
-        # 1. 좌상단 침대 (세로형 침대 프레임 + 베개 + 이불 질감, x=15, y=21)
-        self.draw_icon_pattern(15, 21, (
-            '1000001',
-            '1111111',
-            '1011101',
-            '1000001',
-            '1111111',
-            '1101011',
-            '1010101',
-            '1101011',
-            '1111111',
-            '1000001',
+        # 3. 양옆 문으로 나가는 소형 화살표 (3x5 크기)
+        self.draw_icon_pattern(1, 26, (
+            '001',
+            '011',
+            '111',
+            '011',
+            '001',
+        ))
+        self.draw_icon_pattern(58, 26, (
+            '100',
+            '110',
+            '111',
+            '110',
+            '100',
+        ))
+
+        def draw_solid_pattern(cx, cy, rows):
+            w, h = len(rows[0]), len(rows)
+            for r_idx, row in enumerate(rows):
+                for c_idx, ch in enumerate(row):
+                    px = cx + c_idx - w // 2
+                    py = cy + r_idx - h // 2
+                    if ch == '1':
+                        pad.set_dot(px, py, 1)
+                    elif ch == '0':
+                        pad.set_dot(px, py, 0)
+
+        # 4. 좌상단 침대 (x=13, y=19, 범위 y: 15~23): 하단 y=24부터 화분이 자랄 공간 확보
+        draw_solid_pattern(13, 19, (
+            '111111111',
+            '110000011',
+            '110111011',
+            '111111111',
+            '100000001',
+            '111111111',
+            '110111011',
+            '111111111',
+            '111111111',
         ))
 
         if self.day_ended:
             return
 
-        # 2. 중앙 연구 작업대 (플라스크/책이 놓인 테이블, x=30, y=20)
-        self.draw_icon_pattern(30, 20, (
-            '000001100',
-            '011011110',
-            '111111111',
-            '101110111',
-            '111111111',
-            '101010101',
-            '100000001',
+        # 5. 중앙 연구 작업대 (x=30, y=19, 범위 y: 15~22)
+        draw_solid_pattern(30, 19, (
+            '..1111111..',
+            '11111011111',
+            '11001010011',
+            '11111111111',
+            '10000000001',
+            '11111111111',
+            '11001110011',
+            '11111111111',
         ))
 
-        # 3. 우상단 주방 싱크대 & 스토브 (후드 + 냄비 + 오븐장, x=45, y=20)
-        self.draw_icon_pattern(45, 20, (
-            '000111000',
-            '001111100',
-            '000010000',
-            '111111111',
-            '101011101',
-            '111010101',
-            '111111111',
+        # 6. 우상단 주방 스토브 (x=46, y=19, 범위 y: 15~22)
+        draw_solid_pattern(46, 19, (
+            '....11111..',
+            '...1110111.',
+            '11111111111',
+            '10001101011',
+            '11111111111',
+            '11011100011',
+            '11011100011',
+            '11111111111',
         ))
 
-        # 4. 좌하단 나팔꽃 화분 (성장 단계에 따라 잎/꽃 변화, x=8, y=34)
+        # 7. 집 내부 좌하단 나팔꽃 화분: 화분(y=34~36)은 고정, 위로 줄기/잎/꽃이 실제로 자라남
         stage = self.houseplant.get('stage', 'empty')
-        flower_rows = self.icons.FLOWER_STAGE_PATTERNS.get(stage, self.icons.FLOWER_STAGE_PATTERNS['empty'])
-        self.draw_icon_pattern(8, 34, flower_rows)
+        pot_cx = 12
 
-        # 5. 좌측 농장 이동 화살표 ◀ (x=3, y=26)
-        self.draw_icon_pattern(3, 26, (
-            '0001',
-            '0011',
-            '0111',
-            '1111',
-            '0111',
-            '0011',
-            '0001',
-        ))
+        # (a) 고정 크기 화분 본체 (x: 9~15, y: 34~36, 테두리 있는 사다리꼴 화분)
+        for x in range(pot_cx - 3, pot_cx + 4):
+            pad.set_dot(x, 34, 1)  # 화분 입구 림(Rim)
+        for x in range(pot_cx - 2, pot_cx + 3):
+            pad.set_dot(x, 35, 1)  # 화분 몸통
+            pad.set_dot(x, 36, 1)  # 화분 바닥
+        # 화분 내부에 작은 음각 포인트로 화분 질감 표현
+        pad.set_dot(pot_cx, 35, 0)
 
-        # 6. 우측 마을 이동 화살표 ▶ (x=56, y=26)
-        self.draw_icon_pattern(56, 26, (
-            '1000',
-            '1100',
-            '1110',
-            '1111',
-            '1110',
-            '1100',
-            '1000',
-        ))
+        # (b) 성장 단계별 화분 위쪽(y <= 33) 식물 줄기·잎·꽃 렌더링
+        if stage == 'sprout':
+            # 떡잎 새싹 (y: 31~33)
+            pad.set_dot(pot_cx, 33, 1)
+            pad.set_dot(pot_cx, 32, 1)
+            pad.set_dot(pot_cx - 1, 31, 1)
+            pad.set_dot(pot_cx - 2, 31, 1)
+            pad.set_dot(pot_cx + 1, 31, 1)
+            pad.set_dot(pot_cx + 2, 31, 1)
+
+        elif stage == 'withered':
+            # 옆으로 힘없이 처진 줄기 (y: 31~33)
+            pad.set_dot(pot_cx, 33, 1)
+            pad.set_dot(pot_cx + 1, 32, 1)
+            pad.set_dot(pot_cx + 2, 32, 1)
+            pad.set_dot(pot_cx + 3, 33, 1)
+            pad.set_dot(pot_cx - 1, 32, 1)
+            pad.set_dot(pot_cx - 2, 33, 1)
+
+        elif stage == 'stem':
+            # S자 덩굴 줄기 + 좌우 잎사귀가 위로 뻗어 올라감 (y: 27~33)
+            for px, py in [
+                (pot_cx, 33), (pot_cx, 32), (pot_cx - 1, 31),
+                (pot_cx, 30), (pot_cx + 1, 29), (pot_cx, 28), (pot_cx, 27),
+                # 왼쪽 아래 잎사귀
+                (pot_cx - 2, 31), (pot_cx - 3, 31), (pot_cx - 3, 30),
+                # 오른쪽 중간 잎사귀
+                (pot_cx + 2, 29), (pot_cx + 3, 29), (pot_cx + 3, 28),
+                # 왼쪽 위 새순
+                (pot_cx - 1, 28), (pot_cx - 2, 27),
+            ]:
+                pad.set_dot(px, py, 1)
+
+        elif stage == 'flower':
+            # 침대 아래쪽(y=24)까지 덩굴이 자라고 상단에 나팔꽃이 활짝 핀 모습 (y: 24~33)
+            for px, py in [
+                # 메인 덩굴 줄기 (y: 27~33)
+                (pot_cx, 33), (pot_cx, 32), (pot_cx - 1, 31),
+                (pot_cx, 30), (pot_cx + 1, 29), (pot_cx, 28),
+                # 좌우 잎사귀 (y: 29~32)
+                (pot_cx - 2, 31), (pot_cx - 3, 31), (pot_cx - 3, 30), (pot_cx - 2, 30),
+                (pot_cx + 2, 29), (pot_cx + 3, 29), (pot_cx + 3, 28), (pot_cx + 2, 28),
+            ]:
+                pad.set_dot(px, py, 1)
+
+            # 상단 만개한 나팔꽃 송이 (y: 24~27, 중심부는 음각 0으로 나팔 형태 강조)
+            draw_solid_pattern(pot_cx, 25, (
+                '.11111.',
+                '1110111',
+                '1100011',
+                '.11111.',
+            ))
 
     def get_farm_objects(self):
         farm = self.config.get("farm", {})
         objects = []
+        # 가로 3개 × 세로 2개 대형 밭 배치 좌표 (60x40 화면 최적화)
+        grid_positions = [
+            (11, 10), (30, 10), (49, 10),
+            (11, 27), (30, 27), (49, 27),
+        ]
 
-        for plot in self.get_unlocked_plot_defs():
+        for idx, plot in enumerate(self.get_unlocked_plot_defs()):
             obj = dict(plot)
             obj["type"] = "plot"
+            if idx < len(grid_positions):
+                px, py = grid_positions[idx]
+                obj.update(x=px, y=py, width=16, height=14, hit_width=16, hit_height=14)
             state = self.farm_plots[plot["id"]]
             seed_id = state["seed_id"]
 
@@ -736,6 +834,112 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         for obj in farm.get("objects", []):
             objects.append(dict(obj))
         return objects
+
+    def draw_plot(self, obj):
+        """
+        3x2 대형 밭(16x14) 렌더링:
+        - 외곽 1줄 테두리
+        - 빈 밭(Empty): 고랑이 파인 흙(Soil) 점선 텍스처
+        - 작물 심김: 작물 종류(tomato/carrot/potato) 및 성장 단계별 디테일 표시
+        """
+        pad = self.dotpad
+        cx, cy = round(obj["x"]), round(obj["y"])
+        rx, ry = int(obj.get("width", 16)) // 2 - 1, int(obj.get("height", 14)) // 2 - 1
+        pad.draw_box(cx, cy, 2 * rx, 2 * ry)
+
+        state = self.farm_plots.get(obj["id"], self.new_plot_state())
+        seed_id = state.get("seed_id")
+
+        # 1. 아무것도 없을 때: 밭고랑(흙) 텍스처 표시
+        if not seed_id:
+            for dy in (-3, 0, 3):
+                for dx in range(-rx + 2, rx - 1, 2):
+                    pad.set_dot(cx + dx, cy + dy)
+            return
+
+        # 물 준 상태면 밭 바닥 줄(cy + ry - 1)을 실선으로 채워 촉각 피드백 제공
+        if state.get("watered"):
+            pad.draw_line(cx - rx + 1, cy + ry - 1, cx + rx - 1, cy + ry - 1)
+        # 비료 준 상태면 상단 양쪽 모서리에 점 표시
+        if state.get("fertilized"):
+            pad.set_dot(cx - rx + 2, cy - ry + 2)
+            pad.set_dot(cx + rx - 2, cy - ry + 2)
+
+        growth = int(state.get("growth", 0))
+        mature = bool(state.get("mature"))
+
+        # 2. 다 자란 상태(Mature): 작물 종류별 꽉 찬 고유 실루엣
+        if mature:
+            mature_patterns = {
+                # 토마토: 꼭지가 달린 둥글고 풍성한 열매
+                "tomato": (
+                    "001010100",
+                    "011111110",
+                    "111101111",
+                    "111000111",
+                    "111101111",
+                    "111111111",
+                    "011111110",
+                ),
+                # 당근: 무성한 잎사귀와 아래로 뾰족한 당근 뿌리
+                "carrot": (
+                    "101010101",
+                    "011111110",
+                    "001111100",
+                    "011111110",
+                    "001111100",
+                    "000111000",
+                    "000010000",
+                ),
+                # 감자: 땅속에 알알이 맺힌 굵은 감자 덩이줄기들
+                "potato": (
+                    "011100110",
+                    "111111111",
+                    "110111011",
+                    "011111110",
+                    "111101111",
+                    "111111111",
+                    "011001110",
+                ),
+            }
+            self.draw_icon_pattern(cx, cy, mature_patterns.get(seed_id, mature_patterns["tomato"]))
+            return
+
+        # 3. 자라는 중(Sprout / Growing): 작물별 새싹·줄기 형태 구분
+        if growth <= 0:
+            # 갓 심은 씨앗 + 흙 고랑
+            sprout_patterns = {
+                "tomato": ("00100", "01110", "00100"),
+                "carrot": ("10101", "01110", "00100"),
+                "potato": ("01100", "11110", "00110"),
+            }
+            self.draw_icon_pattern(cx, cy + 1, sprout_patterns.get(seed_id, ("010", "111", "010")))
+        else:
+            # 중간 성장 단계: 줄기와 잎이 뻗어나가는 모습
+            mid_patterns = {
+                "tomato": (
+                    "0101010",
+                    "1111111",
+                    "0011100",
+                    "0111110",
+                    "0001000",
+                ),
+                "carrot": (
+                    "1010101",
+                    "0111110",
+                    "0011100",
+                    "0011100",
+                    "0001000",
+                ),
+                "potato": (
+                    "0011100",
+                    "0111110",
+                    "1110111",
+                    "0111110",
+                    "0110110",
+                ),
+            }
+            self.draw_icon_pattern(cx, cy, mid_patterns.get(seed_id, mid_patterns["tomato"]))
 
     def get_plot_detail_objects(self):
         plot_id = self.detail_plot_id
@@ -886,9 +1090,12 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                             "hits": rock.get("hits", 0),
                             "label": "Rock", "tts": "Rock. Tap to break." if self.resources["pickaxe"] else "Pickaxe required.",
                             "action": f"mine_hit:{rock['id']}"})
-        exit_arrow = self.back_arrow("mine_exit", "Village", "travel:town")
-        exit_arrow.update(x=3, y=self.dotpad.height-6, direction="down", size=3, hit_width=7, hit_height=7)
-        objects.append(exit_arrow)
+        # 광산에서 좌/우 화살표 어느 쪽을 눌러도 마을(town)로 돌아가도록 양쪽 모두 배치
+        exit_left = self.back_arrow("mine_exit_left", "Village", "travel:town")
+        exit_left.update(x=3, y=self.dotpad.height-5, direction="left", size=3, hit_width=7, hit_height=9)
+        exit_right = self.back_arrow("mine_exit_right", "Village", "travel:town")
+        exit_right.update(x=self.dotpad.width-4, y=5, direction="right", size=3, hit_width=7, hit_height=9)
+        objects.extend([exit_left, exit_right])
         return objects
 
     def get_seed_select_objects(self):
@@ -1194,20 +1401,148 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return []
 
     def get_shop_choice_objects(self):
-        return [
+        base = [
             {
                 "id": "shop_sell_choice", "type": "shop_choice", "choice": "sell",
-                "x": 15, "y": 20, "width": 28, "height": 34, "hit_width": 30, "hit_height": 38,
+                "x": 15, "y": 6, "width": 12, "height": 10, "hit_width": 10, "hit_height": 8,
                 "label": "Sell", "tts": "Sell.", "action": "shop_mode:sell"
             },
             {
                 "id": "shop_buy_choice", "type": "shop_choice", "choice": "buy",
-                "x": 45, "y": 20, "width": 28, "height": 34, "hit_width": 30, "hit_height": 38,
+                "x": 30, "y": 6, "width": 12, "height": 10, "hit_width": 10, "hit_height": 8,
                 "label": "Buy", "tts": "Buy.", "action": "shop_mode:buy"
             },
-            {"id":"shop_calendar", "type":"calendar_button", "x":38,"y":8,"width":12,"height":12,
-             "label":"Calendar", "tts":"Calendar. Weekly offers.", "action":"open_calendar"}
+            {
+                "id": "shop_calendar", "type": "calendar_button",
+                "x": 45, "y": 6, "width": 12, "height": 10, "hit_width": 10, "hit_height": 8,
+                "label": "Calendar", "tts": "Calendar. Weekly offers.", "action": "open_calendar"
+            }
         ]
+        return base + self.shop_choice_spatial_objects()
+
+    def shop_choice_spatial_objects(self):
+        """상점 입장(shop_choice) 하단 디테일뷰의 클릭 히트박스 (상단 버튼과 동일 기능 수행)"""
+        return [
+            # 좌측 벽걸이 달력 히트박스
+            dict(id='shop_scene_calendar', type='shop_hitbox', skip_grid=True,
+                 x=11, y=20, width=9, height=9, hit_width=11, hit_height=11,
+                 label='Calendar', tts='Calendar. Weekly offers.', action='open_calendar'),
+            # 중앙 상점 주인(Rowan) 히트박스 (클릭 시 오늘의 요일 혜택 안내)
+            dict(id='shop_scene_keeper', type='shop_hitbox', skip_grid=True,
+                 x=30, y=19, width=9, height=8, hit_width=11, hit_height=9,
+                 label='Shopkeeper', tts='Shopkeeper. Select Sell, Buy, or Calendar.', action='open_calendar'),
+            # 카운터 좌측 판매(Sell) 코너 히트박스
+            dict(id='shop_scene_sell', type='shop_hitbox', skip_grid=True,
+                 x=20, y=30, width=13, height=9, hit_width=15, hit_height=11,
+                 label='Sell counter', tts='Sell.', action='shop_mode:sell'),
+            # 카운터 우측 구매(Buy) 코너 히트박스
+            dict(id='shop_scene_buy', type='shop_hitbox', skip_grid=True,
+                 x=40, y=30, width=13, height=9, hit_width=15, hit_height=11,
+                 label='Buy counter', tts='Buy.', action='shop_mode:buy'),
+            # 좌측 마을 복귀 문 히트박스
+            dict(id='shop_scene_exit', type='shop_hitbox', skip_grid=True,
+                 x=2, y=26, width=5, height=7, hit_width=7, hit_height=9,
+                 label='Back to village', tts='Back to village.', action='return_scene'),
+        ]
+
+    def draw_shop_choice_scene(self):
+        """
+        상점 입장(shop_choice) 하단 디테일뷰 렌더링:
+        - y=12, 13: 2칸 두께 경계선
+        - 좌측 벽걸이 달력(x=11, y=20): 양각 채움 + 요일 칸 음각
+        - 중앙 상점 주인(x=30, y=19): 카운터 뒤에 서 있는 상점 사람 실루엣
+        - 하단 대형 상점 카운터(x: 13~47, y: 25~35):
+          * 좌측(x=20, y=30): 판매(Sell) 상자/S 심볼 음각
+          * 우측(x=40, y=30): 구매(Buy) 진열대/B 심볼 음각
+        - 좌측 출입문(x=4, y: 24~28) 및 마을 복귀 소형 화살표 ◀ (x=1, y=26)
+        """
+        pad = self.dotpad
+        # 1. 2칸 두께 경계선 (y=12, 13)
+        pad.draw_line(0, 12, pad.width - 1, 12)
+        pad.draw_line(0, 13, pad.width - 1, 13)
+
+        # 2. 상점 실내 외벽 (x=4, x=55, y=39) 및 좌측 출입문
+        pad.draw_line(4, 39, 55, 39)
+        for y in range(13, 40):
+            if not (24 <= y <= 28):
+                pad.set_dot(4, y)
+            pad.set_dot(55, y)
+        for dx in (3, 4, 5):
+            pad.set_dot(dx, 23)
+            pad.set_dot(dx, 29)
+        # 좌측 문 밖 소형 화살표 ◀ (x=1, y=26)
+        self.draw_icon_pattern(1, 26, (
+            '001',
+            '011',
+            '111',
+            '011',
+            '001',
+        ))
+
+        def draw_solid_pattern(cx, cy, rows):
+            w, h = len(rows[0]), len(rows)
+            for r_idx, row in enumerate(rows):
+                for c_idx, ch in enumerate(row):
+                    px = cx + c_idx - w // 2
+                    py = cy + r_idx - h // 2
+                    if ch == '1':
+                        pad.set_dot(px, py, 1)
+                    elif ch == '0':
+                        pad.set_dot(px, py, 0)
+
+        # 3. 좌측 벽걸이 달력 (x=11, y=20): 고리가 달린 달력 + 날짜 격자 음각(0)
+        draw_solid_pattern(11, 20, (
+            '.1100011.',
+            '111111111',
+            '101010101',
+            '111111111',
+            '101010101',
+            '111111111',
+            '101010101',
+            '111111111',
+        ))
+
+        # 4. 카운터 뒤 중앙 상점 주인 (x=30, y=19): 모자/머리와 어깨가 뚜렷한 사람 형태
+        draw_solid_pattern(30, 19, (
+            '..11111..',
+            '.1111111.',
+            '..10101..',
+            '..11111..',
+            '.1111111.',
+            '111111111',
+            '111010111',
+            '111111111',
+        ))
+
+        # 5. 상점 카운터 테이블 (x: 13~47, y: 25~35) - 좌측 SELL / 우측 BUY 구분
+        for y in range(25, 36):
+            for x in range(13, 48):
+                pad.set_dot(x, y, 1)
+        # 카운터 상판 아래 음각 구분선 (y=26) 및 중앙 세로 분할선 (x=30)
+        for x in range(14, 47):
+            pad.set_dot(x, 26, 0)
+        for y in range(26, 35):
+            pad.set_dot(30, y, 0)
+
+        # 카운터 좌측: 판매(SELL) 구역 음각 디테일 (동전/화살표 상자 모양, x=21, y=30)
+        draw_solid_pattern(21, 30, (
+            '11000011',
+            '10111101',
+            '11000111',
+            '11110011',
+            '10111011',
+            '11000111',
+        ))
+
+        # 카운터 우측: 구매(BUY) 구역 음각 디테일 (물품 선반/바구니 모양, x=39, y=30)
+        draw_solid_pattern(39, 30, (
+            '10000111',
+            '10110011',
+            '10000111',
+            '10110011',
+            '10000111',
+            '11111111',
+        ))
 
     def get_shop_buy_objects(self):
         entries = [("seed", seed_id, f"{self.get_seed_label(seed_id)} seeds", self.resources["seeds"].get(seed_id, 0),
@@ -1339,11 +1674,13 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
 
         if self.current_page == "home":
             self.draw_home_scene()
-        if self.current_page == "town":
+        elif self.current_page == "town":
             self.draw_town_scene()
-        if self.current_page in ("shop_choice", "shop_buy", "shop_sell", "shop_calendar", "rowan_submit", "plot_detail"):
-            # 집과 상점 등 세부 디스플레이에서도 맨 윗줄 아이콘(하단 y=10)과 2칸 떨어진 y=12에 경계선 표시
+        elif self.current_page == "shop_choice":
+            self.draw_shop_choice_scene()
+        elif self.current_page == "plot_detail":
             self.dotpad.draw_line(0, 12, self.dotpad.width - 1, 12)
+            self.dotpad.draw_line(0, 13, self.dotpad.width - 1, 13)
         if self.current_page == "fishing":
             self.draw_lake()
         if self.current_page == "cooking":
@@ -1370,9 +1707,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.icons.draw(obj)
 
     def draw_stove(self, obj):
-        self.icons.draw(obj)
-
-    def draw_plot(self, obj):
         self.icons.draw(obj)
 
     @staticmethod

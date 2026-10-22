@@ -1543,94 +1543,94 @@
       {
         "id": "plot_1",
         "type": "plot",
-        "x": 21,
+        "x": 11,
         "y": 10,
         "label": "1번 밭",
         "action": "",
         "tts": "1번 밭",
-        "width": 12,
-        "height": 8,
+        "width": 16,
+        "height": 14,
         "hit_width": 16,
-        "hit_height": 12
+        "hit_height": 14
       },
       {
         "id": "plot_2",
         "type": "plot",
-        "x": 43,
+        "x": 30,
         "y": 10,
         "label": "2번 밭",
         "action": "",
         "tts": "2번 밭",
-        "width": 12,
-        "height": 8,
+        "width": 16,
+        "height": 14,
         "hit_width": 16,
-        "hit_height": 12
+        "hit_height": 14
       },
       {
         "id": "plot_3",
         "type": "plot",
-        "x": 21,
-        "y": 27,
+        "x": 49,
+        "y": 10,
         "label": "3번 밭",
         "action": "",
         "tts": "3번 밭",
-        "width": 12,
-        "height": 8,
+        "width": 16,
+        "height": 14,
         "hit_width": 16,
-        "hit_height": 12
+        "hit_height": 14
       },
       {
         "id": "plot_4",
         "type": "plot",
-        "x": 43,
+        "x": 11,
         "y": 27,
         "label": "4번 밭",
         "action": "",
         "tts": "4번 밭",
-        "width": 12,
-        "height": 8,
+        "width": 16,
+        "height": 14,
         "hit_width": 16,
-        "hit_height": 12
+        "hit_height": 14
       },
       {
         "id": "plot_5",
         "type": "plot",
-        "x": 23,
-        "y": 20,
+        "x": 30,
+        "y": 27,
         "label": "Plot 5",
         "action": "",
         "tts": "5번 밭",
-        "width": 12,
-        "height": 8,
+        "width": 16,
+        "height": 14,
         "hit_width": 16,
-        "hit_height": 12
+        "hit_height": 14
       },
       {
         "id": "plot_6",
         "type": "plot",
-        "x": 38,
-        "y": 20,
+        "x": 49,
+        "y": 27,
         "label": "Plot 6",
         "action": "",
         "tts": "6번 밭",
-        "width": 12,
-        "height": 8,
+        "width": 16,
+        "height": 14,
         "hit_width": 16,
-        "hit_height": 12
+        "hit_height": 14
       }
     ],
     "objects": [
       {
         "id": "farm_home",
         "type": "arrow",
-        "x": 54,
-        "y": 20,
+        "x": 57,
+        "y": 35,
         "label": "집으로 이동",
         "action": "travel:home",
         "tts": "집으로 이동",
         "direction": "right",
         "size": 3,
-        "hit_width": 9,
+        "hit_width": 7,
         "hit_height": 9
       }
     ]
