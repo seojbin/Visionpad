@@ -79,18 +79,15 @@ export function plots(s) {
     Object.entries(s.farm_plots || {})
       .slice(0, s.unlocked_plot_count || 0)
       .map(([id, p]) => ({ id, ...p }));
-  return source.map((p, i) => {
-    const col = i % 3;
-    const row = Math.floor(i / 3);
-    return {
-      ...p,
-      x: 110 + col * 260,
-      y: 260 + row * 155,
-      w: 210,
-      h: 120,
-    };
+  const objects=s.spectator?.objects||s.objects||[];
+  return source.map((p,i)=>{
+    const o=objects.find(o=>o.id===p.id), width=o?.width||12, height=o?.height||8;
+    const left=o?.x!=null?o.x-Math.floor(width/2):2+(i%3)*15;
+    const top=o?.y!=null?o.y-Math.floor(height/2):2+Math.floor(i/3)*14;
+    return {...p,x:105+(left-2)*15,y:275+(top-2)*12,w:width*15,h:height*12};
   });
 }
+
 export function rockRect(r, s) {
   const k = Math.min(790 / (s.width || 60), 430 / (s.height || 40));
   return {

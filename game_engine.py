@@ -592,19 +592,14 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return objects + self.home_spatial_objects()
 
     def flower_scene_bounds(self):
-        """
-        집 내부 하단 디스플레이의 나팔꽃 성장 단계별 동적 히트박스 계산:
-        - 화분 바닥(y=36)은 고정된 채 위로 자라나므로, 성장 단계에 따라 중심 y가 올라가고 높이가 커짐.
-        - 위쪽 가구(침대 하단 y=23, 연구대 하단 y=22)와 겹치지 않도록 최대 상단을 y=24로 제한.
-        """
         stage = self.houseplant.get('stage', 'empty')
         bounds = {
             # (중심 x, 중심 y, width, height, hit_width, hit_height)
-            'empty':    (12, 35, 7, 4, 9, 5),    # 화분만 존재 (y: 33~36)
-            'sprout':   (12, 33, 7, 7, 9, 8),    # 화분 + 떡잎 새싹 (y: 30~36)
-            'withered': (12, 33, 9, 7, 11, 8),   # 화분 + 처진 줄기 (y: 30~36)
-            'stem':     (12, 31, 9, 10, 11, 11), # 화분 + S자 덩굴과 잎 (y: 26~36)
-            'flower':   (12, 30, 11, 13, 13, 14) # 화분 + 덩굴 + 만개한 나팔꽃 (y: 24~36)
+            'empty':    (12, 36, 7, 3, 9, 4),    # 화분만 존재 (y: 35~37)
+            'sprout':   (12, 34, 7, 6, 9, 7),    # 화분 + 떡잎 새싹 (y: 32~37)
+            'withered': (12, 34, 9, 6, 11, 7),   # 화분 + 처진 줄기 (y: 32~37)
+            'stem':     (12, 33, 9, 9, 11, 10),  # 화분 + 덩굴과 잎 (y: 29~37)
+            'flower':   (12, 31, 11, 12, 13, 12) # 화분 + 만개한 나팔꽃 (y: 26~37, 침대와 2칸 이격)
         }
         return bounds.get(stage, bounds['empty'])
 
@@ -638,11 +633,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         ]
 
     def draw_home_scene(self):
-        """
-        확장된 집 내부 공간(x: 4~55, y: 13~39):
-        - 화분 본체(y=34~36)는 크기 고정
-        - 성장 단계(sprout -> stem -> flower)에 따라 화분 위로 줄기와 잎, 꽃이 y=24까지 실제로 자라남
-        """
         pad = self.dotpad
         # 1. 2칸 두께 상단 경계선 (y=12, 13)
         pad.draw_line(0, 12, pad.width - 1, 12)
@@ -727,73 +717,65 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             '11011100011',
             '11111111111',
         ))
-
-        # 7. 집 내부 좌하단 나팔꽃 화분: 화분(y=34~36)은 고정, 위로 줄기/잎/꽃이 실제로 자라남
+        # 7. 집 내부 좌하단 나팔꽃 화분
         stage = self.houseplant.get('stage', 'empty')
         pot_cx = 12
 
-        # (a) 고정 크기 화분 본체 (x: 9~15, y: 34~36, 테두리 있는 사다리꼴 화분)
+        # (a) 고정 크기 화분 본체 (x: 9~15, y: 35~37)
         for x in range(pot_cx - 3, pot_cx + 4):
-            pad.set_dot(x, 34, 1)  # 화분 입구 림(Rim)
+            pad.set_dot(x, 35, 1)  # 화분 입구 림(Rim)
         for x in range(pot_cx - 2, pot_cx + 3):
-            pad.set_dot(x, 35, 1)  # 화분 몸통
-            pad.set_dot(x, 36, 1)  # 화분 바닥
-        # 화분 내부에 작은 음각 포인트로 화분 질감 표현
-        pad.set_dot(pot_cx, 35, 0)
+            pad.set_dot(x, 36, 1)  # 화분 몸통
+            pad.set_dot(x, 37, 1)  # 화분 바닥
+        pad.set_dot(pot_cx, 36, 0) # 화분 내부 음각 포인트
 
-        # (b) 성장 단계별 화분 위쪽(y <= 33) 식물 줄기·잎·꽃 렌더링
+        # (b) 성장 단계별 화분 위쪽(y <= 34) 식물 줄기·잎·꽃 렌더링 (최대 상단 y=26)
         if stage == 'sprout':
-            # 떡잎 새싹 (y: 31~33)
+            # 떡잎 새싹 (y: 32~34)
+            pad.set_dot(pot_cx, 34, 1)
             pad.set_dot(pot_cx, 33, 1)
-            pad.set_dot(pot_cx, 32, 1)
-            pad.set_dot(pot_cx - 1, 31, 1)
-            pad.set_dot(pot_cx - 2, 31, 1)
-            pad.set_dot(pot_cx + 1, 31, 1)
-            pad.set_dot(pot_cx + 2, 31, 1)
-
-        elif stage == 'withered':
-            # 옆으로 힘없이 처진 줄기 (y: 31~33)
-            pad.set_dot(pot_cx, 33, 1)
+            pad.set_dot(pot_cx - 1, 32, 1)
+            pad.set_dot(pot_cx - 2, 32, 1)
             pad.set_dot(pot_cx + 1, 32, 1)
             pad.set_dot(pot_cx + 2, 32, 1)
-            pad.set_dot(pot_cx + 3, 33, 1)
-            pad.set_dot(pot_cx - 1, 32, 1)
-            pad.set_dot(pot_cx - 2, 33, 1)
+
+        elif stage == 'withered':
+            # 옆으로 처진 줄기 (y: 32~34)
+            pad.set_dot(pot_cx, 34, 1)
+            pad.set_dot(pot_cx + 1, 33, 1)
+            pad.set_dot(pot_cx + 2, 33, 1)
+            pad.set_dot(pot_cx + 3, 34, 1)
+            pad.set_dot(pot_cx - 1, 33, 1)
+            pad.set_dot(pot_cx - 2, 34, 1)
 
         elif stage == 'stem':
-            # S자 덩굴 줄기 + 좌우 잎사귀가 위로 뻗어 올라감 (y: 27~33)
+            # S자 덩굴 줄기 + 좌우 잎사귀 (y: 29~34, 침대와 5칸 이격)
             for px, py in [
-                (pot_cx, 33), (pot_cx, 32), (pot_cx - 1, 31),
-                (pot_cx, 30), (pot_cx + 1, 29), (pot_cx, 28), (pot_cx, 27),
+                (pot_cx, 34), (pot_cx, 33), (pot_cx - 1, 32),
+                (pot_cx, 31), (pot_cx + 1, 30), (pot_cx, 29),
                 # 왼쪽 아래 잎사귀
-                (pot_cx - 2, 31), (pot_cx - 3, 31), (pot_cx - 3, 30),
+                (pot_cx - 2, 32), (pot_cx - 3, 32), (pot_cx - 3, 31),
                 # 오른쪽 중간 잎사귀
-                (pot_cx + 2, 29), (pot_cx + 3, 29), (pot_cx + 3, 28),
-                # 왼쪽 위 새순
-                (pot_cx - 1, 28), (pot_cx - 2, 27),
+                (pot_cx + 2, 30), (pot_cx + 3, 30), (pot_cx + 3, 29),
             ]:
                 pad.set_dot(px, py, 1)
 
         elif stage == 'flower':
-            # 침대 아래쪽(y=24)까지 덩굴이 자라고 상단에 나팔꽃이 활짝 핀 모습 (y: 24~33)
+            # 다 자란 상태: 줄기(y: 29~34) + 상단 나팔꽃 송이(y: 26~28) -> 침대(y=23)와 정확히 2칸(y=24, 25) 떨어짐
             for px, py in [
-                # 메인 덩굴 줄기 (y: 27~33)
-                (pot_cx, 33), (pot_cx, 32), (pot_cx - 1, 31),
-                (pot_cx, 30), (pot_cx + 1, 29), (pot_cx, 28),
-                # 좌우 잎사귀 (y: 29~32)
-                (pot_cx - 2, 31), (pot_cx - 3, 31), (pot_cx - 3, 30), (pot_cx - 2, 30),
-                (pot_cx + 2, 29), (pot_cx + 3, 29), (pot_cx + 3, 28), (pot_cx + 2, 28),
+                (pot_cx, 34), (pot_cx, 33), (pot_cx - 1, 32),
+                (pot_cx, 31), (pot_cx + 1, 30), (pot_cx, 29),
+                (pot_cx - 2, 32), (pot_cx - 3, 32), (pot_cx - 3, 31), (pot_cx - 2, 31),
+                (pot_cx + 2, 30), (pot_cx + 3, 30), (pot_cx + 3, 29), (pot_cx + 2, 29),
             ]:
                 pad.set_dot(px, py, 1)
 
-            # 상단 만개한 나팔꽃 송이 (y: 24~27, 중심부는 음각 0으로 나팔 형태 강조)
-            draw_solid_pattern(pot_cx, 25, (
+            # 상단 만개한 나팔꽃 송이 (중심 y=27 -> y: 26~28 차지)
+            draw_solid_pattern(pot_cx, 27, (
                 '.11111.',
-                '1110111',
                 '1100011',
                 '.11111.',
             ))
-
     def get_farm_objects(self):
         farm = self.config.get("farm", {})
         objects = []
