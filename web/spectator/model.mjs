@@ -80,14 +80,16 @@ export function plots(s) {
       .slice(0, s.unlocked_plot_count || 0)
       .map(([id, p]) => ({ id, ...p }));
   return source.map((p, i) => {
-    const col = i % 3; 
-    const row = Math.floor(i / 2);
+    const width = 12,
+      height = 8;
+    const left = 2 + (i % 3) * 15;
+    const top = 2 + Math.floor(i / 3) * 12;
     return {
       ...p,
-      x: 160 + col * 340,
-      y: 180 + row * 160,
-      w: 140,
-      h: 65,
+      x: 105 + (left - 2) * 15,
+      y: 275 + (top - 2) * 12,
+      w: width * 15,
+      h: height * 12,
     };
   });
 }

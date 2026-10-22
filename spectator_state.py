@@ -11,6 +11,9 @@ def spectator_snapshot(engine, objects):
               'research_kind', 'required_count', 'display_quantities', 'quest_available')
     public_objects = [{k: copy.deepcopy(o[k]) for k in fields if k in o}
                       for o in objects if o.get('type') not in ('arrow', 'route', 'home_hitbox', 'town_hitbox', 'shop_hitbox')]
+    for idx, public in enumerate([o for o in public_objects if o.get('type') == 'plot']):
+        col, row = idx % 3, idx // 3
+        public.update(x=8 + col * 15, y=6 + row * 12, width=12, height=8)
     for public in public_objects:
         kind = public.get('type')
         recipe_id = public.get('recipe_id') or (public.get('item_id') if public.get('shop_kind') == 'food' else None)
