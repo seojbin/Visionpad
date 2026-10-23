@@ -1059,7 +1059,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                 "id": f"seed_{seed_id}", "type": "seed", "seed_id": seed_id,
                 "x": x, "y": y, "width": 12, "height": 10,
                 "hit_width": 15, "hit_height": 13,
-                "label": f"{seed_config.get('label', seed_id)} seeds",
+                "label": f"{seed_config.get('label', seed_id)} seeds", "count": count,
                 "tts": f"{seed_config.get('label', seed_id)} seeds {count}. Growth {growth_days} days, Harvest {yield_count}, Seed recovery level {self.research_levels.get('seed_return', 0)}",
                 "action": f"plant:{self.seed_select_plot_id}:{seed_id}"
             })
@@ -1894,44 +1894,58 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return f"{self.get_page_name(loc)}."
 
     def get_object_tts(self, obj, detail=False):
-        kind, label = obj.get("type"), obj.get("label", "")
-        original_tts = obj.get("tts") or label
-        
-        if detail:
-            return original_tts
+        """Short hover: one target's name and its price/quantity only.
 
-        short_tts = label
-        
+        Detailed inspection (Shift/hand gesture) is a separate read-only mode.
+        Never derive the brief description by splitting verbose TTS sentences:
+        prices, counts and actions may be buried in those sentences.
+        """
+        kind = obj.get("type")
+        label = str(obj.get("label") or "Object").strip()
+        if detail:
+            return obj.get("tts") or label
+
+        # A map location, transition, building or navigation control has only
+        # a name in standard hover, regardless of its verbose TTS.
+        if kind in ("node", "route", "arrow", "home_hitbox", "shop_hitbox"):
+            return label
+
         if kind in ("plot", "plot_detail_field"):
-            state = self.farm_plots.get(self.detail_plot_id if kind == "plot_detail_field" else obj.get("id"))
-            if state and state.get("seed_id"):
-                seed = self.get_seed_label(state["seed_id"])
-                short_tts = f"{label}. {seed}."
-            else:
-                short_tts = f"{label}. Empty."
-                
-        elif kind == "shop_item":
-            parts = str(original_tts).split('.')
-            short_tts = parts[0] + "." if parts else label
-            
-        elif kind in ("resource", "ingredient", "seed", "crop", "food", "fish"):
-            count = obj.get("count", "")
-            if count != "":
-                short_tts = f"{label} {count}."
-            else:
-                short_tts = label
-                
-        elif kind == "mine_rock":
-            short_tts = "Rock."
-            
-        elif kind in ("care_button", "recipe", "arrow"):
-            short_tts = f"{label}."
-            
-        else:
-            parts = str(original_tts).split('. ')
-            short_tts = parts[0] + "." if parts else original_tts
-            
-        return short_tts
+            plot_id = (self.detail_plot_id if kind == "plot_detail_field"
+                       else obj.get("id"))
+            state = self.farm_plots.get(plot_id) or {}
+            plot_label = (self.get_plot_label(plot_id) if kind == "plot_detail_field"
+                          and plot_id else label)
+            seed_id = state.get("seed_id")
+            return f"{plot_label}, {self.get_seed_label(seed_id)}." if seed_id else f"{plot_label}, empty."
+
+        if kind == "shop_item":
+            # shop_item.count means player-owned quantity; price is the
+            # current market rate (already adjusted in build_shop_objects).
+            price = obj.get("price")
+            owned = obj.get("count")
+            info = []
+            if price is not None:
+                info.append(f"{price} gold")
+            if owned is not None:
+                info.append(f"owned {owned}")
+            return f"{label}, {', '.join(info)}." if info else label
+
+        if kind == "research":
+            # The same structured cost fields that drive the research icon.
+            costs = obj.get("display_quantities") or []
+            info = [f"{item.get('required')} {item.get('label', item.get('item', ''))}"
+                    for item in costs if item.get("required") is not None]
+            return f"{label}, {', '.join(info)}." if info else label
+
+        count = obj.get("count")
+        if kind == "seed" and count is None:
+            count = self.resources.get("seeds", {}).get(obj.get("seed_id"))
+        if count is not None:
+            return f"{label}, {count}."
+        if obj.get("price") is not None:
+            return f"{label}, {obj['price']} gold."
+        return label
 
     def get_hover_sfx(self, obj):
         if obj.get("hover_sfx"):
@@ -1971,7 +1985,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             before=len(self.care_collected_ids)
             self.collect_care_segment(px,py,x,y)
             gained=len(self.care_collected_ids)-before
-            complete=bool(self.care_targets) and len(self.care_collected_ids)/len(self.care_targets)>=float(self.config.get('care_minigame',{}).get('success_ratio',0.65))
+            complete=bool(self.care_targets) and len(self.care_collected_ids) == len(self.care_targets)
         else:
             self.harvest_dragging=True
             before=len(self.harvest_collected_ids)
@@ -2321,7 +2335,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.clear_cooking()
         self.clear_hover()
         self.render()
-        return self.response(tts="Map. Select a place.", sfx="open_page")
+        return self.response(tts="Map.", sfx="open_page")
 
     def open_inventory(self):
         if self.day_ended:
@@ -2334,7 +2348,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.clear_cooking()
         self.clear_hover()
         self.render()
-        return self.response(tts=f"Inventory. {self.resources['coin']} gold. {self.buff_text()}", sfx="open_page")
+        return self.response(tts="Inventory.", sfx="open_page")
 
     def open_research(self):
         if self.day_ended:
@@ -2401,8 +2415,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.clear_harvest()
         self.clear_hover()
         self.render()
-        text = self.plot_status_text(plot_id)
-        return self.response(tts=text, sfx="open_page")
+        return self.response(tts=f"{self.get_plot_label(plot_id)}.", sfx="open_page")
 
     def start_care_minigame(self, plot_id, mode):
         self.last_pointer = (None, None)
@@ -2471,17 +2484,16 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             return self.return_to_scene()
         total = len(self.care_targets)
         collected = len(self.care_collected_ids)
-        ratio = collected / total if total else 0.0
-        success_ratio = float(self.config.get("care_minigame", {}).get("success_ratio", 0.65))
-        percent = int(round(ratio * 100))
         mode = self.care_mode
         plot_id = self.detail_plot_id
 
-        if ratio < success_ratio:
+        # All visible targets must be collected, regardless of the old
+        # care_minigame.success_ratio configuration setting.
+        if collected < total:
             self.render()
             mode_label = "Water" if mode == "water" else "Fertilizer"
             return self.response(
-                tts=f"{mode_label} {percent} percent. Continue over remaining targets.",
+                tts=f"{mode_label} {collected} of {total}. Continue over remaining targets.",
                 sfx="error"
             )
 
@@ -2525,14 +2537,13 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             return self.response(tts="Plot unavailable.", sfx="error")
         if state["seed_id"] is not None:
             return self.response(tts="Plot occupied.")
-        available = [f"{self.get_seed_label(seed_id)} {count} " for seed_id, count in self.resources["seeds"].items() if int(count) > 0]
-        if not available:
+        if not any(int(count) > 0 for count in self.resources["seeds"].values()):
             return self.response(tts="No seeds. Buy at the shop.", sfx="error")
         self.seed_select_plot_id = plot_id
         self.current_page = "seed_select"
         self.clear_hover()
         self.render()
-        return self.response(tts="Choose seeds. " + ", ".join(available), sfx="open_page")
+        return self.response(tts="Seeds.", sfx="open_page")
 
     def plant_seed(self, plot_id, seed_id):
         state = self.farm_plots.get(plot_id)
@@ -2767,7 +2778,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         if not craftable:
             return self.response(tts="No recipes available. Gather ingredients.", sfx="open_page")
         names = ", ".join(self.get_recipe_label(rid) for rid in craftable)
-        return self.response(tts=f"Choose a recipe.", sfx="open_page")
+        return self.response(tts="Recipes.", sfx="open_page")
 
     def select_recipe(self, recipe_id):
         if self.get_recipe_config(recipe_id).get("hidden_recipe") or not self.can_craft_recipe(recipe_id):
@@ -2777,7 +2788,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.current_page = "ingredient_select"
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{self.get_recipe_label(recipe_id)}. {self.recipe_ingredient_text(recipe_id)}.", sfx="open_page")
+        return self.response(tts="Ingredients.", sfx="open_page")
 
     def toggle_ingredient(self, seed_id):
         if self.current_page != "ingredient_select":
@@ -3011,23 +3022,23 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.current_page = "shop_choice"
         self.clear_hover()
         self.render()
-        return self.response(tts="Shop. Sell, buy, or check the calendar.", sfx="shop_open", sound_events=[{"kind": "one_shot", "sound": "door"}])
+        return self.response(tts="Shop.", sfx="shop_open", sound_events=[{"kind": "one_shot", "sound": "door"}])
 
     def return_to_shop_choice(self):
         self.current_page = "shop_choice"
         self.shop_page = 0
         self.clear_hover()
         self.render()
-        return self.response(tts="Shop. Sell, buy, or check the calendar.", sfx="open_page")
+        return self.response(tts="Shop.", sfx="open_page")
 
     def open_shop_mode(self, mode):
         self.shop_page = 0
         if mode == "sell":
             self.current_page = "shop_sell"
-            text = "Sell items."
+            text = "Sell."
         else:
             self.current_page = "shop_buy"
-            text = "Buy items."
+            text = "Buy."
         self.clear_hover()
         self.render()
         return self.response(tts=text, sfx="open_page")
@@ -3162,6 +3173,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             "inspect_objects": [
                 {"id": o["id"], "type": o.get("type"), "label": o.get("label", ""),
                  "description": self.get_object_tts(o, detail=True),
+                 "short_description": self.get_object_tts(o, detail=False),
                  "x": o.get("x"), "y": o.get("y"),
                  "width": o.get("width"), "height": o.get("height"),
                  "hit_width": o.get("hit_width"), "hit_height": o.get("hit_height"),
@@ -3178,7 +3190,9 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             "audio_guidance": self.audio_guidance(),
             "objects": [{"id": o["id"], "label": o.get("label", ""),
                          "type": o.get("type"), "x": o.get("x"), "y": o.get("y"),
-                         "description": self.get_object_tts(o, detail=True), "actionable": bool(o.get("action"))}
+                         "description": self.get_object_tts(o, detail=True),
+                         "short_description": self.get_object_tts(o, detail=False),
+                         "actionable": bool(o.get("action"))}
                         for o in objects if o.get("type") != "route"],
             "action_costs": {k: self.get_action_cost(k) for k in ("travel", "plant", "water", "fertilize", "harvest", "research", "cook", "mine", "fish")},
             "sleeping": self.sleep_until is not None,
