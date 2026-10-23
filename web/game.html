@@ -8,23 +8,40 @@
 /* Geometry and bezel colors matched to the supplied preview's workspace.css. */
 .pad-panel{position:relative;padding:5% 8% 4%;border-radius:6%;background:linear-gradient(125deg,#353635,#242524 63%,#30312f)}.screen{padding:4% 5%;background:linear-gradient(140deg,#424441,#30322f);border:2px solid #1a1c1a;border-radius:4%;box-shadow:0 0 0 5px #222522,inset 0 3px 8px #0007}#dotpad{background:#30362f}.hardware-controls{gap:5%;margin:4% 4% 5%}.hardware-controls .controls{max-width:none;gap:9%;padding:7px 10px;background:#41443f;border-radius:16px}.hardware-controls .controls button{aspect-ratio:1.5;border-radius:40%;border:1px solid #202520;box-shadow:0 1px 2px #0009,inset 0 1px 1px #7c80774d;background:linear-gradient(#555852,#454842)}.device-leds{position:absolute;right:3.5%;top:78%;margin:0;gap:10px}.device-leds i{width:3px;height:3px}.braille-bezel{width:100%;padding:3% 12%;background:#42463e;border:2px solid #1b1f1a;border-radius:7px;box-shadow:0 0 0 5px #222522,inset 0 2px 3px #0008}.device-top{font-size:9px}.device-bottom{font-size:8px}.time-label{font-size:9px}@media(max-width:500px){.pad-panel{padding:6% 7% 5%}.hardware-controls .controls{padding:5px;gap:7%}.hardware-controls .controls button{aspect-ratio:1.2;font-size:10px}.hardware-controls .controls button span{font-size:6px}.braille-bezel{width:100%;padding:3% 12%}.device-top{font-size:7px}.device-top b{font-size:12px}}
 .visual-access{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 20px}.visual-access button{border:1px solid #93b67e;border-radius:8px;background:#314a2b;color:#f1f6e9;padding:10px 16px;font:inherit}.visual-access span{font-size:12px;color:#acbaa5}.visual-access .visual-error{color:#f1bb97}.dotdew-observer{scroll-margin-top:16px}
+#pointer-led {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4b554b;
+    transition: all 0.15s ease;
+}
+#pointer-led.active {
+    background: var(--mint);
+    box-shadow: 0 0 8px #b8dd9780;
+}
 </style></head><body><div class="container">
 <header><div><div class="eyebrow">Tactile garden</div><h1>Dotdew Valley</h1><p>Grow a little world at your fingertips.</p></div><div class="connection" id="connection"><i class="led"></i><span id="connection-text">Connecting</span></div></header>
 <nav class="visual-access" aria-label="Display views"><button type="button" id="show-visual" disabled>Open visual display ↗</button><span id="visual-load-status" role="status">Loading visual display…</span></nav>
 <div class="workspace"><main>
 <div class="top-info"><div class="info-box">Day<strong id="day-text">Day 1</strong></div><div class="info-box">Location<strong id="location-text">Home</strong></div><div class="info-box">Gold<strong id="coin-text">60</strong></div><div class="info-box">Activity time<strong id="time-text">0 / 20</strong></div></div>
 <div class="pad-panel" id="pad-panel"><div class="device-top"><b>dot<span style="font-weight:300"> pad</span></b><span>TACTILE GAME SIMULATOR</span><span>60 × 40</span></div>
-<div class="hardware-layout"><div class="screen"><canvas id="dotpad" width="900" height="600" tabindex="0" aria-label="Tactile game pad. W/A/S/D move the pointer, Enter selects, and Space presses or releases."></canvas></div></div>
+<div class="hardware-layout"><div class="screen"><canvas id="dotpad" width="900" height="600" tabindex="0" aria-label="Tactile game pad. W/A/S/D moves the pointer. Hold Shift for detailed descriptions. Enter, F4, or Space selects, including while Shift is held."></canvas></div></div>
 <div class="hardware-controls"><button id="nav-prev" class="physical-arrow" aria-label="Go left"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4L6 12l10 8Z"/></svg></button><div class="controls"><button data-command="minimap">F1<span>Map</span></button><button data-command="resources">F2<span>Inventory</span></button><button data-command="load" title="Press to load; hold to save">F3<span>Load / Save</span></button><button data-command="click">F4<span>Click</span></button></div><button id="nav-next" class="physical-arrow" aria-label="Go right"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l10 8L8 20Z"/></svg></button></div>
 <div class="device-leds" aria-hidden="true"><i></i><i></i></div><div class="braille-bezel"><canvas id="timepad" width="600" height="60" aria-label="Activity time, page position, or shop location in the lower 20 cells"></canvas></div>
-<div class="device-bottom"><span>DOTDEW VALLEY</span><span id="pointer-info">TOUCH · DRAG · RELEASE</span></div></div>
+<div class="device-bottom">
+    <span>DOTDEW VALLEY</span>
+    <span style="display:flex; align-items:center; gap:6px;">
+        <i id="pointer-led"></i>
+        <span id="pointer-info">TOUCH · DRAG · RELEASE</span>
+    </span>
+</div></div>
 
 
 </main><aside>
 <section class="card"><div class="section-tag">CURRENT SCENE</div><div class="scene-title" id="page-text">Home</div><div class="scene-sub" id="task-progress">Choose an activity to start your day.</div><h2 style="margin-top:22px">Voice guidance <small id="tts-text" class="section-tag">Loading</small></h2><div id="caption" role="status">Select an object on the pad.</div><div class="toolbar"><button id="repeat-button">Replay</button><button id="mute-button" aria-pressed="false">Speech on</button><button id="tts-test-button">Test guide</button><button id="npc-voice-test">Test Rowan</button><button id="speech-stop">Stop speech</button></div><p id="voice-info" class="scene-sub">Checking English voices…</p><label class="setting" for="speech-volume">Speech volume <input id="speech-volume" type="range" min="0" max="1" step="0.05" value="0.85" aria-valuetext="85 percent"><span id="speech-volume-label" aria-hidden="true">85%</span></label><label class="setting">Speech rate <input id="speech-rate" type="range" min="0.8" max="1.5" step="0.1" value="1.0"><span id="rate-label">1.0×</span></label><label class="setting">Sound volume <input id="sfx-volume" type="range" min="0" max="1" step="0.1" value="0.9"><span id="volume-label">90%</span></label><div class="toolbar" style="margin-top:12px"><button id="sfx-toggle" aria-pressed="false">Sound on</button><button id="target-cues-toggle" aria-pressed="true" aria-describedby="target-cues-help">Target cues on</button></div><p id="sound-text" class="scene-sub">Task and reward sounds ready</p><p id="target-cues-help" class="scene-sub">Farm and mine targets: follow the short tone. Closer targets pulse faster.</p></section>
 <section class="card"><h2>Daily status</h2><div id="score-feedback" style="color:var(--mint);font-size:12px;min-height:22px"></div><div id="buff-text">No food effect</div><div class="progress-track"><div id="activity-fill"></div></div><div class="metrics"><div>Fertilizer<strong id="fertilizer-text">2</strong></div><div>Unlocked plots<strong id="plot-text">2</strong></div><div>Seed recovery<strong id="research-text">Level 0</strong></div><div>Time left<strong id="remaining-text">20 hours</strong></div></div></section>
 <section class="card"><h2>Objects nearby</h2><div class="scene-sub" style="margin-bottom:12px">These buttons perform the same actions as the tactile objects.</div><div id="object-list"></div></section>
-<section class="card"><h2>Physical pad and hand tracking</h2><div class="toolbar"><button id="usb-button">Connect USB pad</button><button id="ble-button">Connect Bluetooth pad</button></div><p class="scene-sub" id="hardware-status">Web simulator · USB not connected</p><label class="setting" for="tracking-url">Hand-tracking server</label><input id="tracking-url" value="ws://127.0.0.1:8765" aria-label="Hand-tracking WebSocket address" style="width:100%;padding:9px;background:#111b13;border:1px solid #41543b;color:#dcead4;border-radius:6px;margin:8px 0"><div class="toolbar"><button id="tracking-button">Connect hand tracking</button><button id="tracking-hold" aria-pressed="false" disabled>Press</button></div><p id="tracking-status" class="scene-sub">Not connected</p><p class="scene-sub" style="line-height:1.6">Hand tracking moves the pointer only. Use F4 or the press button to select objects. In farming and cooking minigames, simply move your hand.</p><a href="https://github.com/eun022/hand_drawing" target="_blank" rel="noopener noreferrer" style="color:#cbe8b8;font-size:12px">Connection tools and setup ↗</a></section><details class="card"><summary>Diagnostics and reset</summary><p>This page simulates the tactile pad. Connect a pad over USB or Bluetooth using Chrome or Edge on localhost. Start the hand-tracking server before connecting. Hold F3 to save progress to a local file. After restarting the server, press F3 to load a saved game.</p><div id="status"></div><button class="text-button" id="reset-button">New game</button></details>
+<section class="card"><h2>Physical pad and hand tracking</h2><div class="toolbar"><button id="usb-button">Connect USB pad</button><button id="ble-button">Connect Bluetooth pad</button></div><p class="scene-sub" id="hardware-status">Web simulator · USB not connected</p><label class="setting" for="tracking-url">Hand-tracking server</label><input id="tracking-url" value="ws://127.0.0.1:8765" aria-label="Hand-tracking WebSocket address" style="width:100%;padding:9px;background:#111b13;border:1px solid #41543b;color:#dcead4;border-radius:6px;margin:8px 0"><div class="toolbar"><button id="tracking-button">Connect hand tracking</button><button id="tracking-hold" aria-pressed="false" disabled>Press</button></div><p id="tracking-status" class="scene-sub">Not connected</p><p class="scene-sub" style="line-height:1.6">Hand tracking moves the pointer. Hold Shift on the keyboard to hear detailed object descriptions without taking actions. A future pointing gesture can call DotdewInput.setDetailMode(true/false). Use F4, Space, or a dedicated press button to select, even while Shift is held. Normal movement operates farming and cooking minigames.</p><a href="https://github.com/eun022/hand_drawing" target="_blank" rel="noopener noreferrer" style="color:#cbe8b8;font-size:12px">Connection tools and setup ↗</a></section><details class="card"><summary>Diagnostics and reset</summary><p>This page simulates the tactile pad. Connect a pad over USB or Bluetooth using Chrome or Edge on localhost. Start the hand-tracking server before connecting. Hold F3 to save progress to a local file. After restarting the server, press F3 to load a saved game.</p><div id="status"></div><button class="text-button" id="reset-button">New game</button></details>
 </aside></div></div><script src="/static/game-audio.js?v=single-spatial-10"></script><script src="/static/game-speech.js?v=team-speech-9"></script><script src="/static/game-keys.js?v=evaluation-click-1"></script>
 <script>
 
@@ -53,7 +70,9 @@ let logicalHeight = 40;
 let pointerX = 0;
 let pointerY = 0;
 let pointerInside = false;
-let pointerPressed = false;
+let pointerPressed = false;          // Only genuine presses/clicks (never pointing gesture).
+let detailMode = false;              // Read-only inspect mode: Shift or hand-pointing gesture.
+let lastDetailAnnouncement = null;
 let currentState = null;
 let flowerMouseInside = false;
 const gameAudio = new GameAudio({onNarration:text=>announce(text),onStatus:text=>document.getElementById("sound-text").textContent=text});
@@ -120,10 +139,13 @@ function updateStatus() {
     const cooking = currentState?.cooking || {};
     const buff = currentState?.active_buff || {};
 
-    document.getElementById("pointer-info").textContent = `${pointerPressed ? "PRESS" : "POINTER"} ${pointerX.toFixed(0)} · ${pointerY.toFixed(0)}`;
+    const pointerModeLabel = pointerPressed ? "PRESS" : detailMode ? "DETAIL" : "POINTER";
+    document.getElementById("pointer-info").textContent = `${pointerModeLabel} ${pointerX.toFixed(0)} · ${pointerY.toFixed(0)}`;
+    document.getElementById("pointer-led")?.classList.toggle("active", pointerPressed || detailMode);
     statusElement.textContent =
         "Pointer: " + pointerX.toFixed(2) + ", " + pointerY.toFixed(2)
         + "\nPressed: " + pointerPressed
+        + "\nDetail mode: " + detailMode
         + "\nHover Object: " + hover
         + "\nDrag Tool: " + dragTool
         + "\nField Care: " + (care.mode || "None") + " " + (care.collected_targets ?? 0) + " / " + (care.total_targets ?? 0)
@@ -133,6 +155,7 @@ function updateStatus() {
         + "\nPaused: " + paused
         + "\nTime: " + usedTime + " / " + totalTime
         + "\nNight: " + dayEnded;
+    
 }
 
 function drawDotMatrix(targetCanvas, targetCtx, dots, width, height) {
@@ -160,6 +183,72 @@ function drawDotMatrix(targetCanvas, targetCtx, dots, width, height) {
             targetCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
             targetCtx.fill();
         }
+    }
+}
+
+// A read-only description is independent of the engine's pressed state.
+// Engine sends the same geometry it uses for normal object hit-testing.
+function inspectObjectContains(obj, x, y) {
+    if (obj.type === "mine_rock") {
+        const left = obj.x - Math.floor(obj.width / 2);
+        const top = obj.y - Math.floor(obj.height / 2);
+        return x >= left && x < left + obj.width && y >= top && y < top + obj.height;
+    }
+    if (obj.type === "route") {
+        const dx = obj.x2 - obj.x1, dy = obj.y2 - obj.y1;
+        const denom = dx*dx + dy*dy;
+        const t = denom ? Math.max(0, Math.min(1, ((x-obj.x1)*dx+(y-obj.y1)*dy)/denom)) : 0;
+        return Math.hypot(x-(obj.x1+t*dx), y-(obj.y1+t*dy)) <= (obj.hit_radius ?? 3);
+    }
+    const halfWidth = (obj.hit_width ?? obj.width ?? 8) / 2;
+    const halfHeight = (obj.hit_height ?? obj.height ?? 8) / 2;
+    return Math.abs(x-obj.x) <= halfWidth && Math.abs(y-obj.y) <= halfHeight;
+}
+function findInspectObject(state, x, y) {
+    const objects = state?.inspect_objects || [];
+    const priorities = ["care_target","harvest_crop","care_button","growth_gauge","plot","seed","ingredient","recipe","shop_item","research","node","plot_detail_field"];
+    for (const type of priorities) {
+        const found = objects.find(o=>o.type === type && inspectObjectContains(o,x,y));
+        if (found) return found;
+    }
+    return objects.find(o=>o.type !== "route" && inspectObjectContains(o,x,y))
+        || objects.find(o=>o.type === "route" && inspectObjectContains(o,x,y)) || null;
+}
+function paintPointerCursor() {
+    if (!currentState || !(pointerInside || document.activeElement === canvas)) return;
+    const pitchX = canvas.width / currentState.width;
+    const pitchY = canvas.height / currentState.height;
+    ctx.strokeStyle = detailMode ? "#f3dc91" : "#a6d983";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse((pointerX+.5)*pitchX,(pointerY+.5)*pitchY,pitchX*.85,pitchY*.85,0,0,Math.PI*2);
+    ctx.stroke();
+}
+function inspectPointer() {
+    if (!detailMode || !currentState || currentState.sleeping || currentState.paused) return;
+    const obj = findInspectObject(currentState,pointerX,pointerY);
+    const description = obj?.description || (!obj ? (currentState.location_description || currentState.page_name) : obj.label);
+    const key = `${currentState.page}|${obj?.id ?? "background"}|${description}`;
+    if (lastDetailAnnouncement !== key && description) {
+        lastDetailAnnouncement = key;
+        announce(description,"hover");
+    }
+    // The pointer is drawn locally because inspect mode never sends game movement.
+    drawDotMatrix(canvas,ctx,currentState.dots,currentState.width,currentState.height);
+    paintPointerCursor();
+    updateStatus();
+}
+function setDetailMode(enabled) {
+    const next = Boolean(enabled);
+    if (detailMode === next) return;
+    detailMode = next;
+    lastDetailAnnouncement = null;
+    updateStatus();
+    if (detailMode) {
+        if (pointerInside || document.activeElement === canvas) inspectPointer();
+    } else if (currentState) {
+        drawDotMatrix(canvas,ctx,currentState.dots,currentState.width,currentState.height);
+        paintPointerCursor();
     }
 }
 
@@ -252,13 +341,10 @@ function drawState(state) {
             list.append(button);
         });
     }
-    if (pointerInside || document.activeElement === canvas) {
-        const pitch = canvas.width / state.width;
-        ctx.strokeStyle = "#a6d983"; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc((pointerX+.5)*pitch, (pointerY+.5)*pitch, pitch*.85, 0, Math.PI*2); ctx.stroke();
-    }
+    paintPointerCursor();
     window.dispatchEvent(new CustomEvent("dotdew-state", {detail:state}));
     updateStatus();
+    if (detailMode && (pointerInside || document.activeElement === canvas)) inspectPointer();
 }
 
 async function handleResponse(response, audioToken) {
@@ -331,9 +417,10 @@ function queuePointer(endpoint, x, y) {
 }
 
 function sendMoveIfPossible(force=false) {
-    if (!pointerInside) {
-        return;
-    }
+    if (!pointerInside) return;
+    // Inspection is exclusively client-side. Never call the server's game-moving
+    // endpoint: some minigames intentionally respond to movement without a click.
+    if (detailMode && !pointerPressed) { inspectPointer(); return; }
 
     const now = performance.now();
     if (!force && now - lastPointerSendAt < 65) {
@@ -351,7 +438,7 @@ function sendMoveIfPossible(force=false) {
 function sendCommand(command) {
     // TEMP_EVALUATION_CLICK: use the latest local tracking position, not a
     // potentially delayed server hover. F4 key-up never clicks a second time.
-    if (["click", "pause", "f4"].includes(String(command).toLowerCase())) {
+    if (["click", "pause", "f4", "space", "spacebar", " "].includes(String(command).toLowerCase())) {
         unlockSpeech();
         const x = pointerX, y = pointerY;
         pointerPressed = false;
@@ -389,7 +476,7 @@ async function loadState() {
     } catch(error) { connection(false,"Connection error · Check the server"); }
 }
 canvas.addEventListener("pointerenter", event=>{flowerMouseInside=true;pointerInside=true; eventToLogical(event);sendMoveIfPossible(true)});
-canvas.addEventListener("pointerleave", ()=>{flowerMouseInside=false;pointerInside=false; clearTimeout(hoverTimer)});
+canvas.addEventListener("pointerleave", ()=>{flowerMouseInside=false;pointerInside=false;lastDetailAnnouncement=null;clearTimeout(hoverTimer)});
 canvas.addEventListener("pointermove", event=>{
     if (!event.isPrimary) return;
     flowerMouseInside=true;
@@ -410,22 +497,49 @@ function releasePointer(event) {
 }
 canvas.addEventListener("pointerup",releasePointer);
 canvas.addEventListener("pointercancel",()=>{pointerPressed=false;sendCommand("release")});
-canvas.addEventListener("keydown",event=>{
+// Keyboard Shift mirrors the future hand-pointing gesture. It never presses the pad.
+window.addEventListener("keydown", event => {
+    if (event.key !== "Shift" || event.repeat) return;
+    if (["INPUT","TEXTAREA","SELECT"].includes(event.target.tagName) || event.target.isContentEditable) return;
+    event.preventDefault(); unlockSpeech();
+    setDetailMode(true);
+});
+window.addEventListener("keyup", event => {
+    if (event.key !== "Shift") return;
+    // Always clear the gesture even if focus moved to a form field meanwhile.
+    if (!["INPUT","TEXTAREA","SELECT"].includes(event.target.tagName) && !event.target.isContentEditable) event.preventDefault();
+    setDetailMode(false);
+});
+window.addEventListener("blur", () => setDetailMode(false));
+document.addEventListener("visibilitychange", () => {if(document.hidden)setDetailMode(false);});
+
+canvas.addEventListener("keydown", event => {
     const moves = {a:[-1,0],d:[1,0],w:[0,-1],s:[0,1],A:[-1,0],D:[1,0],W:[0,-1],S:[0,1]};
     if (moves[event.key]) {
-        event.preventDefault(); const [dx,dy]=moves[event.key]; const step=event.shiftKey?3:1;
-        pointerX=Math.max(0,Math.min(logicalWidth-1,pointerX+dx*step));
-        pointerY=Math.max(0,Math.min(logicalHeight-1,pointerY+dy*step));
-        queuePointer(pointerPressed?"/api/pointer/drag":"/api/pointer/move",pointerX,pointerY);
+        event.preventDefault();
+        const [dx,dy] = moves[event.key];
+        // Shift is a description modifier now, not an acceleration/press key.
+        pointerX = Math.max(0,Math.min(logicalWidth-1,pointerX+dx));
+        pointerY = Math.max(0,Math.min(logicalHeight-1,pointerY+dy));
+        if (detailMode && !pointerPressed) inspectPointer();
+        else queuePointer(pointerPressed ? "/api/pointer/drag" : "/api/pointer/move",pointerX,pointerY);
     } else if (event.key === "Enter" && !event.repeat) {
         event.preventDefault(); unlockSpeech();
-        queuePointer("/api/pointer/down",pointerX,pointerY);queuePointer("/api/pointer/up",pointerX,pointerY);
-    } else if (event.code === "Space" && !event.repeat) {
-        event.preventDefault();unlockSpeech();pointerPressed=!pointerPressed;
-        queuePointer(pointerPressed?"/api/pointer/down":"/api/pointer/up",pointerX,pointerY);
+        queuePointer("/api/pointer/down",pointerX,pointerY);
+        queuePointer("/api/pointer/up",pointerX,pointerY);
     }
 });
-
+// Space acts as a one-shot left click (the same input path as F4).
+// Shift is allowed: holding the detail gesture never disables explicit clicks.
+// Native keyboard behavior is preserved in inputs and on focused UI controls.
+window.addEventListener("keydown", event => {
+    if (event.code !== "Space" && event.key !== " " && event.key !== "Spacebar") return;
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+    const target = event.target;
+    if (target?.isContentEditable || target?.closest?.('input, textarea, select, button, a, summary, [role="button"], [role="textbox"]')) return;
+    event.preventDefault(); // No page scroll and no implicit button activation.
+    if (!event.repeat) sendCommand("click");
+});
 const gameKeys = new GameKeys(command => {
     if (command === "save") document.getElementById("caption").textContent = "Saving game…";
     return sendCommand(command);
@@ -572,7 +686,10 @@ window.DotdewInput = {
         unlockSpeech();gameKeys.down(key);
     },
     keyUp:key=>gameKeys.up(key),
-    move:(x,y)=>{flowerMouseInside=false;if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>=logicalWidth||y>=logicalHeight)return;pointerX=x;pointerY=y;pointerInside=true;return queuePointer(pointerPressed?"/api/pointer/drag":"/api/pointer/move",x,y)},
+    // Hand tracker: gesture down => setDetailMode(true), release => false.
+    // This is NOT the click button and NEVER invokes /api/pointer/down.
+    setDetailMode:(enabled)=>setDetailMode(enabled),
+    move:(x,y)=>{flowerMouseInside=false;if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>=logicalWidth||y>=logicalHeight)return;pointerX=x;pointerY=y;pointerInside=true;if(detailMode && !pointerPressed){inspectPointer();return;}return queuePointer(pointerPressed?"/api/pointer/drag":"/api/pointer/move",x,y)},
     press:()=>{unlockSpeech();pointerPressed=true;return queuePointer("/api/pointer/down",pointerX,pointerY)},
     release:()=>{pointerPressed=false;return queuePointer("/api/pointer/up",pointerX,pointerY)}
 };
@@ -610,7 +727,7 @@ function refreshDelayedVisuals() {
 
 // A stationary mouse is still contact. Camera samples must keep arriving themselves.
 setInterval(()=>{
- if(flowerMouseInside && pointerInside && currentState?.page==='flower_detail' && currentState.flowers?.watering && !currentState.paused && !document.hidden && document.hasFocus())
+ if(!detailMode && flowerMouseInside && pointerInside && currentState?.page==='flower_detail' && currentState.flowers?.watering && !currentState.paused && !document.hidden && document.hasFocus())
   queuePointer('/api/pointer/move',pointerX,pointerY);
 },100);
 

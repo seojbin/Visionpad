@@ -114,6 +114,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                 elif obj['type'] == 'plot_detail_field':
                     obj.update(x=30, y=30, hit_width=44, hit_height=18)
         return objects
+        
     def reset(self):
         self.reset_village()
         self._menu_stack = []
@@ -198,6 +199,8 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         }
 
         self.hover_object_id = None
+        self.last_hover_state = (None, False)
+        self.location_detail_spoken = False
         self.last_pointer = (None, None)
         self.pointer_pressed = False
 
@@ -222,6 +225,8 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
 
     def clear_hover(self):
         self.hover_object_id = None
+        self.last_hover_state = (None, False)
+        self.location_detail_spoken = False
 
     def clear_care(self, keep_detail=False):
         if self.pending_visual_completion and self.pending_visual_completion[1] == "care":
@@ -253,7 +258,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.cooking_stage_index = 0
         self.cooking_last_progress_at = None
         self.cooking_resume_marker = False
-
 
     def has_final_consonant(self, text):
         if not text:
@@ -300,7 +304,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return plot_id
 
     def get_action_cost(self, action_name):
-        # Movement never consumes time, even with an older configuration.
         if action_name == "travel":
             return 0
         defaults = {"plant": 2, "water": 2, "fertilize": 2, "harvest": 3,
@@ -350,7 +353,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         if self.day_ended:
             return {"cost": 0, "night": True}
 
-        # Buff duration follows elapsed game hours. Split an action at expiry.
         multiplier = self.buff_multiplier_for("time_slow")
         if 0 < multiplier < 1:
             remaining = float(self.active_buff["remaining_ticks"])
@@ -460,7 +462,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         if panel["mode"] == "blank":
             return
         if panel["mode"] == "pages":
-            # Integer boundaries partition all columns without overlap or gaps.
             start = (panel["page"] - 1) * self.timepad.width // panel["pages"]
             end = panel["page"] * self.timepad.width // panel["pages"]
             for x in range(start, max(start + 1, end)):
@@ -468,7 +469,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                     self.timepad.set_dot(x, y)
             return
         if panel["mode"] == "braille":
-            # Uncontracted English, six-dot letters within the eight-dot cells.
             letters = {'s': (2,3,4), 'h': (1,2,5), 'o': (1,3,5),
                        'p': (1,2,3,4), 'b': (1,2), 'u': (1,3,6),
                        'y': (1,3,4,5,6), 'e': (1,5), 'l': (1,2,3)}
@@ -555,7 +555,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                     obj.update(direction="right", x=self.dotpad.width-4, y=5)
                 w, h = (5, 9) if obj.get("direction") in ("left", "right") else (9, 5)
                 obj["hit_width"], obj["hit_height"] = w, h
-        # 가로 메인 축(농장-집-마을)만 좌우 방향 자동 정렬, 광산(상)/낚시터(하)는 유지
         horizontal_route = ("farm", "home", "town")
         if self.current_page in horizontal_route:
             origin = horizontal_route.index(self.current_page)
@@ -594,18 +593,15 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
     def flower_scene_bounds(self):
         stage = self.houseplant.get('stage', 'empty')
         bounds = {
-            # (중심 x, 중심 y, width, height, hit_width, hit_height)
-            'empty':    (12, 36, 7, 3, 9, 4),    # 화분만 존재 (y: 35~37)
-            'sprout':   (12, 34, 7, 6, 9, 7),    # 화분 + 떡잎 새싹 (y: 32~37)
-            'withered': (12, 34, 9, 6, 11, 7),   # 화분 + 처진 줄기 (y: 32~37)
-            'stem':     (12, 33, 9, 9, 11, 10),  # 화분 + 덩굴과 잎 (y: 29~37)
-            'flower':   (12, 31, 11, 12, 13, 12) # 화분 + 만개한 나팔꽃 (y: 26~37, 침대와 2칸 이격)
+            'empty':    (12, 36, 7, 3, 9, 4),
+            'sprout':   (12, 34, 7, 6, 9, 7),
+            'withered': (12, 34, 9, 6, 11, 7),
+            'stem':     (12, 33, 9, 9, 11, 10),
+            'flower':   (12, 31, 11, 12, 13, 12)
         }
         return bounds.get(stage, bounds['empty'])
 
     def home_spatial_objects(self):
-        """집 내부 확장 레이아웃 및 나팔꽃 성장 연동 동적 히트박스"""
-        # 침대를 y=19로 배치해 하단(y=23) 아래쪽(y=24~36)에 화분이 자랄 세로 공간을 넉넉히 확보
         bed_item = dict(id='home_scene_bed', type='home_hitbox', skip_grid=True,
                         x=13, y=19, width=9, height=9, hit_width=11, hit_height=10,
                         label='Bed', tts='Bed. Sleep until morning.', action='rest')
@@ -634,11 +630,9 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
 
     def draw_home_scene(self):
         pad = self.dotpad
-        # 1. 2칸 두께 상단 경계선 (y=12, 13)
         pad.draw_line(0, 12, pad.width - 1, 12)
         pad.draw_line(0, 13, pad.width - 1, 13)
 
-        # 2. 집 외벽 (x=4, x=55, 하단 y=39) 및 양옆 출입문 문틀 (y: 23~29)
         pad.draw_line(4, 39, 55, 39)
         for y in range(13, 40):
             if not (24 <= y <= 28):
@@ -651,7 +645,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             pad.set_dot(dx, 23)
             pad.set_dot(dx, 29)
 
-        # 3. 양옆 문으로 나가는 소형 화살표 (3x5 크기)
         self.draw_icon_pattern(1, 26, (
             '001',
             '011',
@@ -678,7 +671,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                     elif ch == '0':
                         pad.set_dot(px, py, 0)
 
-        # 4. 좌상단 침대 (x=13, y=19, 범위 y: 15~23): 하단 y=24부터 화분이 자랄 공간 확보
         draw_solid_pattern(13, 19, (
             '111111111',
             '110000011',
@@ -694,7 +686,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         if self.day_ended:
             return
 
-        # 5. 중앙 연구 작업대 (x=30, y=19, 범위 y: 15~22)
         draw_solid_pattern(30, 19, (
             '..1111111..',
             '11111011111',
@@ -706,7 +697,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             '11111111111',
         ))
 
-        # 6. 우상단 주방 스토브 (x=46, y=19, 범위 y: 15~22)
         draw_solid_pattern(46, 19, (
             '....11111..',
             '...1110111.',
@@ -717,21 +707,17 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             '11011100011',
             '11111111111',
         ))
-        # 7. 집 내부 좌하단 나팔꽃 화분
         stage = self.houseplant.get('stage', 'empty')
         pot_cx = 12
 
-        # (a) 고정 크기 화분 본체 (x: 9~15, y: 35~37)
         for x in range(pot_cx - 3, pot_cx + 4):
-            pad.set_dot(x, 35, 1)  # 화분 입구 림(Rim)
+            pad.set_dot(x, 35, 1)
         for x in range(pot_cx - 2, pot_cx + 3):
-            pad.set_dot(x, 36, 1)  # 화분 몸통
-            pad.set_dot(x, 37, 1)  # 화분 바닥
-        pad.set_dot(pot_cx, 36, 0) # 화분 내부 음각 포인트
+            pad.set_dot(x, 36, 1)
+            pad.set_dot(x, 37, 1)
+        pad.set_dot(pot_cx, 36, 0)
 
-        # (b) 성장 단계별 화분 위쪽(y <= 34) 식물 줄기·잎·꽃 렌더링 (최대 상단 y=26)
         if stage == 'sprout':
-            # 떡잎 새싹 (y: 32~34)
             pad.set_dot(pot_cx, 34, 1)
             pad.set_dot(pot_cx, 33, 1)
             pad.set_dot(pot_cx - 1, 32, 1)
@@ -740,7 +726,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             pad.set_dot(pot_cx + 2, 32, 1)
 
         elif stage == 'withered':
-            # 옆으로 처진 줄기 (y: 32~34)
             pad.set_dot(pot_cx, 34, 1)
             pad.set_dot(pot_cx + 1, 33, 1)
             pad.set_dot(pot_cx + 2, 33, 1)
@@ -749,19 +734,15 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             pad.set_dot(pot_cx - 2, 34, 1)
 
         elif stage == 'stem':
-            # S자 덩굴 줄기 + 좌우 잎사귀 (y: 29~34, 침대와 5칸 이격)
             for px, py in [
                 (pot_cx, 34), (pot_cx, 33), (pot_cx - 1, 32),
                 (pot_cx, 31), (pot_cx + 1, 30), (pot_cx, 29),
-                # 왼쪽 아래 잎사귀
                 (pot_cx - 2, 32), (pot_cx - 3, 32), (pot_cx - 3, 31),
-                # 오른쪽 중간 잎사귀
                 (pot_cx + 2, 30), (pot_cx + 3, 30), (pot_cx + 3, 29),
             ]:
                 pad.set_dot(px, py, 1)
 
         elif stage == 'flower':
-            # 다 자란 상태: 줄기(y: 29~34) + 상단 나팔꽃 송이(y: 26~28) -> 침대(y=23)와 정확히 2칸(y=24, 25) 떨어짐
             for px, py in [
                 (pot_cx, 34), (pot_cx, 33), (pot_cx - 1, 32),
                 (pot_cx, 31), (pot_cx + 1, 30), (pot_cx, 29),
@@ -770,16 +751,15 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             ]:
                 pad.set_dot(px, py, 1)
 
-            # 상단 만개한 나팔꽃 송이 (중심 y=27 -> y: 26~28 차지)
             draw_solid_pattern(pot_cx, 27, (
                 '.11111.',
                 '1100011',
                 '.11111.',
             ))
+            
     def get_farm_objects(self):
         farm = self.config.get("farm", {})
         objects = []
-        # 가로 3개 × 세로 2개 대형 밭 배치 좌표 (60x40 화면 최적화)
         grid_positions = [
             (11, 10), (30, 10), (49, 10),
             (11, 27), (30, 27), (49, 27),
@@ -818,12 +798,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return objects
 
     def draw_plot(self, obj):
-        """
-        3x2 대형 밭(16x14) 렌더링:
-        - 외곽 1줄 테두리
-        - 빈 밭(Empty): 고랑이 파인 흙(Soil) 점선 텍스처
-        - 작물 심김: 작물 종류(tomato/carrot/potato) 및 성장 단계별 디테일 표시
-        """
         pad = self.dotpad
         cx, cy = round(obj["x"]), round(obj["y"])
         rx, ry = int(obj.get("width", 16)) // 2 - 1, int(obj.get("height", 14)) // 2 - 1
@@ -832,17 +806,14 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         state = self.farm_plots.get(obj["id"], self.new_plot_state())
         seed_id = state.get("seed_id")
 
-        # 1. 아무것도 없을 때: 밭고랑(흙) 텍스처 표시
         if not seed_id:
             for dy in (-3, 0, 3):
                 for dx in range(-rx + 2, rx - 1, 2):
                     pad.set_dot(cx + dx, cy + dy)
             return
 
-        # 물 준 상태면 밭 바닥 줄(cy + ry - 1)을 실선으로 채워 촉각 피드백 제공
         if state.get("watered"):
             pad.draw_line(cx - rx + 1, cy + ry - 1, cx + rx - 1, cy + ry - 1)
-        # 비료 준 상태면 상단 양쪽 모서리에 점 표시
         if state.get("fertilized"):
             pad.set_dot(cx - rx + 2, cy - ry + 2)
             pad.set_dot(cx + rx - 2, cy - ry + 2)
@@ -850,10 +821,8 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         growth = int(state.get("growth", 0))
         mature = bool(state.get("mature"))
 
-        # 2. 다 자란 상태(Mature): 작물 종류별 꽉 찬 고유 실루엣
         if mature:
             mature_patterns = {
-                # 토마토: 꼭지가 달린 둥글고 풍성한 열매
                 "tomato": (
                     "001010100",
                     "011111110",
@@ -863,7 +832,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                     "111111111",
                     "011111110",
                 ),
-                # 당근: 무성한 잎사귀와 아래로 뾰족한 당근 뿌리
                 "carrot": (
                     "101010101",
                     "011111110",
@@ -873,7 +841,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                     "000111000",
                     "000010000",
                 ),
-                # 감자: 땅속에 알알이 맺힌 굵은 감자 덩이줄기들
                 "potato": (
                     "011100110",
                     "111111111",
@@ -887,9 +854,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             self.draw_icon_pattern(cx, cy, mature_patterns.get(seed_id, mature_patterns["tomato"]))
             return
 
-        # 3. 자라는 중(Sprout / Growing): 작물별 새싹·줄기 형태 구분
         if growth <= 0:
-            # 갓 심은 씨앗 + 흙 고랑
             sprout_patterns = {
                 "tomato": ("00100", "01110", "00100"),
                 "carrot": ("10101", "01110", "00100"),
@@ -897,7 +862,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             }
             self.draw_icon_pattern(cx, cy + 1, sprout_patterns.get(seed_id, ("010", "111", "010")))
         else:
-            # 중간 성장 단계: 줄기와 잎이 뻗어나가는 모습
             mid_patterns = {
                 "tomato": (
                     "0101010",
@@ -1057,7 +1021,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             })
         return objects
 
-
     def get_town_objects(self):
         base = [dict(obj) for obj in self.config.get("town", {}).get("objects", [])]
         return base + [self.rowan_object()] + self.town_nav_objects() + self.town_spatial_objects()
@@ -1072,7 +1035,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                             "hits": rock.get("hits", 0),
                             "label": "Rock", "tts": "Rock. Tap to break." if self.resources["pickaxe"] else "Pickaxe required.",
                             "action": f"mine_hit:{rock['id']}"})
-        # 광산에서 좌/우 화살표 어느 쪽을 눌러도 마을(town)로 돌아가도록 양쪽 모두 배치
         exit_left = self.back_arrow("mine_exit_left", "Village", "travel:town")
         exit_left.update(x=3, y=self.dotpad.height-5, direction="left", size=3, hit_width=7, hit_height=9)
         exit_right = self.back_arrow("mine_exit_right", "Village", "travel:town")
@@ -1173,7 +1135,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
 
     @staticmethod
     def compress_axis(intervals, margin=2, max_gap=8):
-        """Preserve occupied spans; shorten only empty gaps between them."""
         merged = []
         for low, high in sorted(intervals):
             if merged and low <= merged[-1][1]:
@@ -1201,7 +1162,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return transform
 
     def spatial_objects(self, objects):
-        # Scene furniture and exits retain their original relative positions.
         copied = [dict(o) for o in objects]
         if not copied: return copied
         def dims(o):
@@ -1219,7 +1179,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         cfg = self.config.get("minimap", {})
         locations = [dict(o) for o in cfg.get("locations", [])]
         if not locations: return []
-        # Original nodes are seven-dot outlines. Do not scale their shapes.
         tx = self.compress_axis([(o["x"]-3,o["x"]+3) for o in locations])
         ty = self.compress_axis([(o["y"]-3,o["y"]+3) for o in locations])
         objects = []
@@ -1235,7 +1194,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             location = obj["location"]
             label = self.get_page_name(location)
             here = location == self.current_location
-            # Directions come from original coordinates, before gap compression.
             direction = self.get_relative_direction(current, source) if current and not here else ""
             obj.update(type="node", x=round(tx(source["x"])), y=round(ty(source["y"])),
                        width=7, height=7, hit_width=7, hit_height=7, current=here,
@@ -1403,47 +1361,29 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return base + self.shop_choice_spatial_objects()
 
     def shop_choice_spatial_objects(self):
-        """상점 입장(shop_choice) 하단 디테일뷰의 클릭 히트박스 (상단 버튼과 동일 기능 수행)"""
         return [
-            # 좌측 벽걸이 달력 히트박스
             dict(id='shop_scene_calendar', type='shop_hitbox', skip_grid=True,
                  x=11, y=20, width=9, height=9, hit_width=11, hit_height=11,
                  label='Calendar', tts='Calendar. Weekly offers.', action='open_calendar'),
-            # 중앙 상점 주인(Rowan) 히트박스 (클릭 시 오늘의 요일 혜택 안내)
             dict(id='shop_scene_keeper', type='shop_hitbox', skip_grid=True,
                  x=30, y=19, width=9, height=8, hit_width=11, hit_height=9,
                  label='Shopkeeper', tts='Shopkeeper. Select Sell, Buy, or Calendar.', action='open_calendar'),
-            # 카운터 좌측 판매(Sell) 코너 히트박스
             dict(id='shop_scene_sell', type='shop_hitbox', skip_grid=True,
                  x=20, y=30, width=13, height=9, hit_width=15, hit_height=11,
                  label='Sell counter', tts='Sell.', action='shop_mode:sell'),
-            # 카운터 우측 구매(Buy) 코너 히트박스
             dict(id='shop_scene_buy', type='shop_hitbox', skip_grid=True,
                  x=40, y=30, width=13, height=9, hit_width=15, hit_height=11,
                  label='Buy counter', tts='Buy.', action='shop_mode:buy'),
-            # 좌측 마을 복귀 문 히트박스
             dict(id='shop_scene_exit', type='shop_hitbox', skip_grid=True,
                  x=2, y=26, width=5, height=7, hit_width=7, hit_height=9,
                  label='Back to village', tts='Back to village.', action='return_scene'),
         ]
 
     def draw_shop_choice_scene(self):
-        """
-        상점 입장(shop_choice) 하단 디테일뷰 렌더링:
-        - y=12, 13: 2칸 두께 경계선
-        - 좌측 벽걸이 달력(x=11, y=20): 양각 채움 + 요일 칸 음각
-        - 중앙 상점 주인(x=30, y=19): 카운터 뒤에 서 있는 상점 사람 실루엣
-        - 하단 대형 상점 카운터(x: 13~47, y: 25~35):
-          * 좌측(x=20, y=30): 판매(Sell) 상자/S 심볼 음각
-          * 우측(x=40, y=30): 구매(Buy) 진열대/B 심볼 음각
-        - 좌측 출입문(x=4, y: 24~28) 및 마을 복귀 소형 화살표 ◀ (x=1, y=26)
-        """
         pad = self.dotpad
-        # 1. 2칸 두께 경계선 (y=12, 13)
         pad.draw_line(0, 12, pad.width - 1, 12)
         pad.draw_line(0, 13, pad.width - 1, 13)
 
-        # 2. 상점 실내 외벽 (x=4, x=55, y=39) 및 좌측 출입문
         pad.draw_line(4, 39, 55, 39)
         for y in range(13, 40):
             if not (24 <= y <= 28):
@@ -1452,7 +1392,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         for dx in (3, 4, 5):
             pad.set_dot(dx, 23)
             pad.set_dot(dx, 29)
-        # 좌측 문 밖 소형 화살표 ◀ (x=1, y=26)
         self.draw_icon_pattern(1, 26, (
             '001',
             '011',
@@ -1472,7 +1411,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                     elif ch == '0':
                         pad.set_dot(px, py, 0)
 
-        # 3. 좌측 벽걸이 달력 (x=11, y=20): 고리가 달린 달력 + 날짜 격자 음각(0)
         draw_solid_pattern(11, 20, (
             '.1100011.',
             '111111111',
@@ -1484,7 +1422,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             '111111111',
         ))
 
-        # 4. 카운터 뒤 중앙 상점 주인 (x=30, y=19): 모자/머리와 어깨가 뚜렷한 사람 형태
         draw_solid_pattern(30, 19, (
             '..11111..',
             '.1111111.',
@@ -1496,17 +1433,14 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             '111111111',
         ))
 
-        # 5. 상점 카운터 테이블 (x: 13~47, y: 25~35) - 좌측 SELL / 우측 BUY 구분
         for y in range(25, 36):
             for x in range(13, 48):
                 pad.set_dot(x, y, 1)
-        # 카운터 상판 아래 음각 구분선 (y=26) 및 중앙 세로 분할선 (x=30)
         for x in range(14, 47):
             pad.set_dot(x, 26, 0)
         for y in range(26, 35):
             pad.set_dot(30, y, 0)
 
-        # 카운터 좌측: 판매(SELL) 구역 음각 디테일 (동전/화살표 상자 모양, x=21, y=30)
         draw_solid_pattern(21, 30, (
             '11000011',
             '10111101',
@@ -1516,7 +1450,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             '11000111',
         ))
 
-        # 카운터 우측: 구매(BUY) 구역 음각 디테일 (물품 선반/바구니 모양, x=39, y=30)
         draw_solid_pattern(39, 30, (
             '10000111',
             '10110011',
@@ -1670,8 +1603,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.draw_time_bar()
 
     def draw_triangle(self, x, y, direction, size=2):
-        # A 45-degree outline avoids shallow, syringe-like diagonal steps.
-        # Right/left: 5 x 9 dots. Up/down: the same pattern rotated, 9 x 5.
         points = {(0,row) for row in range(9)}
         points.update((4-abs(row-4),row) for row in range(9))
         if direction == "left": points={(4-col,row) for col,row in points}
@@ -1715,7 +1646,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.icons.draw(obj)
 
     def draw_crop_symbol(self, x, y, seed_id):
-        # Distinct compact silhouettes: round fruit, tapered root, paired tubers.
         patterns = {
             "tomato": ["00100", "01010", "10001", "10001", "01110"],
             "carrot": ["10101", "01110", "01010", "00100", "00100"],
@@ -1846,7 +1776,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             if time.monotonic() >= self.sleep_until:
                 return self.finish_sleep()
             return self.response()
-        # Browser polling keeps physical output current even without movement.
         if not self.paused and self.pending_visual_completion:
             deadline, kind = self.pending_visual_completion
             if time.monotonic() >= deadline:
@@ -1865,8 +1794,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             self.render()
 
     def draw_cooking_path(self):
-        # Progress is the index of the next checkpoint to visit.
-        # Render only unvisited samples; scoring still uses the full path.
         samples = self.cooking_path_samples
         if not samples:
             return
@@ -1937,38 +1864,74 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             if obj.get("type") == "plot" and self.object_contains(obj, x, y):
                 return obj
         return None
+        
+    def get_location_detail(self):
+        loc = self.current_page
+        if loc == "mine":
+            return "Mine. Tap rocks to break them." if self.resources.get("pickaxe") else "Mine. Buy a pickaxe to break rocks."
+        elif loc == "fishing":
+            return "Fishing lake. Follow the water sound. Tap to fish." if self.resources.get("fishing_rod") else "Fishing lake. Buy a fishing rod to catch fish."
+        elif loc == "home":
+            return "Home. Bed, Research, Kitchen, and Flower pot."
+        elif loc == "farm":
+            return "Farm. Choose a plot to manage your crops."
+        elif loc == "town":
+            return "Village. Shop and Rowan."
+        elif loc == "inventory":
+            return "Inventory. Select an item to use."
+        elif loc == "shop_choice":
+            return "Shop. Sell, Buy, Calendar, or Ask Rowan for advice."
+        elif loc == "plot_detail":
+            return "Plot details. Plant, water, or fertilize."
+        elif loc == "seed_select":
+            return "Seeds. Choose seeds to plant."
+        elif loc == "recipe_select":
+            return "Recipes. Choose a recipe to cook."
+        elif loc == "ingredient_select":
+            return "Ingredients. Select all ingredients to start cooking."
+        elif loc == "cooking":
+            return "Cooking. Start at the filled square and follow the line."
+        return f"{self.get_page_name(loc)}."
 
-    def get_object_tts(self, obj):
+    def get_object_tts(self, obj, detail=False):
         kind, label = obj.get("type"), obj.get("label", "")
-        if kind == "plot":
-            return self.plot_status_text(obj["id"])
-        if kind == "plot_detail_field":
-            return self.plot_status_text(self.detail_plot_id)
-        if kind == "arrow":
-            return label
-        if kind == "bed":
-            return "Bed. Sleep until morning."
-        if kind == "chest":
-            return "Research. Choose an upgrade."
-        if kind == "stove":
-            count = sum(self.can_craft_recipe(r) for r in self.config.get("recipes", {}))
-            return f"Kitchen. Available recipes: {count} "
-        if kind == "shop_npc":
-            return "Shop. Buy or sell."
-        if kind == "care_button" and obj.get("id", "").startswith("flower_"):
-            return obj.get("tts", label)
-        if kind == "care_button":
-            mode = obj.get("care_kind")
-            state = self.farm_plots.get(self.detail_plot_id, {})
-            if mode == "water":
-                return "Watered" if state.get("watered") else f"Water. Move."
-            if mode == "fertilizer":
-                count = self.resources.get("fertilizer", 0)
-                if state.get("fertilized"):
-                    return "Fertilized"
-                return f"Fertilizer {count}. Water first. Growth bonus: {self.config.get('fertilizer', {}).get('growth_day_bonus', 1)} days." if count else "No fertilizer. Buy at the shop."
-            return label
-        return obj.get("tts") or label
+        original_tts = obj.get("tts") or label
+        
+        if detail:
+            return original_tts
+
+        short_tts = label
+        
+        if kind in ("plot", "plot_detail_field"):
+            state = self.farm_plots.get(self.detail_plot_id if kind == "plot_detail_field" else obj.get("id"))
+            if state and state.get("seed_id"):
+                seed = self.get_seed_label(state["seed_id"])
+                short_tts = f"{label}. {seed}."
+            else:
+                short_tts = f"{label}. Empty."
+                
+        elif kind == "shop_item":
+            parts = str(original_tts).split('.')
+            short_tts = parts[0] + "." if parts else label
+            
+        elif kind in ("resource", "ingredient", "seed", "crop", "food", "fish"):
+            count = obj.get("count", "")
+            if count != "":
+                short_tts = f"{label} {count}."
+            else:
+                short_tts = label
+                
+        elif kind == "mine_rock":
+            short_tts = "Rock."
+            
+        elif kind in ("care_button", "recipe", "arrow"):
+            short_tts = f"{label}."
+            
+        else:
+            parts = str(original_tts).split('. ')
+            short_tts = parts[0] + "." if parts else original_tts
+            
+        return short_tts
 
     def get_hover_sfx(self, obj):
         if obj.get("hover_sfx"):
@@ -1987,7 +1950,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return mapping.get(obj.get("type"), "hover_object")
 
     def move_minigame(self, x, y):
-        """Follow the pointer independently of the physical press state."""
         if self.paused or self.day_ended or self.sleep_until is not None or self.pending_visual_completion:
             self.last_pointer=(x,y)
             return self.response()
@@ -2031,21 +1993,31 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
             return self.response()
+            
         self.last_pointer = (x, y)
         if self.paused:
             return self.response()
-        if self.current_page in ("mine", "fishing") and self.pointer_pressed:
-            return self.response()
-        if self.current_page in ("cooking", "fishing"):
-            return self.response()
+            
+        is_pointing = False  # Press/click does not double as detailed inspection.
         obj = self.find_object(x, y)
+        
         if obj is None:
-            self.clear_hover()
+            self.hover_object_id = None
+            self.last_hover_state = (None, is_pointing)
+            if is_pointing and not getattr(self, 'location_detail_spoken', False):
+                self.location_detail_spoken = True
+                return self.response(tts=self.get_location_detail())
             return self.response()
+
         object_id = obj["id"]
-        if object_id != self.hover_object_id:
+        current_state = (object_id, is_pointing)
+
+        if current_state != getattr(self, 'last_hover_state', (None, False)):
+            self.last_hover_state = current_state
             self.hover_object_id = object_id
-            return self.response(tts=self.get_object_tts(obj), sfx=self.get_hover_sfx(obj))
+            tts_text = self.get_object_tts(obj, detail=is_pointing)
+            return self.response(tts=tts_text, sfx=self.get_hover_sfx(obj))
+            
         return self.response()
 
     def pointer_down(self, x, y):
@@ -2055,8 +2027,13 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             return self.response()
         if self.pending_visual_completion:
             return self.response()
+            
+        self.location_detail_spoken = False
+        self.last_hover_state = (None, True)
+        
         if self.current_page in ("mine", "fishing") and self.pointer_pressed:
             return self.response()
+            
         self.pointer_pressed = True
         self.last_pointer = (x, y)
         if self.paused:
@@ -2117,6 +2094,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             return self.response()
         if self.pending_visual_completion:
             return self.response()
+            
         previous_x, previous_y = self.last_pointer
         self.last_pointer = (x, y)
         if self.paused:
@@ -2169,17 +2147,24 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             return self.response()
         if self.sleep_until is not None:
             return self.response()
+            
+        self.location_detail_spoken = False
+        self.last_hover_state = (None, False)
+        
         if self.paused:
             self.pointer_pressed = False
             self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
             self.drag_tool = None
             return self.response()
+            
         final = self.pointer_drag(x, y) if self.pointer_pressed else None
         self.pointer_pressed = False
         self.last_pointer = (x, y)
+        
         if final and (final.get("sfx") in ("cooking_success", "cooking_step", "cooking_wait", "day_end")):
             final["state"] = self.get_state()
             return final
+            
         if self.current_page in ("water_minigame", "fertilizer_minigame") and self.care_dragging:
             self.care_dragging = False
             result = self.finish_care_minigame()
@@ -2193,6 +2178,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             self.drag_tool = None
             self.drag_target_ids.clear()
             result = self.response()
+            
         if final:
             result["sound_events"] = final.get("sound_events", []) + result.get("sound_events", [])
         return result
@@ -2314,16 +2300,15 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                 return self.night_response()
         self.render()
         name = self.get_page_name(location)
-        particle = self.ro_particle(name)
         if location == "fishing":
-            text = "Fishing lake. Follow the water sound. Tap to fish." if self.resources.get("fishing_rod") else "Fishing lake. Buy a fishing rod to catch fish."
+            text = "Fishing lake." if self.resources.get("fishing_rod") else "Fishing lake. Buy a fishing rod"
             return self.response(tts=text, sfx="travel")
         if location == "mine":
-            text = "Mine. Tap rocks to break them." if self.resources["pickaxe"] else "Mine. Buy a pickaxe to break rocks."
+            text = "Mine." if self.resources["pickaxe"] else "Mine. Buy a pickaxe"
             return self.response(tts=text, sfx="travel")
         if location == 'town' and not self.rowan_greeted:
             self.rowan_greeted=True
-            return self.response(tts='Village. Rowan would like to meet you. Select Rowan beside the shop to hear more.',sfx='travel')
+            return self.response(tts='Village. Rowan would like to meet you.',sfx='travel')
         return self.response(tts=f"{name}", sfx="travel")
 
     def open_minimap(self):
@@ -2367,7 +2352,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             if not 0 <= self.inventory_page+delta < self.inventory_page_count:
                 return self.response(tts='First page.' if delta<0 else 'Last page.')
             return self._perform_action(f'inventory_page:{delta}', {})
-        # Function-key panels close with either physical navigation button.
         if self.current_page in ('minimap', 'load_game'):
             if self.paused: return self.response(tts='Resume first.')
             if self.sleep_until is not None: return self.response(tts='Sleeping. Please wait.')
@@ -2593,7 +2577,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return self.response(tts=f"{label} watered. {self.get_seed_label(state['seed_id'])} will grow after sleep.", sfx="water")
 
     def apply_fertilizer_bonus(self, state):
-        """Apply the saved growth days now; sleep must not apply them twice."""
         needed = int(self.get_seed_config(state["seed_id"]).get("growth_days", 3))
         bonus = max(0, int(self.config.get("fertilizer", {}).get("growth_day_bonus", 1)))
         before = state["growth"]
@@ -2794,7 +2777,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.current_page = "ingredient_select"
         self.clear_hover()
         self.render()
-        return self.response(tts=f"{self.get_recipe_label(recipe_id)}. {self.recipe_ingredient_text(recipe_id)}. Select all ingredients to start cooking.", sfx="open_page")
+        return self.response(tts=f"{self.get_recipe_label(recipe_id)}. {self.recipe_ingredient_text(recipe_id)}.", sfx="open_page")
 
     def toggle_ingredient(self, seed_id):
         if self.current_page != "ingredient_select":
@@ -2809,7 +2792,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         else:
             self.selected_ingredients.add(seed_id)
             label = self.get_seed_label(seed_id)
-            particle = self.josa(label, " ", " ")
             text = f"{label} selected."
         self.clear_hover()
         self.render()
@@ -2832,7 +2814,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         path = gesture.get("path", [])
         if gesture.get("kind") != "stir" or len(path) < 2:
             return gesture
-        # Enlarge both rendered path and hit-test samples, without editing recipes.
         xs, ys = [p[0] for p in path], [p[1] for p in path]
         span_x, span_y = max(xs) - min(xs), max(ys) - min(ys)
         if span_x <= 0 or span_y <= 0:
@@ -2852,8 +2833,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         if not gesture.get("closed") and len(path) > 2 and math.dist(path[0], path[-1]) < 8:
             while len(path) > 2 and math.dist(path[0], path[-1]) < 8:
                 path.pop()
-        # Restore the configured full-field position. Keep the distinct filled
-        # start marker and the opening between the start and end of closed paths.
         gesture["path"] = path
         return gesture
 
@@ -3133,13 +3112,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             self.pointer_pressed = self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
             self.drag_tool = None
             return self.response()
-        # TEMP_EVALUATION_CLICK: F4 replaces pause during the user evaluation.
-        # Original pause implementation (restore together with game-keys.js):
-        # if command == "pause":
-        #     self.paused = not self.paused
-        #     self.pointer_pressed = self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
-        #     self.drag_tool = None
-        #     return self.response(tts="Paused." if self.paused else "Resumed.")
         if command in ("click", "pause"):
             x, y = self.last_pointer
             if x is None or y is None:
@@ -3186,6 +3158,18 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         objects = self.get_objects()
         return {
             "spectator": spectator_snapshot(self, objects),
+            "location_description": self.get_location_detail(),
+            "inspect_objects": [
+                {"id": o["id"], "type": o.get("type"), "label": o.get("label", ""),
+                 "description": self.get_object_tts(o, detail=True),
+                 "x": o.get("x"), "y": o.get("y"),
+                 "width": o.get("width"), "height": o.get("height"),
+                 "hit_width": o.get("hit_width"), "hit_height": o.get("hit_height"),
+                 "x1": o.get("x1"), "y1": o.get("y1"),
+                 "x2": o.get("x2"), "y2": o.get("y2"),
+                 "hit_radius": o.get("hit_radius")}
+                for o in objects
+            ],
             "dialogue": self.current_dialogue(),
             "rowan_submission": self.current_page=="rowan_submit" and self.rowan_submit_open,
             "calendar": {"weekday":self.calendar_days()[self.weekday_index()]['name'], "offer":self.calendar_text()},
@@ -3194,7 +3178,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             "audio_guidance": self.audio_guidance(),
             "objects": [{"id": o["id"], "label": o.get("label", ""),
                          "type": o.get("type"), "x": o.get("x"), "y": o.get("y"),
-                         "description": self.get_object_tts(o), "actionable": bool(o.get("action"))}
+                         "description": self.get_object_tts(o, detail=True), "actionable": bool(o.get("action"))}
                         for o in objects if o.get("type") != "route"],
             "action_costs": {k: self.get_action_cost(k) for k in ("travel", "plant", "water", "fertilize", "harvest", "research", "cook", "mine", "fish")},
             "sleeping": self.sleep_until is not None,
@@ -3306,12 +3290,10 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         ]
 
     def draw_mine_rock(self, obj):
-        """Three fixed damage patterns; preserve a solid two-dot border."""
         width, height = int(obj["width"]), int(obj["height"])
         left, top = obj["x"] - width // 2, obj["y"] - height // 2
         hits = max(0, int(obj.get("hits", 0)))
         hits_to_break = max(1, int(self.config.get("mine", {}).get("hits_to_break", 3)))
-        # Default: 0 / 1 / 2 hits. Custom hit counts retain the same three patterns.
         stage = min(2, (2 * hits) // max(1, hits_to_break - 1))
         for row in range(height):
             for col in range(width):
@@ -3322,7 +3304,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                     self.dotpad.set_dot(left + col, top + row)
 
     def item_destroyed_event(self, item_id, reward_sound=None, loot_tts=None):
-        """Shared destruction event for pickaxes and future breakable items."""
         self.record_activity("tool_broken", "Fishing rod" if item_id == "fishing_rod" else "Pickaxe")
         event = {"kind": "item_destroyed", "item_id": item_id}
         if reward_sound is not None:
@@ -3377,7 +3358,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                 text += ". Night. Home now. Select the bed."
         self.render()
         if item_destroyed:
-            # Replace the mining impact instead of layering both impact sounds.
             reward_sound = ("shine" if mineral == "diamond" else "correct") if destroyed else None
             events = [self.item_destroyed_event("pickaxe", reward_sound, text if destroyed else None)]
         elif destroyed:
