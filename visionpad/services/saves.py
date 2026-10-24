@@ -31,10 +31,33 @@ def decode(value):
     return value
 
 
+# Key order of save files written before the modular refactor. Features now create their
+# attributes in their own reset handlers, so attribute order no longer matches it; snapshot()
+# writes these keys in this order and any newer keys after them.
+SAVE_KEY_ORDER = (
+    "rowan_stage", "rowan_greeted", "rowan_dialogue", "rowan_submit_open", "_menu_stack", "sleep_until",
+    "pending_visual_completion", "shop_page", "_pickaxe_hits", "inventory_page", "inventory_page_count", "day",
+    "current_location", "current_page", "paused", "day_ended", "resources", "research_levels",
+    "unlocked_plot_count", "farm_plots", "seed_select_plot_id", "drag_tool", "drag_target_ids",
+    "detail_plot_id", "care_mode", "care_targets", "care_dragging", "care_collected_ids", "care_visible_until",
+    "harvest_plot_id", "harvest_targets", "harvest_dragging", "harvest_collected_ids", "selected_recipe_id",
+    "selected_ingredients", "cooking_dragging", "cooking_path_samples", "cooking_visible_until",
+    "cooking_progress_index", "cooking_stage_index", "cooking_last_progress_at", "cooking_resume_marker",
+    "active_buff", "hover_object_id", "last_hover_state", "location_detail_spoken", "last_pointer",
+    "pointer_pressed", "time_total_cells", "time_used_cells", "mine_rocks", "fishing_last_catch",
+    "fishing_attempts", "rod_casts", "rod_catches", "fishing_target", "npc_visits", "dialogue",
+    "activity_counts", "activity_serial", "recent_activity", "npc_reactions", "activity_history_complete",
+    "flower_seeds", "houseplant", "flower_watering", "flower_contact_at",
+)
+
+
 class SaveMixin:
     def snapshot(self):
-        state = {k: copy.deepcopy(v) for k, v in vars(self).items()
-                 if k not in self._static_fields and k not in {"_static_fields", "_load_return", "_save_slots"}}
+        names = [k for k in vars(self)
+                 if k not in self._static_fields and k not in {"_static_fields", "_load_return", "_save_slots"}]
+        known = set(names)
+        ordered = [k for k in SAVE_KEY_ORDER if k in known] + [k for k in names if k not in SAVE_KEY_ORDER]
+        state = {k: copy.deepcopy(getattr(self, k)) for k in ordered}
         state.update(self.registry.save_transient)
         state["random_state"] = random.getstate()
         now = time.monotonic()

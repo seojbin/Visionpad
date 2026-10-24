@@ -90,9 +90,9 @@ class OrderingTests(unittest.TestCase):
         calls = []
         registry = build(feature("a", lambda self, reg: (reg.on("reset", lambda: calls.append("before"), order=order.Reset.VILLAGE),
                                                          reg.on("reset", lambda: calls.append("after"), order=order.Reset.MINING))))
-        registry.run("reset", until=order.Reset.CORE)
+        registry.run("reset", until=order.Reset.RESEARCH)
         self.assertEqual(calls, ["before"])
-        registry.run("reset", since=order.Reset.CORE)
+        registry.run("reset", since=order.Reset.RESEARCH)
         self.assertEqual(calls, ["before", "after"])
 
     def test_slot_contributions_follow_their_order(self):

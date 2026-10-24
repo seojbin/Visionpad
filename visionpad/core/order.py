@@ -2,20 +2,24 @@
 
 Handlers and contributions run by (order, registration index). Each table below
 reproduces an order the game already depends on: random draws (mine before
-fishing at reset, fishing before mine in the morning), object order on a page,
-and attribute order in save files. Names refer to features; entries for
+fishing at reset, fishing before mine in the morning) and object order on a
+page. Save-file key order does not depend on these tables; it is fixed by
+SAVE_KEY_ORDER in visionpad/services/saves.py. Names refer to features; entries for
 features that are still part of the core engine document where they will go.
 
 Pass these constants as `order=`; never a bare number.
 """
 
-DEFAULT = 100
+DEFAULT = 1000  # after every named entry
 
 
 class Reset:
-    """engine.reset(). Handlers below CORE run before core state is initialised, the rest after it."""
-    VILLAGE = 10    # reset_village() ran first, so rowan_* attributes come first in saves
-    CORE = 50       # boundary: core resources, plots, minigame and pointer state
+    """engine.reset(): feature handlers run after core state is initialised, in this order."""
+    VILLAGE = 10
+    RESEARCH = 20
+    FARMING = 30
+    HARVEST = 40
+    COOKING = 50
     MINING = 60     # regenerate_mine() draws random numbers before the fishing target
     FISHING = 70
     NPC = 80
