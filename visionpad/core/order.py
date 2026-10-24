@@ -16,6 +16,7 @@ DEFAULT = 1000  # after every named entry
 class Reset:
     """engine.reset(): feature handlers run after core state is initialised, in this order."""
     VILLAGE = 10
+    INVENTORY = 15
     RESEARCH = 20
     FARMING = 30
     HARVEST = 40

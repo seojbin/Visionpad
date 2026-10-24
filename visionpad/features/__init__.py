@@ -10,6 +10,7 @@ ENABLED = (
     "flowers",
     "research",
     "minimap",
+    "inventory",
 )
 
 

@@ -153,7 +153,7 @@ class IconRenderer:
 
 class IconLayout:
     """Page policy over the same twelve virtual slots."""
-    PAGES = frozenset(('home','town','inventory','seed_select',
+    PAGES = frozenset(('home','town','seed_select',
         'recipe_select','ingredient_select','shop_choice','shop_buy','shop_sell',
         'load_game','shop_calendar','rowan_dialogue','rowan_submit'))
 

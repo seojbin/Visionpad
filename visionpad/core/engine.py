@@ -61,6 +61,13 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.reset()
         self.registry.check_owned(self)
 
+    def __getattr__(self, name):
+        # Methods that moved into features but are still called on the engine (tests, tools).
+        registry = self.__dict__.get("registry")
+        if registry is not None and name in registry.api:
+            return registry.api[name]
+        raise AttributeError(f"{type(self).__name__!r} object has no attribute {name!r}")
+
     @staticmethod
     def prepare_display_config(config):
         # Keep saved rules intact; normalize presentation in a private copy.
@@ -131,8 +138,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.pending_visual_completion = None
         self.shop_page = 0
         self._pickaxe_hits = 0
-        self.inventory_page = 0
-        self.inventory_page_count = 1
         self.shop_page_count = 1
         self.day = int(self.config.get("game", {}).get("start_day", 1))
         self.current_location = "home"
@@ -529,7 +534,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             "fishing": self.get_fishing_objects,
             "npc_dialogue": self.get_dialogue_objects,
             "seed_select": self.get_seed_select_objects,
-            "inventory": self.get_inventory_objects,
             "plot_detail": self.get_plot_detail_objects,
             "water_minigame": self.get_care_minigame_objects,
             "fertilizer_minigame": self.get_care_minigame_objects,
@@ -1008,72 +1012,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             })
 
         objects.append(self.back_arrow("seed_back", "Back to farm", "return_scene"))
-        return objects
-
-    def get_inventory_objects(self):
-        entries = [
-            {"id": "coin", "label": "Gold", "count": int(self.resources.get("coin", 0)), "kind": "coin", "action": ""},
-            {"id": "fertilizer", "label": "Fertilizer", "count": int(self.resources.get("fertilizer", 0)), "kind": "fertilizer", "action": ""},
-            {"id": "wood", "label": "Wood", "count": int(self.resources.get("wood", 0)), "kind": "material", "action": ""},
-            {"id": "stone", "label": "Stone", "count": int(self.resources.get("stone", 0)), "kind": "stone", "action": ""}
-        ]
-        for item_id, label in [("pickaxe", "Pickaxe"), ("copper", "Copper"), ("iron", "Iron"), ("diamond", "Diamond")]:
-            entries.append({"id": item_id, "label": label, "count": self.resources[item_id], "kind": item_id, "action": ""})
-        for seed_id, seed_config in self.config.get("seeds", {}).items():
-            entries.append({"id": f"seed_{seed_id}", "label": f"{seed_config.get('label', seed_id)} seeds", "count": int(self.resources["seeds"].get(seed_id, 0)), "kind": "seed", "seed_id": seed_id, "action": ""})
-        for seed_id, seed_config in self.config.get("seeds", {}).items():
-            entries.append({"id": f"crop_{seed_id}", "label": f"{seed_config.get('label', seed_id)} crops", "count": int(self.resources["crops"].get(seed_id, 0)), "kind": "crop", "seed_id": seed_id, "action": ""})
-        for recipe_id, recipe in self.config.get("recipes", {}).items():
-            count = int(self.resources["foods"].get(recipe_id, 0))
-            if count <= 0 and self.inventory_hide_zero_items:
-                continue
-            entries.append({
-                "id": f"food_{recipe_id}", "label": recipe.get("label", recipe_id),
-                "count": count, "kind": "food", "recipe_id": recipe_id, "action": f"use_food:{recipe_id}",
-                "extra_tts": f"Use: {self.recipe_effect_text(recipe)}"
-            })
-
-        entries.append({"id":"fishing_rod", "label":"Fishing rod", "count":self.resources.get("fishing_rod",0), "kind":"tool", "action":""})
-        for key, fish in self.fishing_config()['fish'].items():
-            entries.append({"id":key, "label":fish['label'], "count":self.resources['fish'].get(key,0), "kind":"fish", "action":""})
-        entries.extend(self.registry.collect("inventory.items"))
-        entries = [entry for entry in entries if entry['kind']=='coin' or entry['count']>0]
-        page_size = min(12, max(2, self.inventory_items_per_page))
-        gold = next(e for e in entries if e['kind']=='coin')
-        foods = [e for e in entries if e['kind']=='food']
-        others = [e for e in entries if e['kind'] not in ('coin','food')]
-        pages = [[gold]+foods[:page_size-1]]
-        overflow=foods[page_size-1:]
-        pages += [overflow[i:i+page_size] for i in range(0,len(overflow),page_size)]
-        pages += [others[i:i+page_size] for i in range(0,len(others),page_size)]
-        self.inventory_page_count=len(pages)
-        self.inventory_page=max(0,min(self.inventory_page,self.inventory_page_count-1))
-        entries=pages[self.inventory_page]
-        positions = [
-            (9, 5), (23, 5), (37, 5), (51, 5),
-            (9, 15), (23, 15), (37, 15), (51, 15),
-            (9, 25), (23, 25), (37, 25), (51, 25)
-        ]
-        objects = []
-        for index, entry in enumerate(entries[:len(positions)]):
-            x, y = positions[index]
-            extra = entry.get("extra_tts", "")
-            tts = f"{entry['label']} {entry['count']}."
-            if extra:
-                tts += f". {extra}"
-            objects.append({
-                "id": f"inventory_{entry['id']}", "type": "resource",
-                "count": entry["count"], "resource_kind": entry["kind"], "recipe_id": entry.get("recipe_id"), "seed_id": entry.get("seed_id"), "x": x, "y": y,
-                "width": 10, "height": 8 if entry["kind"] == "food" else 6, "hit_width": 13, "hit_height": 9,
-                "label": entry["label"], "tts": tts, "action": entry.get("action", "")
-            })
-        for delta, x, label, direction in [(-1, 9, "Previous page", "left"), (1, 51, "Next page", "right")]:
-            if 0 <= self.inventory_page + delta < self.inventory_page_count:
-                objects.append({"id": f"inventory_page_{direction}", "type": "arrow",
-                                "x": x, "y": 35, "direction": direction, "size": 2,
-                                "hit_width": 11, "hit_height": 7,
-                                "label": label, "tts": label,
-                                "action": f"inventory_page:{delta}"})
         return objects
 
     @staticmethod
@@ -2094,15 +2032,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             self.clear_hover()
             self.render()
             return self.response(tts="Next page" if action.endswith(":1") else "Previous page")
-        if action.startswith("inventory_page:"):
-            if self.current_page != "inventory":
-                return self.response()
-            delta = int(action.split(":", 1)[1])
-            self.get_inventory_objects()
-            self.inventory_page = max(0, min(self.inventory_page + delta, self.inventory_page_count - 1))
-            self.clear_hover()
-            self.render()
-            return self.response(tts="Next page" if delta > 0 else "Previous page", sfx="open_page")
         if action.startswith("travel:"):
             return self.travel_to(action.split(":", 1)[1])
         if action == "return_scene":
@@ -2184,27 +2113,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             return self.response(tts='Village. Rowan would like to meet you.',sfx='travel')
         return self.response(tts=f"{name}", sfx="travel")
 
-    def open_inventory(self):
-        if self.day_ended:
-            return self.night_only_response()
-        self.inventory_page = 0
-        self.current_page = "inventory"
-        self.seed_select_plot_id = None
-        self.clear_care()
-        self.clear_harvest()
-        self.clear_cooking()
-        self.clear_hover()
-        self.render()
-        return self.response(tts="Inventory.", sfx="open_page")
-
     def navigate_key(self, direction):
-        if self.current_page == 'inventory':
-            if self.paused: return self.response(tts='Resume first.')
-            self.get_inventory_objects()
-            delta = -1 if direction=='left' else 1
-            if not 0 <= self.inventory_page+delta < self.inventory_page_count:
-                return self.response(tts='First page.' if delta<0 else 'Last page.')
-            return self._perform_action(f'inventory_page:{delta}', {})
         if self.current_page == 'load_game':
             if self.paused: return self.response(tts='Resume first.')
             if self.sleep_until is not None: return self.response(tts='Sleeping. Please wait.')
@@ -3027,7 +2936,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
                 "collected_targets": len(self.harvest_collected_ids),
                 "dragging": self.harvest_dragging
             },
-            "inventory": {"page": self.inventory_page + 1, "pages": self.inventory_page_count},
             "cooking": {
                 "resume_point": self.cooking_resume_point(),
                 "stage_index": self.cooking_stage_index,

@@ -22,13 +22,11 @@ class KeypadUI:
         self.pointer_pressed = self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
         self.drag_tool = None
         self.current_page = page
-        if page == 'inventory': self.inventory_page = 0
         on_open = self.registry.page_hook(page, 'on_menu_open')
         if on_open: on_open()
         self.clear_hover()
         self.render()
-        menu_text = self.registry.page_hook(page, 'menu_text')
-        return self.response(tts=menu_text() if menu_text else f'Inventory. {self.resources["coin"]} gold.', sfx='open_page')
+        return self.response(tts=self.registry.page_hook(page, 'menu_text')(), sfx='open_page')
 
     def key_arrows(self, direction):
         all_arrows = [o for o in self.get_layout_objects() if o.get('type') == 'arrow']

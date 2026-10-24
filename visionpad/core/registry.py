@@ -33,6 +33,7 @@ Hotspots (AUDIT.md section 3.4) and the call that replaces each one:
     14 shop catalogue                                                         -> shop_item() + contribute("shop.buy_items")
     shared page contents (home, inventory, harvest yield)                     -> slot(), contribute()
     attribute ownership                                                       -> owns()
+    engine methods that tests and tools still call (engine.open_inventory())  -> expose()
 """
 from visionpad.core import order as run_order
 
@@ -49,7 +50,6 @@ CORE_SLOTS = {
     "home.objects": "Extra tactile objects on the home page (daytime only). Provider returns a list of objects.",
     "home.scene_objects": "Home scene hitboxes, inserted after the kitchen and before the roads (daytime only).",
     "home.scene": "Drawing on the home scene after the furniture (daytime only). Provider draws, returns None.",
-    "inventory.items": "Inventory entries appended after fish. Provider returns a list of entry dicts.",
     "shop.buy_items": "Shop buy rows appended after the fishing rod: (kind, item_id, label, owned, price).",
     "harvest.bonus": "Integer added to every harvest yield. Provider returns a number.",
 }
@@ -96,6 +96,7 @@ class Registry:
         self.slot_owners = dict.fromkeys(CORE_SLOTS, "core")
         self.slots = {}
         self.owners = {}
+        self.api = {}
         self.shop_buyers = {}
         self.fixed_price_kinds = set()
         self.icon_patterns = {}
@@ -118,6 +119,9 @@ class Registry:
             registry._current = feature.name
             feature.register(registry)
         registry._current = None
+        clashes = sorted(name for name in registry.api if hasattr(type(engine), name))
+        if clashes:
+            raise ValueError(f"Exposed name(s) already defined on the engine: {', '.join(clashes)}")
         undeclared = sorted(set(registry.slots) - set(registry.slot_docs))
         if undeclared:
             raise ValueError(f"Unknown slot(s) {', '.join(undeclared)}; known: {', '.join(registry.slot_docs)}")
@@ -192,6 +196,10 @@ class Registry:
     def contribute(self, slot, provider, order=run_order.DEFAULT):
         """Add to a slot. The slot may be declared by a feature registered later; build() checks it."""
         self.slots.setdefault(slot, []).append((order, self._next(), provider))
+
+    def expose(self, name, function):
+        """Keep `engine.<name>(...)` working for callers outside the features (tests, tools)."""
+        self._claim(self.api, name, function, "Engine method")
 
     def owns(self, *names):
         for name in names:
