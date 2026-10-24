@@ -21,13 +21,16 @@ class Fishing(Feature):
         reg.state("fishing", self.public_state)
         reg.contribute("inventory.items", self.inventory_items, order=order.InventoryItems.FISHING)
         reg.shop_item("fishing_rod", self.buy_rod)
+        reg.shop_item("fish", sell=self.sell_fish)
+        reg.contribute("shop.buy_items", lambda: [("fishing_rod", "fishing_rod", "Fishing rod", self.engine.resources.get("fishing_rod",0), self.rod_price())],
+                       order=order.ShopBuyItems.FISHING)
+        reg.contribute("shop.sell_items", self.shop_sell_rows, order=order.ShopSellItems.FISHING)
         reg.on("reset", self.reset, order=order.Reset.FISHING)
         reg.on("start_of_day", self.new_day, order=order.StartOfDay.FISHING)
         reg.save_fields(defaults=("fishing_target", "fishing_last_catch", "fishing_attempts", "rod_casts", "rod_catches"),
                         migrate=self.migrate)
         reg.expose("fishing_config", self.config)
         reg.expose("cast_fishing", self.cast)
-        reg.expose("get_rod_price", self.rod_price)
         reg.expose("get_fish_price", self.fish_price)
 
     def config(self):
@@ -67,6 +70,22 @@ class Fishing(Feature):
         for key, fish in self.config()['fish'].items():
             entries.append({"id":key, "label":fish['label'], "count":e.resources['fish'].get(key,0), "kind":"fish", "action":""})
         return entries
+
+    def shop_sell_rows(self):
+        e = self.engine
+        return [("fish", key, fish['label'], e.resources['fish'].get(key,0), self.fish_price(key))
+                for key, fish in self.config()['fish'].items() if e.resources['fish'].get(key,0)>0]
+
+    def sell_fish(self, item_id):
+        e = self.engine
+        if item_id not in self.config()['fish']:
+            return None
+        if e.resources['fish'].get(item_id,0) < 1:
+            return e.response(tts="No fish to sell.")
+        fish = self.config()['fish'][item_id]
+        price, label = self.fish_price(item_id), fish['label']
+        e.add_resource('fish', -1, item=item_id)
+        return price, label
 
     def rod_price(self):
         return int(self.config().get('rod_price',100))

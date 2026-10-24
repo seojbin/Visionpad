@@ -1,1 +1,2 @@
-"""shop feature. Code still lives in visionpad/core/engine.py until it is extracted."""
+"""Shop: the counter, buy and sell lists, market prices."""
+from visionpad.features.shop.feature import Shop as Feature

@@ -25,8 +25,11 @@ class Mining(Feature):
         reg.spectator("rocks", lambda objects: [{k: r[k] for k in ('id', 'left', 'top', 'width', 'height', 'hits')}
                                                 for r in self.engine.mine_rocks])
         reg.contribute("inventory.items", self.inventory_items, order=order.InventoryItems.MINING)
-        reg.shop_item("pickaxe", lambda item_id: self.buy_item("pickaxe", item_id))
-        reg.shop_item("mineral", lambda item_id: self.buy_item("mineral", item_id))
+        reg.shop_item("pickaxe", lambda item_id: self.buy_item("pickaxe", item_id),
+                      owned_text=lambda count: "Pickaxe owned. Limit one." if count else None)
+        reg.shop_item("mineral", lambda item_id: self.buy_item("mineral", item_id), sell=self.sell_mineral)
+        reg.contribute("shop.buy_items", self.shop_buy_rows, order=order.ShopBuyItems.MINING)
+        reg.contribute("shop.sell_items", self.shop_sell_rows, order=order.ShopSellItems.MINING)
         reg.on("reset", self.reset, order=order.Reset.MINING)
         reg.on("start_of_day", self.regenerate, order=order.StartOfDay.MINING)
         reg.expose("get_mineral_price", self.mineral_price)
@@ -52,6 +55,32 @@ class Mining(Feature):
         e = self.engine
         return [{"id": item_id, "label": label, "count": e.resources[item_id], "kind": item_id, "action": ""}
                 for item_id, label in [("pickaxe", "Pickaxe"), ("copper", "Copper"), ("iron", "Iron"), ("diamond", "Diamond")]]
+
+    def pickaxe_price(self):
+        e = self.engine
+        return int(math.ceil(e.get_fertilizer_price() * float(e.config.get("mine", {}).get("pickaxe_price_multiplier", 5))))
+
+    def shop_buy_rows(self):
+        e = self.engine
+        entries = [("pickaxe", "pickaxe", "Pickaxe", e.resources["pickaxe"], self.pickaxe_price())]
+        entries += [("mineral", key, e.MINERAL_LABELS[key], e.resources[key], self.mineral_price(key, buying=True))
+                    for key in ("stone", "copper", "iron")]
+        return entries
+
+    def shop_sell_rows(self):
+        e = self.engine
+        return [("mineral", key, label, e.resources[key], self.mineral_price(key))
+                for key, label in e.MINERAL_LABELS.items() if e.resources[key] > 0]
+
+    def sell_mineral(self, item_id):
+        e = self.engine
+        if item_id not in e.MINERAL_LABELS:
+            return None
+        if e.resources[item_id] < 1:
+            return e.response(tts="No mineral to sell.", sfx="error")
+        price, label = self.mineral_price(item_id), e.MINERAL_LABELS[item_id]
+        e.add_resource(item_id, -1)
+        return price, label
 
     @staticmethod
     def rock_contains(obj, x, y):
@@ -188,7 +217,7 @@ class Mining(Feature):
         if kind == "pickaxe":
             if e.resources["pickaxe"] >= 1:
                 return e.response(tts="Only one pickaxe allowed.", sfx="error")
-            price, label = e.get_pickaxe_price(), "Pickaxe"
+            price, label = self.pickaxe_price(), "Pickaxe"
         elif kind == "mineral" and item_id in ("stone", "copper", "iron"):
             price, label = self.mineral_price(item_id, buying=True), e.MINERAL_LABELS[item_id]
         else:

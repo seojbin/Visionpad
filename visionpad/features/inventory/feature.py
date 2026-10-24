@@ -22,7 +22,8 @@ class Inventory(Feature):
         reg.contribute("inventory.items", self.cooking_items, order=order.InventoryItems.COOKING)
         reg.page("inventory", objects=self.page_objects, icon_grid=True,
                  menu_text=lambda: f'Inventory. {self.engine.resources["coin"]} gold.',
-                 on_menu_open=self.first_page, navigate=self.navigate)
+                 on_menu_open=self.first_page, navigate=self.navigate,
+                 panel=lambda: (self.engine.inventory_page, self.engine.inventory_page_count, None))
         reg.action("inventory_page:", self.turn_page)
         reg.state("inventory", lambda: {"page": self.engine.inventory_page + 1, "pages": self.engine.inventory_page_count})
         reg.on("reset", self.reset, order=order.Reset.INVENTORY)

@@ -52,7 +52,6 @@ CORE_SLOTS = {
     "home.objects": "Extra tactile objects on the home page (daytime only). Provider returns a list of objects.",
     "home.scene_objects": "Home scene hitboxes, inserted after the kitchen and before the roads (daytime only).",
     "home.scene": "Drawing on the home scene after the furniture (daytime only). Provider draws, returns None.",
-    "shop.buy_items": "Shop buy rows appended after the fishing rod: (kind, item_id, label, owned, price).",
     "harvest.bonus": "Integer added to every harvest yield. Provider returns a number.",
 }
 
@@ -73,14 +72,15 @@ class Feature:
 class Page:
     def __init__(self, feature, name=None, objects=None, scene=None, guidance=None,
                  press=None, single_press=False, icon_grid=False,
-                 menu_text=None, on_menu_open=None, navigate=None, arrival=None, detail=None, **pointer):
+                 menu_text=None, on_menu_open=None, navigate=None, arrival=None, detail=None, panel=None,
+                 **pointer):
         unknown = set(pointer) - {"pointer_" + kind for kind in POINTER_KINDS}
         if unknown:
             raise TypeError(f"Unknown page hook(s): {', '.join(sorted(unknown))}")
         self.feature, self.name, self.objects, self.scene, self.guidance = feature, name, objects, scene, guidance
         self.press, self.single_press, self.icon_grid = press, single_press, icon_grid
         self.menu_text, self.on_menu_open, self.navigate = menu_text, on_menu_open, navigate
-        self.arrival, self.detail = arrival, detail
+        self.arrival, self.detail, self.panel = arrival, detail, panel
         self.pointer = {kind: pointer.get("pointer_" + kind) for kind in POINTER_KINDS}
 
 
@@ -103,8 +103,11 @@ class Registry:
         self.api = {}
         self.api_owners = {}
         self.shop_buyers = {}
+        self.shop_sellers = {}
+        self.shop_owned_texts = {}
         self.fixed_price_kinds = set()
         self.icon_patterns = {}
+        self.icon_symbols = {}
         self.icon_skips = {}
         self.icon_layout_order = {}
         self.icon_aliases = {}
@@ -148,7 +151,8 @@ class Registry:
 
     def page(self, page_id, *, name=None, objects=None, scene=None, guidance=None,
              press=None, single_press=False, icon_grid=False,
-             menu_text=None, on_menu_open=None, navigate=None, arrival=None, detail=None, **pointer):
+             menu_text=None, on_menu_open=None, navigate=None, arrival=None, detail=None, panel=None,
+             **pointer):
         """Own a page.
         objects() -> list of tactile objects; name -> spoken page name; scene() draws after the objects;
         guidance() -> (kind, targets, completed, total) for audio_guidance.
@@ -160,9 +164,11 @@ class Registry:
         For pages opened as F-key menus: on_menu_open() runs as the menu opens and menu_text() -> the
         spoken text. navigate(direction) handles Left/Right on the page (return None for the default).
         For travel locations: arrival() -> text spoken on arrival, or None for the location name.
-        detail() -> the location description (get_location_detail)."""
+        detail() -> the location description (get_location_detail).
+        panel() -> (page, pages, braille_label) for the lower time panel: a page bar when pages > 1,
+        else the braille label when given, else the activity time."""
         page = Page(self._current, name, objects, scene, guidance, press, single_press, icon_grid,
-                    menu_text, on_menu_open, navigate, arrival, detail, **pointer)
+                    menu_text, on_menu_open, navigate, arrival, detail, panel, **pointer)
         self._claim(self.pages, page_id, page, "Page")
 
     def action(self, key, handler, *, before_night_guard=False):
@@ -221,16 +227,29 @@ class Registry:
                 raise ValueError(f"Attribute {name!r} is owned by both {self.owners[name]} and {self._current}")
             self.owners[name] = self._current
 
-    def shop_item(self, kind, buy, *, market_price=True):
-        """buy(item_id) -> response, or None when this feature does not sell that item."""
-        self._claim(self.shop_buyers, kind, buy, "Shop kind")
+    def shop_item(self, kind, buy=None, *, sell=None, market_price=True, owned_text=None):
+        """Handle one kind of shop item.
+        buy(item_id) -> response, or None when this feature does not sell that item.
+        sell(item_id) -> (base_price, label) after removing one item, a response to refuse, or None when
+        the item is unknown; the shop applies the market price, pays and responds.
+        owned_text(count) -> buy-row speech that replaces the price text (e.g. "Pickaxe owned."), or None."""
+        if buy:
+            self._claim(self.shop_buyers, kind, buy, "Shop kind (buy)")
+        if sell:
+            self._claim(self.shop_sellers, kind, sell, "Shop kind (sell)")
+        if owned_text:
+            self._claim(self.shop_owned_texts, kind, owned_text, "Shop owned text")
         if not market_price:
             self.fixed_price_kinds.add(kind)
 
-    def icon(self, object_type, *, pattern=None, skip=None, layout_order=None):
-        """Draw object_type with the shared icon frame. pattern(obj) -> rows; skip(obj) -> True leaves
-        the object to its renderer(); layout_order places it on home/town icon grids."""
+    def icon(self, object_type, *, pattern=None, symbol=None, skip=None, layout_order=None):
+        """Draw object_type with the shared icon frame. symbol(obj) -> a symbol name from
+        IconRenderer.PATTERNS (default: the type; 'food' uses the double frame without a pattern);
+        pattern(obj) -> explicit rows; skip(obj) -> True leaves the object to its renderer();
+        layout_order places it on home/town icon grids."""
         self._claim(self.icon_patterns, object_type, pattern, "Icon")
+        if symbol:
+            self.icon_symbols[object_type] = symbol
         if skip:
             self.icon_skips[object_type] = skip
         if layout_order is not None:

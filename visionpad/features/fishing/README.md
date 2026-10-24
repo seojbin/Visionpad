@@ -13,10 +13,10 @@ The lake: a hidden target that moves after every cast and each morning, distance
 | Shared attributes read | `config`, `current_page`, `paused`, `day_ended`, `sleep_until`, `dotpad` |
 | Events | `reset` (`Reset.FISHING`, after the mine), `start_of_day` (`StartOfDay.FISHING`, before the mine); emits `activity` ("fishing", "fishing_miss", "tool_broken") |
 | Slots contributed | `inventory.items` (`InventoryItems.FISHING`) |
-| Shop | buys `fishing_rod` (market priced). The rod buy row and the fish sell branch are still in the core shop until shop is extracted. |
+| Shop | `fishing_rod` (buy) and `fish` (sell), market priced. Rows in `shop.buy_items` (`ShopBuyItems.FISHING`) and `shop.sell_items` (`ShopSellItems.FISHING`). |
 | State key | `fishing` |
 | Saves | Defaults for all five attributes; older saves get `fishing_rod: 0` and an empty `fish` bag |
-| Engine API provided | `fishing_config()` (seafood, cooking/shop in core), `cast_fishing(x, y)` (tests), `get_rod_price()`, `get_fish_price(fish_id)` (core shop) |
+| Engine API provided | `fishing_config()` (seafood; cooking in core), `cast_fishing(x, y)` (tests), `get_fish_price(fish_id)` (shop, for seafood dish prices) |
 | Engine API used | `get_mineral_price` (mining), `boost_rare_weights`, `loot_amount` (seafood), `market_price` (village), `item_destroyed_event` (core) |
 | Config | `config/game.json` → `fishing.*`, `resources.fishing_rod`, `resources.fish`, `time.action_costs.fish` |
 | Tests | `tests/python/audio/test_gameplay_audio.py`, `tests/python/audio/test_sound_events.py`; JS `tests/js/audio/test_fishing_audio.cjs` (client sounds) |

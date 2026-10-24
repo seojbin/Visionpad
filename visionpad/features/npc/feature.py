@@ -19,7 +19,7 @@ class Npc(Feature):
                  "npc_reactions", "activity_history_complete")
         reg.page("npc_dialogue", name="Conversation", objects=self.dialogue_objects)
         reg.action("npc:", self.action, before_night_guard=True)
-        reg.renderer("npc_marker", lambda obj: self.engine.draw_shop_npc({**obj, "type": "shop_npc"}))
+        reg.renderer("npc_marker", lambda obj: self.engine.icons.draw({**obj, "type": "shop_npc"}))
         reg.renderer("npc_topic", lambda obj: self.engine.dotpad.draw_box(obj["x"], obj["y"], obj["width"], obj["height"]))
         reg.state("dialogue", self.current_dialogue)
         reg.on("reset", self.reset, order=order.Reset.NPC)

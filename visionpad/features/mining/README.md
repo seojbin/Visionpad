@@ -13,10 +13,10 @@ Daily rocks at the mine, pickaxe wear and breakage, mineral loot (with mineral-d
 | Shared attributes read | `config`, `day`, `current_page`, `paused`, `day_ended`, `research_levels["mineral_luck"]`, `MINERAL_LABELS` |
 | Events | `reset` (`Reset.MINING`, before fishing's random draws), `start_of_day` (`StartOfDay.MINING`, after fishing); emits `activity` ("mining", "tool_broken") |
 | Slots contributed | `inventory.items` (`InventoryItems.MINING`) |
-| Shop | buys `pickaxe` and `mineral` items (market priced). Buy rows and the mineral sell branch are still in the core shop until shop is extracted. |
+| Shop | `pickaxe` (buy; "Pickaxe owned. Limit one." when owned) and `mineral` (buy and sell), market priced. Rows in `shop.buy_items` (`ShopBuyItems.MINING`) and `shop.sell_items` (`ShopSellItems.MINING`). |
 | Spectator key | `rocks` |
-| Engine API provided | `get_mineral_price(mineral, buying=False)` (core shop, seafood), `hit_mine_rock(rock_id)` (tests) |
-| Engine API used | `market_price` (village), `boost_rare_weights`, `loot_amount` (seafood), `buff_multiplier_for` (cooking, core), `get_pickaxe_price` (core shop), `item_destroyed_event` (core) |
+| Engine API provided | `get_mineral_price(mineral, buying=False)` (fishing fish prices), `hit_mine_rock(rock_id)` (tests) |
+| Engine API used | `market_price` (village), `boost_rare_weights`, `loot_amount` (seafood), `get_fertilizer_price` (shop, for the pickaxe price), `buff_multiplier_for` (cooking, core), `item_destroyed_event` (core) |
 | Config | `config/game.json` → `mine.*`, `research.mineral_luck.*`, `time.action_costs.mine` |
 | Tests | `tests/python/audio/test_gameplay_audio.py` (rock guidance, tool break) |
 | Note | `draw_item` was unused before the split (AUDIT.md §2.4); kept for parity. |

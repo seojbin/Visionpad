@@ -100,7 +100,8 @@ class OrderingTests(unittest.TestCase):
 
     def test_slot_contributions_follow_their_order(self):
         registry = build(feature("a", lambda self, reg: reg.contribute("shop.buy_items", lambda: ["flowers"], order=order.ShopBuyItems.FLOWERS)),
-                         feature("b", lambda self, reg: reg.contribute("shop.buy_items", lambda: ["farming"], order=order.ShopBuyItems.FARMING)))
+                         feature("b", lambda self, reg: reg.contribute("shop.buy_items", lambda: ["farming"], order=order.ShopBuyItems.FARMING)),
+                         feature("shop", lambda self, reg: reg.slot("shop.buy_items", "Buy rows")))
         self.assertEqual(registry.collect("shop.buy_items"), ["farming", "flowers"])
 
     def test_actions_dispatch_by_prefix_or_exact_key_in_their_guard_phase(self):
@@ -178,14 +179,15 @@ class ExposeTests(unittest.TestCase):
     # legacy entry point: review it (AGENTS.md: prefer events or slots).
     EXPECTED = {
         "boost_rare_weights": "seafood",
+        "buy_shop_item": "shop",
         "cast_fishing": "fishing",
         "consume_sale": "seafood",
         "finish_seafood": "seafood",
         "fishing_config": "fishing",
+        "get_fertilizer_price": "shop",
         "get_fish_price": "fishing",
         "get_inventory_objects": "inventory",
         "get_mineral_price": "mining",
-        "get_rod_price": "fishing",
         "hit_mine_rock": "mining",
         "loot_amount": "seafood",
         "market_price": "village",
@@ -194,6 +196,7 @@ class ExposeTests(unittest.TestCase):
         "npc_voice_profile": "npc",
         "open_calendar": "village",
         "open_inventory": "inventory",
+        "open_shop": "shop",
         "recent_reaction": "npc",
         "record_activity": "npc",
         "rowan_advice": "npc",
@@ -201,6 +204,7 @@ class ExposeTests(unittest.TestCase):
         "seafood_ingredient_objects": "seafood",
         "seafood_ready": "seafood",
         "selected_fish": "seafood",
+        "sell_shop_item": "shop",
         "submit_rowan_crop": "village",
         "talk_rowan": "village",
         "toggle_fish": "seafood",

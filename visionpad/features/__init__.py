@@ -16,6 +16,7 @@ ENABLED = (
     "mining",
     "fishing",
     "seafood",
+    "shop",
 )
 
 

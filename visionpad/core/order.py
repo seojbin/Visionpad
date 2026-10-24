@@ -18,6 +18,7 @@ class Reset:
     VILLAGE = 10
     INVENTORY = 15
     RESEARCH = 20
+    SHOP = 25
     FARMING = 30
     HARVEST = 40
     COOKING = 50
@@ -75,6 +76,14 @@ class ShopBuyItems:
     MINING = 20     # pickaxe, minerals
     FISHING = 30    # fishing rod
     FLOWERS = 40    # morning glory seeds
+
+
+class ShopSellItems:
+    """Slot shop.sell_items, in the order the sell page listed them."""
+    FARMING = 10    # crops
+    COOKING = 20    # foods
+    MINING = 30     # minerals
+    FISHING = 40    # fish
 
 
 class HarvestBonus:

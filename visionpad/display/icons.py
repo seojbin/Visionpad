@@ -43,9 +43,9 @@ class IconSpec:
 
 class IconRenderer:
     """One thin frame plus one filled semantic symbol; optional selection/progress overlays."""
-    TYPES = frozenset(('bed','chest','stove','shop_npc',
+    TYPES = frozenset(('bed','chest','stove',
         'save_slot','seed','resource','care_button',
-        'recipe','ingredient','cooking_start','shop_choice','shop_item','watering_can',
+        'recipe','ingredient','cooking_start','watering_can',
         'fertilizer'))
 
     PATTERNS = {
@@ -94,17 +94,18 @@ class IconRenderer:
         symbol = kind
         frame = 'rectangle'
         pattern = ()
-        feature_pattern = self.engine.registry.icon_patterns.get(kind)
-        if feature_pattern:
-            pattern = feature_pattern(obj)
+        registry = self.engine.registry
+        if kind in registry.icon_patterns:
+            if kind in registry.icon_symbols:
+                symbol = registry.icon_symbols[kind](obj)
+            if registry.icon_patterns[kind]:
+                pattern = registry.icon_patterns[kind](obj)
         elif kind == 'resource': symbol = self.category(obj.get('resource_kind'))
-        elif kind == 'shop_item': symbol = self.category(obj.get('shop_kind'))
         elif kind == 'recipe': symbol = 'food'
         elif kind == 'ingredient': symbol = 'check' if obj.get('selected') else self.category(obj.get('item_kind','crop'))
         elif kind == 'care_button': symbol = {'plant':'seed','fertilizer':'tool'}.get(obj.get('care_kind'),obj.get('care_kind'))
         elif kind == 'watering_can': symbol = 'water'
         elif kind == 'fertilizer': symbol = 'tool'
-        elif kind == 'shop_choice': symbol = obj.get('choice')
         elif kind == 'save_slot': symbol = 'save'
         elif kind == 'cooking_start': symbol = 'start'
         if symbol == 'food': frame = 'double_rectangle'
@@ -153,7 +154,7 @@ class IconRenderer:
 class IconLayout:
     """Page policy over the same twelve virtual slots."""
     PAGES = frozenset(('home','seed_select',
-        'recipe_select','ingredient_select','shop_choice','shop_buy','shop_sell',
+        'recipe_select','ingredient_select',
         'load_game'))
 
     def __init__(self, grid=None):
@@ -168,7 +169,6 @@ class IconLayout:
         if page in ('home', 'town'):
             order = {
                 'bed': 0, 'chest': 1, 'stove': 2,
-                'shop_npc': 0,
                 **(layout_order or {})
             }
             chosen.sort(key=lambda o: order.get(o['type'], 9))

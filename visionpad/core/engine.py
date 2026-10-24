@@ -111,8 +111,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
 
     def compact_objects(self, objects):
         """Use shared slots for icons; preserve spatial minigame/map geometry."""
-        if self.current_page == "shop_choice":
-            objects = list(objects) + [self.back_arrow("shop_choice_back", "Back to village", "return_scene")]
         objects = self.icon_layout.arrange(self.current_page, objects,
                                            self.dotpad.width, self.dotpad.height,
                                            types=self.icons.types, layout_order=self.registry.icon_layout_order,
@@ -131,8 +129,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         self._save_slots = []
         self.sleep_until = None
         self.pending_visual_completion = None
-        self.shop_page = 0
-        self.shop_page_count = 1
         self.day = int(self.config.get("game", {}).get("start_day", 1))
         self.current_location = "home"
         self.current_page = "home"
@@ -438,18 +434,13 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
     def lower_panel_state(self):
         if self.sleep_until is not None:
             return {"mode": "blank", "label": "Sleeping"}
-        if self.current_page == "inventory":
-            page, pages = self.inventory_page, self.inventory_page_count
-        elif self.current_page in ("shop_buy", "shop_sell"):
-            page, pages = self.shop_page, self.shop_page_count
-        else:
-            page, pages = 0, 1
+        panel = self.registry.page_hook(self.current_page, "panel")
+        page, pages, braille = panel() if panel else (0, 1, None)
         if pages > 1:
             return {"mode": "pages", "page": page + 1, "pages": pages,
                     "label": f"Page {page + 1} of {pages}"}
-        labels = {"shop_choice": "shop", "shop_buy": "buy", "shop_sell": "sell"}
-        if self.current_page in labels:
-            return {"mode": "braille", "label": labels[self.current_page]}
+        if braille:
+            return {"mode": "braille", "label": braille}
         return {"mode": "time", "label": "Activity time"}
 
     def draw_time_bar(self):
@@ -497,18 +488,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
                 return False
         return True
 
-    def get_food_sell_price(self, recipe_id):
-        recipe = self.get_recipe_config(recipe_id)
-        if recipe.get("sell_price") is not None: return int(recipe["sell_price"])
-        ingredient_total = 0
-        for seed_id, count in recipe.get("ingredients", {}).items():
-            crop_price = int(self.get_seed_config(seed_id).get("crop_price", 1))
-            ingredient_total += crop_price * int(count)
-        if recipe.get('seafood'):
-            prices=[self.get_fish_price(k) for k,v in self.fishing_config()['fish'].items() if v['grade']==recipe.get('fish_grade','low')]
-            ingredient_total += min(prices)*recipe.get('fish_required',1)
-        return max(1, int(math.ceil(ingredient_total * 1.2)))
-
     def get_layout_objects(self):
         if self.sleep_until is not None:
             return []
@@ -524,9 +503,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
             "recipe_select": self.get_recipe_select_objects,
             "ingredient_select": self.get_ingredient_select_objects,
             "cooking": self.get_cooking_objects,
-            "shop_choice": self.get_shop_choice_objects,
-            "shop_buy": self.get_shop_buy_objects,
-            "shop_sell": self.get_shop_sell_objects,
         }
         getter = self.registry.page_hook(self.current_page, "objects") or pages.get(self.current_page)
         objects = self.compact_objects(getter()) if getter else []
@@ -1087,148 +1063,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
     def get_cooking_objects(self):
         return []
 
-    def get_shop_choice_objects(self):
-        base = [
-            {
-                "id": "shop_sell_choice", "type": "shop_choice", "choice": "sell",
-                "x": 15, "y": 6, "width": 12, "height": 10, "hit_width": 10, "hit_height": 8,
-                "label": "Sell", "tts": "Sell.", "action": "shop_mode:sell"
-            },
-            {
-                "id": "shop_buy_choice", "type": "shop_choice", "choice": "buy",
-                "x": 30, "y": 6, "width": 12, "height": 10, "hit_width": 10, "hit_height": 8,
-                "label": "Buy", "tts": "Buy.", "action": "shop_mode:buy"
-            },
-            {
-                "id": "shop_calendar", "type": "calendar_button",
-                "x": 45, "y": 6, "width": 12, "height": 10, "hit_width": 10, "hit_height": 8,
-                "label": "Calendar", "tts": "Calendar. Weekly offers.", "action": "open_calendar"
-            }
-        ]
-        return base + self.shop_choice_spatial_objects()
-
-    def shop_choice_spatial_objects(self):
-        return [
-            dict(id='shop_scene_calendar', type='shop_hitbox', skip_grid=True,
-                 x=11, y=20, width=9, height=9, hit_width=11, hit_height=11,
-                 label='Calendar', tts='Calendar. Weekly offers.', action='open_calendar'),
-            dict(id='shop_scene_keeper', type='shop_hitbox', skip_grid=True,
-                 x=30, y=19, width=9, height=8, hit_width=11, hit_height=9,
-                 label='Shopkeeper', tts='Shopkeeper. Select Sell, Buy, or Calendar.', action='open_calendar'),
-            dict(id='shop_scene_sell', type='shop_hitbox', skip_grid=True,
-                 x=20, y=30, width=13, height=9, hit_width=15, hit_height=11,
-                 label='Sell counter', tts='Sell.', action='shop_mode:sell'),
-            dict(id='shop_scene_buy', type='shop_hitbox', skip_grid=True,
-                 x=40, y=30, width=13, height=9, hit_width=15, hit_height=11,
-                 label='Buy counter', tts='Buy.', action='shop_mode:buy'),
-            dict(id='shop_scene_exit', type='shop_hitbox', skip_grid=True,
-                 x=2, y=26, width=5, height=7, hit_width=7, hit_height=9,
-                 label='Back to village', tts='Back to village.', action='return_scene'),
-        ]
-
-    def draw_shop_choice_scene(self):
-        pad = self.dotpad
-        pad.draw_line(0, 12, pad.width - 1, 12)
-        pad.draw_line(0, 13, pad.width - 1, 13)
-
-        pad.draw_line(4, 39, 55, 39)
-        for y in range(13, 40):
-            if not (24 <= y <= 28):
-                pad.set_dot(4, y)
-            pad.set_dot(55, y)
-        for dx in (3, 4, 5):
-            pad.set_dot(dx, 23)
-            pad.set_dot(dx, 29)
-        self.draw_icon_pattern(1, 26, (
-            '001',
-            '011',
-            '111',
-            '011',
-            '001',
-        ))
-
-        def draw_solid_pattern(cx, cy, rows):
-            w, h = len(rows[0]), len(rows)
-            for r_idx, row in enumerate(rows):
-                for c_idx, ch in enumerate(row):
-                    px = cx + c_idx - w // 2
-                    py = cy + r_idx - h // 2
-                    if ch == '1':
-                        pad.set_dot(px, py, 1)
-                    elif ch == '0':
-                        pad.set_dot(px, py, 0)
-
-        draw_solid_pattern(11, 20, (
-            '.1100011.',
-            '111111111',
-            '101010101',
-            '111111111',
-            '101010101',
-            '111111111',
-            '101010101',
-            '111111111',
-        ))
-
-        draw_solid_pattern(30, 19, (
-            '..11111..',
-            '.1111111.',
-            '..10101..',
-            '..11111..',
-            '.1111111.',
-            '111111111',
-            '111010111',
-            '111111111',
-        ))
-
-        for y in range(25, 36):
-            for x in range(13, 48):
-                pad.set_dot(x, y, 1)
-        for x in range(14, 47):
-            pad.set_dot(x, 26, 0)
-        for y in range(26, 35):
-            pad.set_dot(30, y, 0)
-
-        draw_solid_pattern(21, 30, (
-            '11000011',
-            '10111101',
-            '11000111',
-            '11110011',
-            '10111011',
-            '11000111',
-        ))
-
-        draw_solid_pattern(39, 30, (
-            '10000111',
-            '10110011',
-            '10000111',
-            '10110011',
-            '10000111',
-            '11111111',
-        ))
-
-    def get_shop_buy_objects(self):
-        entries = [("seed", seed_id, f"{self.get_seed_label(seed_id)} seeds", self.resources["seeds"].get(seed_id, 0),
-                    int(seed.get("seed_price", max(1, round(int(seed.get("crop_price", 1)) * .8)))))
-                   for seed_id, seed in self.config.get("seeds", {}).items()]
-        entries += [("fertilizer", "fertilizer", "Fertilizer", self.resources["fertilizer"], self.get_fertilizer_price()),
-                    ("pickaxe", "pickaxe", "Pickaxe", self.resources["pickaxe"], self.get_pickaxe_price())]
-        entries += [("mineral", key, self.MINERAL_LABELS[key], self.resources[key], self.get_mineral_price(key, buying=True))
-                    for key in ("stone", "copper", "iron")]
-        entries.append(("fishing_rod", "fishing_rod", "Fishing rod", self.resources.get("fishing_rod",0), self.get_rod_price()))
-        entries.extend(self.registry.collect("shop.buy_items"))
-        return self.build_shop_objects(entries, "buy")
-
-    def get_shop_sell_objects(self):
-        entries = [("crop", key, f"{self.get_seed_label(key)} crops", self.resources["crops"].get(key, 0), int(seed.get("crop_price", 1)))
-                   for key, seed in self.config.get("seeds", {}).items() if self.resources["crops"].get(key, 0) > 0]
-        entries += [("food", key, recipe.get("label", key), self.resources["foods"].get(key, 0), self.get_food_sell_price(key))
-                    for key, recipe in self.config.get("recipes", {}).items() if self.resources["foods"].get(key, 0) > 0]
-        entries += [("mineral", key, label, self.resources[key], self.get_mineral_price(key))
-                    for key, label in self.MINERAL_LABELS.items() if self.resources[key] > 0]
-        entries += [("fish", key, fish['label'], self.resources['fish'].get(key,0), self.get_fish_price(key))
-                    for key, fish in self.fishing_config()['fish'].items() if self.resources['fish'].get(key,0)>0]
-        return self.build_shop_objects(entries, "sell")
-
     def back_arrow(self, object_id, label, action):
         return {
             "id": object_id, "type": "arrow", "x": 6, "y": 35,
@@ -1312,17 +1146,9 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
                 self.draw_ingredient(obj)
             elif obj_type == "cooking_start":
                 self.draw_cooking_start(obj)
-            elif obj_type == "shop_npc":
-                self.draw_shop_npc(obj)
-            elif obj_type == "shop_choice":
-                self.draw_shop_choice(obj)
-            elif obj_type == "shop_item":
-                self.draw_shop_item(obj)
 
         if self.current_page == "home":
             self.draw_home_scene()
-        elif self.current_page == "shop_choice":
-            self.draw_shop_choice_scene()
         elif self.current_page == "plot_detail":
             self.dotpad.draw_line(0, 12, self.dotpad.width - 1, 12)
             self.dotpad.draw_line(0, 13, self.dotpad.width - 1, 13)
@@ -1537,15 +1363,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         if resume is not None:
             self.draw_filled_square(*resume)
 
-    def draw_shop_npc(self, obj):
-        self.icons.draw(obj)
-
-    def draw_shop_choice(self, obj):
-        self.icons.draw(obj)
-
-    def draw_shop_item(self, obj):
-        self.icons.draw(obj)
-
     def point_to_segment_distance(self, px, py, x1, y1, x2, y2):
         dx, dy = x2 - x1, y2 - y1
         if dx == 0 and dy == 0:
@@ -1597,8 +1414,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
             return "Village. Shop and Rowan."
         elif loc == "inventory":
             return "Inventory. Select an item to use."
-        elif loc == "shop_choice":
-            return "Shop. Sell, Buy, Calendar, or Ask Rowan for advice."
         elif loc == "plot_detail":
             return "Plot details. Plant, water, or fertilize."
         elif loc == "seed_select":
@@ -1629,7 +1444,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
 
         # A map location, transition, building or navigation control has only
         # a name in standard hover, regardless of its verbose TTS.
-        if kind in ("arrow", "home_hitbox", "shop_hitbox"):
+        if kind in ("arrow", "home_hitbox"):
             return label
 
         if kind in ("plot", "plot_detail_field"):
@@ -1640,18 +1455,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
                           and plot_id else label)
             seed_id = state.get("seed_id")
             return f"{plot_label}, {self.get_seed_label(seed_id)}." if seed_id else f"{plot_label}, empty."
-
-        if kind == "shop_item":
-            # shop_item.count means player-owned quantity; price is the
-            # current market rate (already adjusted in build_shop_objects).
-            price = obj.get("price")
-            owned = obj.get("count")
-            info = []
-            if price is not None:
-                info.append(f"{price} gold")
-            if owned is not None:
-                info.append(f"owned {owned}")
-            return f"{label}, {', '.join(info)}." if info else label
 
         count = obj.get("count")
         if kind == "seed" and count is None:
@@ -1674,7 +1477,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
             "seed": "hover_seed", "resource": "hover_resource",
             "harvest_crop": "hover_harvest_crop", "harvest_field": "hover_plot", "arrow": "hover_navigation",
             "recipe": "hover_recipe", "ingredient": "hover_ingredient", "cooking_start": "hover_cooking",
-            "shop_npc": "hover_shop", "shop_choice": "hover_shop", "shop_item": "hover_shop_item",
             "plot_detail_field": "hover_plot", "growth_gauge": "hover_plot", "care_button": "hover_tool", "care_field": "hover_plot",
             "care_target": "hover_tool"
         }
@@ -1950,31 +1752,12 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         if owned:
             handler, arg = owned
             return handler(arg, obj)
-        if action.startswith("shop_page:"):
-            if self.current_page not in ("shop_buy", "shop_sell"):
-                return self.response()
-            self.shop_page += int(action.split(":", 1)[1])
-            self.clear_hover()
-            self.render()
-            return self.response(tts="Next page" if action.endswith(":1") else "Previous page")
         if action.startswith("travel:"):
             return self.travel_to(action.split(":", 1)[1])
         if action == "return_scene":
             return self.return_to_scene()
         if action == "open_recipes":
             return self.open_recipes()
-        if action == "return_shop_choice":
-            return self.return_to_shop_choice()
-        if action == "open_shop":
-            return self.open_shop()
-        if action.startswith("shop_mode:"):
-            return self.open_shop_mode(action.split(":", 1)[1])
-        if action.startswith("buy:"):
-            _, kind, item_id = action.split(":", 2)
-            return self.buy_shop_item(kind, item_id)
-        if action.startswith("sell:"):
-            _, kind, item_id = action.split(":", 2)
-            return self.sell_shop_item(kind, item_id)
         if action.startswith("open_plot_detail:"):
             return self.open_plot_detail(action.split(":", 1)[1])
         if action.startswith("start_care:"):
@@ -2633,99 +2416,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         self.render()
         return self.response(tts=f"{self.get_recipe_label(recipe_id)} used. {self.buff_text()}", sfx="eat_food")
 
-    def open_shop(self):
-        self.registry.run("close_dialogue")
-        if self.current_location != "town":
-            self.current_location = "town"
-        self.current_page = "shop_choice"
-        self.clear_hover()
-        self.render()
-        return self.response(tts="Shop.", sfx="shop_open", sound_events=[{"kind": "one_shot", "sound": "door"}])
-
-    def return_to_shop_choice(self):
-        self.current_page = "shop_choice"
-        self.shop_page = 0
-        self.clear_hover()
-        self.render()
-        return self.response(tts="Shop.", sfx="open_page")
-
-    def open_shop_mode(self, mode):
-        self.shop_page = 0
-        if mode == "sell":
-            self.current_page = "shop_sell"
-            text = "Sell."
-        else:
-            self.current_page = "shop_buy"
-            text = "Buy."
-        self.clear_hover()
-        self.render()
-        return self.response(tts=text, sfx="open_page")
-
-    def buy_shop_item(self, kind, item_id):
-        buyer = self.registry.shop_buyers.get(kind)
-        if buyer:
-            result = buyer(item_id)
-            if result is not None: return result
-        if kind == "seed":
-            seed = self.get_seed_config(item_id)
-            if not seed:
-                return self.response(tts="Seed not sold here.", sfx="error")
-            price = int(seed.get("seed_price", max(1, round(int(seed.get("crop_price", 1)) * 0.8))))
-            label = f"{self.get_seed_label(item_id)} seeds"
-        elif kind == "fertilizer":
-            price = self.get_fertilizer_price()
-            label = "Fertilizer"
-        else:
-            return self.response(tts="Item unavailable.", sfx="error")
-        price = self.market_price(price, kind, "buy")
-        if int(self.resources.get("coin", 0)) < price:
-            return self.response(tts=f"Not enough gold. {label} costs {price} gold.", sfx="error")
-        self.resources["coin"] -= price
-        if kind == "seed":
-            self.resources["seeds"][item_id] = int(self.resources["seeds"].get(item_id, 0)) + 1
-            count = self.resources["seeds"][item_id]
-        else:
-            self.resources["fertilizer"] = int(self.resources.get("fertilizer", 0)) + 1
-            count = self.resources["fertilizer"]
-        self.clear_hover()
-        self.render()
-        return self.response(tts=f"{label} bought. Gold left: {self.resources['coin']} gold", sfx="shop_buy", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
-
-    def sell_shop_item(self, kind, item_id):
-        if kind == "fish" and item_id in self.fishing_config()['fish']:
-            if self.resources['fish'].get(item_id,0) < 1:
-                return self.response(tts="No fish to sell.")
-            fish = self.fishing_config()['fish'][item_id]
-            price, label = self.get_fish_price(item_id), fish['label']
-            self.resources['fish'][item_id] -= 1
-        elif kind == "mineral" and item_id in self.MINERAL_LABELS:
-            if self.resources[item_id] < 1:
-                return self.response(tts="No mineral to sell.", sfx="error")
-            price, label = self.get_mineral_price(item_id), self.MINERAL_LABELS[item_id]
-            self.resources[item_id] -= 1
-        elif kind == "crop":
-            count = int(self.resources["crops"].get(item_id, 0))
-            if count <= 0:
-                return self.response(tts="No crop to sell.", sfx="error")
-            price = int(self.get_seed_config(item_id).get("crop_price", 1))
-            label = f"{self.get_seed_label(item_id)} crops"
-            self.resources["crops"][item_id] = count - 1
-        elif kind == "food":
-            count = int(self.resources["foods"].get(item_id, 0))
-            if count <= 0:
-                return self.response(tts="No food to sell.", sfx="error")
-            price = self.get_food_sell_price(item_id)
-            label = self.get_recipe_label(item_id)
-            self.resources["foods"][item_id] = count - 1
-        else:
-            return self.response(tts="Cannot sell this item.", sfx="error")
-        price = self.market_price(price, kind, "sell")
-        self.resources["coin"] += price
-        self.consume_sale()
-        self.clear_hover()
-        self.render()
-        return self.response(tts=f"{label} sold. Gold left: {self.resources['coin']} gold", sfx="shop_sell", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
-
     def handle_command(self, command):
         command = str(command).lower().strip()
         command = {"f1":"minimap", "f2":"resources", "f3":"load", "f3_long":"save",
@@ -2889,13 +2579,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
 
     MINERAL_LABELS = {"stone": "Stone", "copper": "Copper", "iron": "Iron", "diamond": "Diamond"}
 
-    def get_fertilizer_price(self):
-        cfg = self.config.get("fertilizer", {})
-        return int(cfg.get("shop_price", cfg.get("price", self.config.get("shop", {}).get("fertilizer_price", 12))))
-
-    def get_pickaxe_price(self):
-        return int(math.ceil(self.get_fertilizer_price() * float(self.config.get("mine", {}).get("pickaxe_price_multiplier", 5))))
-
     def item_destroyed_event(self, item_id, reward_sound=None, loot_tts=None):
         self.registry.run("activity", "tool_broken", "Fishing rod" if item_id == "fishing_rod" else "Pickaxe")
         event = {"kind": "item_destroyed", "item_id": item_id}
@@ -2905,28 +2588,3 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
 
     def get_harvest_base_yield(self, seed_id):
         return int(self.get_seed_config(seed_id).get("yield", 1))
-
-    def build_shop_objects(self, entries, mode):
-        page_size = 12
-        pages = max(1, math.ceil(len(entries) / page_size))
-        self.shop_page_count = pages
-        self.shop_page = max(0, min(self.shop_page, pages - 1))
-        objects = []
-        for i, (kind, item_id, label, count, price) in enumerate(entries[self.shop_page * page_size:(self.shop_page + 1) * page_size]):
-            price = price if kind in self.registry.fixed_price_kinds else self.market_price(price, kind, mode)
-            x, y = (9, 23, 37, 51)[i % 4], (5, 15, 25)[i // 4]
-            text = f"{label}, {price} gold. stock {count} " if mode == "buy" else f"{label}, stock {count}. Sell {price} gold"
-            if kind == "pickaxe" and count:
-                text = "Pickaxe owned. Limit one."
-            objects.append({"id": f"shop_{mode}_{kind}_{item_id}", "type": "shop_item", "shop_kind": kind, "item_id": item_id,
-                            "x": x, "y": y, "width": 10, "height": 6, "hit_width": 10, "hit_height": 6,
-                            "count": int(count), "price": int(price), "label": label, "tts": text, "action": f"{mode}:{kind}:{item_id}"})
-        objects.append(self.back_arrow(f"shop_{mode}_back", "Back to shop", "return_shop_choice"))
-        for delta, x, direction, label in [(-1, 30, "left", "Previous page"), (1, 51, "right", "Next page")]:
-            if 0 <= self.shop_page + delta < pages:
-                objects.append({"id": f"shop_page_{direction}", "type": "arrow", "x": x, "y": 35, "direction": direction,
-                                "size": 2, "hit_width": 11, "hit_height": 7, "label": label, "action": f"shop_page:{delta}"})
-        if not entries:
-            objects.append({"id": "shop_empty", "type": "box", "x": 30, "y": 16, "width": 20, "height": 8,
-                            "label": "Nothing to sell", "tts": "Nothing to sell.", "action": ""})
-        return objects
