@@ -70,12 +70,12 @@ class Feature:
 
 class Page:
     def __init__(self, feature, name=None, objects=None, scene=None, guidance=None,
-                 press=None, single_press=False, **pointer):
+                 press=None, single_press=False, icon_grid=False, **pointer):
         unknown = set(pointer) - {"pointer_" + kind for kind in POINTER_KINDS}
         if unknown:
             raise TypeError(f"Unknown page hook(s): {', '.join(sorted(unknown))}")
         self.feature, self.name, self.objects, self.scene, self.guidance = feature, name, objects, scene, guidance
-        self.press, self.single_press = press, single_press
+        self.press, self.single_press, self.icon_grid = press, single_press, icon_grid
         self.pointer = {kind: pointer.get("pointer_" + kind) for kind in POINTER_KINDS}
 
 
@@ -135,15 +135,16 @@ class Registry:
         table[key] = value
 
     def page(self, page_id, *, name=None, objects=None, scene=None, guidance=None,
-             press=None, single_press=False, **pointer):
+             press=None, single_press=False, icon_grid=False, **pointer):
         """Own a page.
         objects() -> list of tactile objects; name -> spoken page name; scene() draws after the objects;
         guidance() -> (kind, targets, completed, total) for audio_guidance.
         pointer_move/down/drag/up(x, y) run first in the engine's pointer method with raw input (no sleep,
         pause or busy checks) and return a response, or None to continue with the core handler.
         press(x, y) runs inside pointer_down after the core checks and bookkeeping, in place of object
-        selection. single_press ignores a new press while the pointer is still held."""
-        page = Page(self._current, name, objects, scene, guidance, press, single_press, **pointer)
+        selection. single_press ignores a new press while the pointer is still held.
+        icon_grid places the page's icon objects on the shared twelve-slot grid."""
+        page = Page(self._current, name, objects, scene, guidance, press, single_press, icon_grid, **pointer)
         self._claim(self.pages, page_id, page, "Page")
 
     def action(self, key, handler, *, before_night_guard=False):
@@ -250,6 +251,9 @@ class Registry:
     def page_hook(self, page_id, hook):
         page = self.pages.get(page_id)
         return getattr(page, hook) if page else None
+
+    def icon_grid_pages(self):
+        return {page_id for page_id, page in self.pages.items() if page.icon_grid}
 
     def page_name(self, page_id):
         return self.page_hook(page_id, "name")

@@ -112,7 +112,8 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             objects = list(objects) + [self.back_arrow("shop_choice_back", "Back to village", "return_scene")]
         objects = self.icon_layout.arrange(self.current_page, objects,
                                            self.dotpad.width, self.dotpad.height,
-                                           types=self.icons.types, layout_order=self.registry.icon_layout_order)
+                                           types=self.icons.types, layout_order=self.registry.icon_layout_order,
+                                           grid_pages=self.registry.icon_grid_pages())
         if self.current_page == 'plot_detail':
             for obj in objects:
                 if obj['type'] == 'growth_gauge':
@@ -160,11 +161,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
 
         for recipe_id in self.config.get("recipes", {}):
             self.resources["foods"].setdefault(recipe_id, 0)
-
-        research = self.config.get("research", {})
-        expansion = research.get("field_expansion", {})
-        self.research_levels = {"seed_return": 0, "mineral_luck": 0}
-        self.unlocked_plot_count = int(expansion.get("initial_plot_count", 2))
 
         self.farm_plots = {}
         for plot in self.config.get("farm", {}).get("plots", []):
@@ -535,7 +531,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             "minimap": self.get_minimap_objects,
             "seed_select": self.get_seed_select_objects,
             "inventory": self.get_inventory_objects,
-            "research": self.get_research_objects,
             "plot_detail": self.get_plot_detail_objects,
             "water_minigame": self.get_care_minigame_objects,
             "fertilizer_minigame": self.get_care_minigame_objects,
@@ -1151,72 +1146,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             objects.append(obj)
         return objects
 
-    def get_research_objects(self):
-        objects = []
-        coin = int(self.resources.get("coin", 0))
-        seed_cfg = self.config.get("research", {}).get("seed_return", {})
-        level = int(self.research_levels.get("seed_return", 0))
-        max_level = int(seed_cfg.get("max_level", 2))
-        costs = list(seed_cfg.get("costs", []))
-
-        if level >= max_level:
-            seed_tts = f"Seed recovery. Level {level}. Maximum level."
-            seed_action = ""
-        else:
-            cost = int(costs[level]) if level < len(costs) else 999999
-            copper_cost = int(seed_cfg.get("copper_costs", [3, 6])[level])
-            seed_tts = f"Seed recovery, level {level}. Next level:  {cost} gold, Copper {copper_cost} required"
-            seed_action = "research:seed_return"
-
-        objects.append({
-            "id": "research_seed_return", "type": "research", "research_kind": "seed_return",
-            "x": 19, "y": 18, "width": 18, "height": 12, "hit_width": 20, "hit_height": 14,
-            "label": "Seed recovery", "tts": seed_tts, "action": seed_action
-        })
-
-        expand_cfg = self.config.get("research", {}).get("field_expansion", {})
-        all_plots = self.config.get("farm", {}).get("plots", [])
-        costs = list(expand_cfg.get("costs", []))
-        initial = int(expand_cfg.get("initial_plot_count", 2))
-        expansion_index = max(0, self.unlocked_plot_count - initial)
-        if self.unlocked_plot_count >= len(all_plots):
-            expand_tts = f"Farm expansion. Plots: {self.unlocked_plot_count} "
-            expand_action = ""
-        else:
-            cost = int(costs[expansion_index]) if expansion_index < len(costs) else 999999
-            material_cost = int(expand_cfg.get("stone_costs", [5, 10])[expansion_index])
-            expand_tts = f"Plot {self.unlocked_plot_count}. {cost} gold, Stone {material_cost} to add a plot. Gold: {coin} gold"
-            expand_action = "research:field_expand"
-
-        objects.append({
-            "id": "research_field_expand", "type": "research", "research_kind": "field_expand",
-            "x": 41, "y": 18, "width": 18, "height": 12, "hit_width": 20, "hit_height": 14,
-            "label": "Farm expansion", "tts": expand_tts, "action": expand_action
-        })
-        for kind, label, mineral in [("mineral_luck", "Mineral discovery", "iron")]:
-            cfg = self.config.get("research", {}).get(kind, {})
-            level = self.research_levels.get(kind, 0)
-            action = "" if level >= int(cfg.get("max_level", 2)) else f"research:{kind}"
-            text = f"{label}. Level {level}. Maximum level." if not action else f"{label}. Level {level + 1}. Requires {cfg.get('costs', [20, 40])[level]} gold, {self.MINERAL_LABELS[mineral]} {cfg.get(mineral + '_costs', [3, 6])[level]} required"
-            objects.append({"id": f"research_{kind}", "type": "research", "research_kind": kind, "label": label, "tts": text, "action": action})
-        for i, obj in enumerate(objects):
-            obj.update(x=8+15*(i%3), y=6+12*(i//3), width=12, height=8, hit_width=12, hit_height=8)
-            kind = obj["research_kind"]
-            key = "field_expansion" if kind == "field_expand" else kind
-            cfg = self.config.get("research", {}).get(key, {})
-            index = expansion_index if kind == "field_expand" else self.research_levels.get(kind, 0)
-            material = {"seed_return": "copper", "field_expand": "stone", "mineral_luck": "iron"}[kind]
-            obj["display_quantities"] = []
-            if obj.get("action"):
-                costs = cfg.get("costs", [])
-                materials = cfg.get(material + "_costs", [3, 6] if material != "stone" else [5, 10])
-                for resource, required in [("coin", costs[index] if index < len(costs) else 999999),
-                                           (material, materials[index])]:
-                    obj["display_quantities"].append({"item": resource, "label": "Gold" if resource == "coin" else resource.title(),
-                                                    "required": int(required), "owned": int(self.resources.get(resource, 0))})
-        objects.append(self.back_arrow("research_back", "Back home", "return_scene"))
-        return objects
-
     def get_harvest_objects(self):
         if self.harvest_plot_id is None:
             return []
@@ -1504,8 +1433,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
                 self.draw_seed(obj)
             elif obj_type == "resource":
                 self.draw_resource(obj)
-            elif obj_type == "research":
-                self.draw_research(obj)
             elif obj_type == "plot_detail_field":
                 self.draw_plot_detail_field(obj)
             elif obj_type == "growth_gauge":
@@ -1635,9 +1562,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
 
     def draw_recipe_icon(self, x, y, recipe_id):
         self.draw_icon_pattern(x, y, self.get_recipe_config(recipe_id).get("icon", []))
-
-    def draw_research(self, obj):
-        self.icons.draw(obj)
 
     def draw_plot_detail_field(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
@@ -1888,13 +1812,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
                 info.append(f"owned {owned}")
             return f"{label}, {', '.join(info)}." if info else label
 
-        if kind == "research":
-            # The same structured cost fields that drive the research icon.
-            costs = obj.get("display_quantities") or []
-            info = [f"{item.get('required')} {item.get('label', item.get('item', ''))}"
-                    for item in costs if item.get("required") is not None]
-            return f"{label}, {', '.join(info)}." if info else label
-
         count = obj.get("count")
         if kind == "seed" and count is None:
             count = self.resources.get("seeds", {}).get(obj.get("seed_id"))
@@ -1913,7 +1830,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             "bed": "hover_bed", "chest": "hover_chest", "stove": "hover_stove",
             "plot": "hover_plot", "node": "hover_node", "route": "hover_route",
             "watering_can": "hover_water_tool", "fertilizer": "hover_fertilizer",
-            "seed": "hover_seed", "resource": "hover_resource", "research": "hover_research",
+            "seed": "hover_seed", "resource": "hover_resource",
             "harvest_crop": "hover_harvest_crop", "harvest_field": "hover_plot", "arrow": "hover_navigation",
             "recipe": "hover_recipe", "ingredient": "hover_ingredient", "cooking_start": "hover_cooking",
             "shop_npc": "hover_shop", "shop_choice": "hover_shop", "shop_item": "hover_shop_item",
@@ -2228,8 +2145,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             return self.travel_to(action.split(":", 1)[1])
         if action == "return_scene":
             return self.return_to_scene()
-        if action == "open_research":
-            return self.open_research()
         if action == "open_recipes":
             return self.open_recipes()
         if action == "return_shop_choice":
@@ -2256,8 +2171,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             return self.plant_seed(plot_id, seed_id)
         if action.startswith("start_harvest:"):
             return self.start_harvest_minigame(action.split(":", 1)[1])
-        if action.startswith("research:"):
-            return self.buy_research(action.split(":", 1)[1])
         if action.startswith("select_recipe:"):
             return self.select_recipe(action.split(":", 1)[1])
         if action.startswith("toggle_ingredient:"):
@@ -2333,14 +2246,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.clear_hover()
         self.render()
         return self.response(tts="Inventory.", sfx="open_page")
-
-    def open_research(self):
-        if self.day_ended:
-            return self.night_only_response()
-        self.current_page = "research"
-        self.clear_hover()
-        self.render()
-        return self.response(tts="Research.", sfx="open_page")
 
     def navigate_key(self, direction):
         if self.current_page == 'inventory':
@@ -2613,57 +2518,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         chances = cfg.get("return_chances", [0.3, 0.6])
         chance = chances[min(level - 1, len(chances) - 1)] if level > 0 else self.get_seed_config(seed_id).get("seed_return_chance", 0.0)
         return min(1.0, max(0.0, float(chance)))
-
-    def buy_research(self, research_kind):
-        if research_kind == "mineral_luck":
-            return self.buy_mineral_research(research_kind)
-        if research_kind == "seed_return":
-            cfg = self.config.get("research", {}).get("seed_return", {})
-            level = int(self.research_levels.get("seed_return", 0))
-            max_level = int(cfg.get("max_level", 2))
-            costs = list(cfg.get("costs", []))
-            if level >= max_level:
-                return self.response(tts="Seed recovery at maximum level.", sfx="error")
-            cost = int(costs[level]) if level < len(costs) else 999999
-            copper_cost = int(cfg.get("copper_costs", [3, 6])[level])
-            if self.resources["copper"] < copper_cost:
-                return self.response(tts=f"Copper {copper_cost} required", sfx="error")
-            if int(self.resources.get("coin", 0)) < cost:
-                return self.response(tts=f"Not enough gold. Need {cost}.", sfx="error")
-            self.resources["coin"] -= cost
-            self.resources["copper"] -= copper_cost
-            self.research_levels["seed_return"] = level + 1
-            result = self.consume_time("research")
-            text = f"Seed recovery level {level + 1}. Gold spent: {cost}."
-            if result["night"]:
-                return self.night_response(text, sound_events=[{"kind": "one_shot", "sound": "coin"}] if cost > 0 else [])
-            self.render()
-            return self.response(tts=text, sfx="research", sound_events=[{"kind": "one_shot", "sound": "coin"}] if cost > 0 else [])
-
-        if research_kind == "field_expand":
-            cfg = self.config.get("research", {}).get("field_expansion", {})
-            plots = self.config.get("farm", {}).get("plots", [])
-            initial = int(cfg.get("initial_plot_count", 2))
-            costs = list(cfg.get("costs", []))
-            if self.unlocked_plot_count >= len(plots):
-                return self.response(tts="All plots unlocked.", sfx="error")
-            index = max(0, self.unlocked_plot_count - initial)
-            cost = int(costs[index]) if index < len(costs) else 999999
-            material_cost = int(cfg.get("stone_costs", [5, 10])[index])
-            if self.resources["stone"] < material_cost:
-                return self.response(tts=f"Stone {material_cost} required", sfx="error")
-            if int(self.resources.get("coin", 0)) < cost:
-                return self.response(tts=f"Not enough gold. Need {cost}.", sfx="error")
-            self.resources["coin"] -= cost
-            self.resources["stone"] -= material_cost
-            self.unlocked_plot_count += 1
-            result = self.consume_time("research")
-            text = f"Farm expanded. Plots: {self.unlocked_plot_count}. Gold spent: {cost}."
-            if result["night"]:
-                return self.night_response(text, sound_events=[{"kind": "one_shot", "sound": "coin"}] if cost > 0 else [])
-            self.render()
-            return self.response(tts=text, sfx="research", sound_events=[{"kind": "one_shot", "sound": "coin"}] if cost > 0 else [])
-        return self.response()
 
     def start_harvest_minigame(self, plot_id):
         state = self.farm_plots.get(plot_id)
@@ -3204,8 +3058,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             "resources": self.resources,
             "active_buff": dict(self.active_buff),
             "buff_text": self.buff_text(),
-            "research_levels": dict(self.research_levels),
-            "unlocked_plot_count": self.unlocked_plot_count,
             "farm_plots": plots,
             "seed_select_plot_id": self.seed_select_plot_id,
             "drag_tool": self.drag_tool,
@@ -3437,31 +3289,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.clear_hover()
         self.render()
         return self.response(tts=f"{label} bought. Gold left: {self.resources['coin']} gold", sound_events=[{"kind": "one_shot", "sound": "coin"}])
-
-    def buy_mineral_research(self, kind):
-        if kind != "mineral_luck":
-            return self.response(tts="Research unavailable.", sfx="error")
-        cfg = self.config.get("research", {}).get(kind, {})
-        level = self.research_levels.get(kind, 0)
-        maximum = int(cfg.get("max_level", 2))
-        if level >= maximum:
-            return self.response(tts="Maximum research level.", sfx="error")
-        mineral = "iron"
-        costs, materials = cfg.get("costs", [20, 40]), cfg.get(f"{mineral}_costs", [3, 6])
-        cost, material_cost = int(costs[level]), int(materials[level])
-        if self.resources["coin"] < cost or self.resources[mineral] < material_cost:
-            return self.response(tts=f"Not enough materials. Need {cost} gold, {self.MINERAL_LABELS[mineral]} {material_cost} required", sfx="error")
-        self.resources["coin"] -= cost
-        self.resources[mineral] -= material_cost
-        self.research_levels[kind] = level + 1
-        text = f"Mineral discovery level {level + 1} complete."
-        result = self.consume_time("research")
-        events = [{"kind": "one_shot", "sound": "coin"}]
-        if result["night"]:
-            return self.night_response(text, sound_events=events)
-        self.clear_hover()
-        self.render()
-        return self.response(tts=text, sound_events=events)
 
     def draw_mine_item(self, x, y, kind):
         x, y = int(x), int(y)

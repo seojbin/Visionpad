@@ -44,7 +44,7 @@ class IconSpec:
 class IconRenderer:
     """One thin frame plus one filled semantic symbol; optional selection/progress overlays."""
     TYPES = frozenset(('bed','chest','stove','shop_npc','rowan','calendar_day',
-        'calendar_button','save_slot','seed','resource','research','care_button',
+        'calendar_button','save_slot','seed','resource','care_button',
         'recipe','ingredient','cooking_start','shop_choice','shop_item','watering_can',
         'fertilizer','nav_up','nav_down'))
 
@@ -108,9 +108,6 @@ class IconRenderer:
         elif kind in ('calendar_day','calendar_button'): symbol = 'calendar'
         elif kind == 'save_slot': symbol = 'save'
         elif kind == 'cooking_start': symbol = 'start'
-        elif kind == 'research':
-            key = obj.get('research_kind')
-            symbol = {'seed_return':'seed','field_expand':'tool','mineral_luck':'mineral'}.get(key,'chest')
         if symbol == 'food': frame = 'double_rectangle'
         # Rowan도 다른 아이콘과 동일하게 1칸 테두리(rectangle) 적용
         return IconSpec(frame, symbol, pattern)
@@ -156,16 +153,16 @@ class IconRenderer:
 
 class IconLayout:
     """Page policy over the same twelve virtual slots."""
-    PAGES = frozenset(('home','town','inventory','research','seed_select',
+    PAGES = frozenset(('home','town','inventory','seed_select',
         'recipe_select','ingredient_select','shop_choice','shop_buy','shop_sell',
         'load_game','shop_calendar','rowan_dialogue','rowan_submit'))
 
     def __init__(self, grid=None):
         self.grid = grid or IconGrid()
 
-    def arrange(self, page, objects, width, height, types=IconRenderer.TYPES, layout_order=None):
+    def arrange(self, page, objects, width, height, types=IconRenderer.TYPES, layout_order=None, grid_pages=()):
         objects = [dict(o) for o in objects]
-        if page not in self.PAGES and page != 'plot_detail': return objects
+        if page not in self.PAGES and page not in grid_pages and page != 'plot_detail': return objects
         chosen = [o for o in objects if o.get('type') in types
                   and not o.get('skip_grid')
                   and (page != 'plot_detail' or o.get('type') == 'care_button')]

@@ -1,1 +1,2 @@
-"""research feature. Code still lives in visionpad/core/engine.py until it is extracted."""
+"""Research: upgrades bought at home."""
+from visionpad.features.research.feature import Research as Feature
