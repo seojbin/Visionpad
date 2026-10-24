@@ -74,10 +74,13 @@ def demo_lines():
             quest_line(engine.open_calendar())
 
     # Only literal test-button calls are read; JavaScript is never evaluated.
-    page = (ROOT / "web/game.html").read_text(encoding="utf-8-sig")
-    for match in re.finditer(r'\b(?:announce|speak)\(("(?:\\.|[^"\\])*")([^;\n]*)', page):
-        profile = "shopkeeper" if '"shopkeeper"' in match[2] else "system"
-        add(json.loads(match[1]), profile, "web/game.html:test-button")
+    # The page script lives in web/core/game.js and web/features/*/client.js.
+    pages = [ROOT / "web/game.html", ROOT / "web/core/game.js", *sorted((ROOT / "web/features").glob("*/client.js"))]
+    for path in pages:
+        page = path.read_text(encoding="utf-8-sig")
+        for match in re.finditer(r'\b(?:announce|speak)\(("(?:\\.|[^"\\])*")([^;\n]*)', page):
+            profile = "shopkeeper" if '"shopkeeper"' in match[2] else "system"
+            add(json.loads(match[1]), profile, f"{path.relative_to(ROOT).as_posix()}:test-button")
 
     flow = run_flow()
     for event in flow["events"]:
