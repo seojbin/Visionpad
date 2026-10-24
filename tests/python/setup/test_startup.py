@@ -66,7 +66,7 @@ class SetupChecks(unittest.TestCase):
 
     def test_missing_sound_and_game_module_are_both_reported(self):
         (self.root / "web/audio/water.mp3").unlink()
-        (self.root / "visionpad/features/fishing/mixin.py").unlink()
+        (self.root / "visionpad/core/engine.py").unlink()
         failed = {check["name"] for check in self.report()["checks"] if not check["ok"]}
         self.assertEqual(failed, {"Game sounds", "Game files"})
 

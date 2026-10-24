@@ -14,6 +14,8 @@ ENABLED = (
     "npc",
     "village",
     "mining",
+    "fishing",
+    "seafood",
 )
 
 

@@ -4,21 +4,18 @@ import random
 import time
 
 from pathlib import Path
-from visionpad.core.order import Reset
 from visionpad.core.registry import Registry
 from visionpad.core.state import SharedState
 from visionpad.display.dotpad import DotPad
 from visionpad.display.icons import IconGrid, IconLayout, IconRenderer
 from visionpad.display.keypad import KeypadUI
 from visionpad.features import load_features
-from visionpad.features.fishing.mixin import FishingMixin
-from visionpad.features.seafood.mixin import SeafoodMixin
 from visionpad.paths import SAVES_DIR
 from visionpad.services.saves import SaveMixin
 from visionpad.spectator.state import spectator_snapshot
 
 
-class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
+class GameEngine(KeypadUI, SaveMixin, SharedState):
 
     def __init__(self, config, save_dir=None):
         config = self.prepare_display_config(config)
@@ -211,10 +208,7 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         time_config = self.config.get("time", {})
         self.time_total_cells = int(time_config.get("total_cells", 20))
         self.time_used_cells = 0
-        # Until fishing is a feature, its reset keeps its place after the mine's random draws.
-        self.registry.run("reset", until=Reset.FISHING)
-        self.reset_fishing()
-        self.registry.run("reset", since=Reset.FISHING)
+        self.registry.run("reset")
 
         self.render()
 
@@ -421,8 +415,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
             state["fertilized"] = False
 
         self.day += 1
-        self.new_fishing_target()
-        self.fishing_last_catch = None
         self.registry.run("start_of_day")
         self.time_used_cells = 0
         self.day_ended = False
@@ -524,7 +516,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
             "load_game": self.get_load_objects,
             "home": self.get_home_objects,
             "farm": self.get_farm_objects,
-            "fishing": self.get_fishing_objects,
             "seed_select": self.get_seed_select_objects,
             "plot_detail": self.get_plot_detail_objects,
             "water_minigame": self.get_care_minigame_objects,
@@ -1335,8 +1326,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         elif self.current_page == "plot_detail":
             self.dotpad.draw_line(0, 12, self.dotpad.width - 1, 12)
             self.dotpad.draw_line(0, 13, self.dotpad.width - 1, 13)
-        if self.current_page == "fishing":
-            self.draw_lake()
         if self.current_page == "cooking":
             self.draw_cooking_path()
         scene = self.registry.page_hook(self.current_page, "scene")
@@ -1600,9 +1589,7 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         detail = self.registry.page_hook(loc, "detail")
         if detail:
             return detail()
-        if loc == "fishing":
-            return "Fishing lake. Follow the water sound. Tap to fish." if self.resources.get("fishing_rod") else "Fishing lake. Buy a fishing rod to catch fish."
-        elif loc == "home":
+        if loc == "home":
             return "Home. Bed, Research, Kitchen, and Flower pot."
         elif loc == "farm":
             return "Farm. Choose a plot to manage your crops."
@@ -1784,7 +1771,7 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         self.location_detail_spoken = False
         self.last_hover_state = (None, True)
 
-        single_press = self.current_page == "fishing" or self.registry.page_hook(self.current_page, "single_press")
+        single_press = self.registry.page_hook(self.current_page, "single_press")
         if single_press and self.pointer_pressed:
             return self.response()
 
@@ -1796,9 +1783,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         press = self.registry.page_hook(self.current_page, "press")
         if press:
             return press(x, y)
-
-        if self.current_page == "fishing":
-            return self.cast_fishing(x, y)
 
         if self.current_page in ("water_minigame", "fertilizer_minigame"):
             self.care_dragging = True
@@ -2042,9 +2026,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
                 return self.night_response()
         self.render()
         name = self.get_page_name(location)
-        if location == "fishing":
-            text = "Fishing lake." if self.resources.get("fishing_rod") else "Fishing lake. Buy a fishing rod"
-            return self.response(tts=text, sfx="travel")
         arrival = self.registry.page_hook(location, "arrival")
         text = arrival() if arrival else None
         if text:
@@ -2685,8 +2666,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         if buyer:
             result = buyer(item_id)
             if result is not None: return result
-        if kind == "fishing_rod" and item_id == "fishing_rod":
-            return self.buy_fishing_rod()
         if kind == "seed":
             seed = self.get_seed_config(item_id)
             if not seed:
@@ -2819,7 +2798,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
                  "hit_radius": o.get("hit_radius")}
                 for o in objects
             ],
-            "fishing": self.fishing_public_state(),
             "audio_guidance": self.audio_guidance(),
             "objects": [{"id": o["id"], "label": o.get("label", ""),
                          "type": o.get("type"), "x": o.get("x"), "y": o.get("y"),

@@ -45,7 +45,7 @@ class Npc(Feature):
         e.activity_history_complete = True
 
     @staticmethod
-    def migrate(state):
+    def migrate(state, fresh):
         # Historical saves cannot prove whether a harvest/catch was the first ever.
         state.setdefault('activity_history_complete', False)
         if state.get('current_page') == 'npc_dialogue':

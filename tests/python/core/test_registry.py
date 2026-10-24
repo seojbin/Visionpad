@@ -177,9 +177,17 @@ class ExposeTests(unittest.TestCase):
     # Every engine method provided by a feature. A new entry here is a new cross-feature or
     # legacy entry point: review it (AGENTS.md: prefer events or slots).
     EXPECTED = {
+        "boost_rare_weights": "seafood",
+        "cast_fishing": "fishing",
+        "consume_sale": "seafood",
+        "finish_seafood": "seafood",
+        "fishing_config": "fishing",
+        "get_fish_price": "fishing",
         "get_inventory_objects": "inventory",
         "get_mineral_price": "mining",
+        "get_rod_price": "fishing",
         "hit_mine_rock": "mining",
+        "loot_amount": "seafood",
         "market_price": "village",
         "next_rowan_advice": "npc",
         "npc_action": "npc",
@@ -189,8 +197,13 @@ class ExposeTests(unittest.TestCase):
         "recent_reaction": "npc",
         "record_activity": "npc",
         "rowan_advice": "npc",
+        "sale_price": "seafood",
+        "seafood_ingredient_objects": "seafood",
+        "seafood_ready": "seafood",
+        "selected_fish": "seafood",
         "submit_rowan_crop": "village",
         "talk_rowan": "village",
+        "toggle_fish": "seafood",
     }
 
     def test_exposed_names_and_owners_are_reviewed(self):

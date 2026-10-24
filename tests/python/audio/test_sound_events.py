@@ -74,7 +74,7 @@ class ActionSoundTests(unittest.TestCase):
         self.assertEqual(engine.cast_fishing(30,20)['sfx'], 'error')
         engine.resources['fishing_rod'] = 1
         self.assertEqual(engine.cast_fishing(0,0)['sfx'], 'error')
-        with patch('visionpad.features.fishing.mixin.random.choices',return_value=['miss']):
+        with patch('visionpad.features.fishing.feature.random.choices',return_value=['miss']):
             result = engine.cast_fishing(30,20)
         self.assertEqual(result['sfx'], 'fishing_miss')
         self.assertEqual(result['sound_events'], [])

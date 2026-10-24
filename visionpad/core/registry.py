@@ -242,7 +242,8 @@ class Registry:
     def save_fields(self, *, transient=None, defaults=(), migrate=None):
         """transient: attribute -> value written into every save and after every load.
         defaults: attributes that older saves may lack; filled from a fresh engine on load.
-        migrate(state): rewrites an older save's state dict in place before defaults are filled."""
+        migrate(state, fresh): rewrites an older save's state dict in place before defaults are filled;
+        fresh is a newly built engine with default values."""
         for key, value in (transient or {}).items():
             self._claim(self.save_transient, key, value, "Transient save field")
         self.save_defaults.extend(defaults)

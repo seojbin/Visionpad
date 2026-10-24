@@ -48,7 +48,7 @@ class Village(Feature):
         e.rowan_submit_open = False
 
     @staticmethod
-    def migrate(state):
+    def migrate(state, fresh):
         """Saves made on retired Rowan pages reopen on the page that replaced them."""
         if state.get('current_page') == 'rowan_dialogue':
             state['rowan_submit_open'] = False

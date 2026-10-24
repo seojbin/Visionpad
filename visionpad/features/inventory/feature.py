@@ -20,7 +20,6 @@ class Inventory(Feature):
         reg.contribute("inventory.items", self.core_resource_items, order=order.InventoryItems.CORE_RESOURCES)
         reg.contribute("inventory.items", self.farming_items, order=order.InventoryItems.FARMING)
         reg.contribute("inventory.items", self.cooking_items, order=order.InventoryItems.COOKING)
-        reg.contribute("inventory.items", self.fishing_items, order=order.InventoryItems.FISHING)
         reg.page("inventory", objects=self.page_objects, icon_grid=True,
                  menu_text=lambda: f'Inventory. {self.engine.resources["coin"]} gold.',
                  on_menu_open=self.first_page, navigate=self.navigate)
@@ -70,13 +69,6 @@ class Inventory(Feature):
                 "count": count, "kind": "food", "recipe_id": recipe_id, "action": f"use_food:{recipe_id}",
                 "extra_tts": f"Use: {e.recipe_effect_text(recipe)}"
             })
-        return entries
-
-    def fishing_items(self):
-        e = self.engine
-        entries = [{"id":"fishing_rod", "label":"Fishing rod", "count":e.resources.get("fishing_rod",0), "kind":"tool", "action":""}]
-        for key, fish in e.fishing_config()['fish'].items():
-            entries.append({"id":key, "label":fish['label'], "count":e.resources['fish'].get(key,0), "kind":"fish", "action":""})
         return entries
 
     # ---- page ----

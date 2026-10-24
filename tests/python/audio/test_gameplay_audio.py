@@ -68,7 +68,7 @@ class GameplayAudioTests(unittest.TestCase):
         e = self.engine
         e.travel_to('fishing')
         e.resources['fishing_rod'] = 1
-        with patch('visionpad.features.fishing.mixin.random.choices', return_value=['low']):
+        with patch('visionpad.features.fishing.feature.random.choices', return_value=['low']):
             e.cast_fishing(*e.fishing_target)
         self.assertEqual(e.activity_counts['fishing'], 1)
         text = self.talk()['tts']
