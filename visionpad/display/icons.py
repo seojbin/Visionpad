@@ -43,10 +43,7 @@ class IconSpec:
 
 class IconRenderer:
     """One thin frame plus one filled semantic symbol; optional selection/progress overlays."""
-    TYPES = frozenset(('bed','chest','stove',
-        'save_slot','seed','resource','care_button',
-        'watering_can',
-        'fertilizer'))
+    TYPES = frozenset(('save_slot',))
 
     PATTERNS = {
         'seed': ('01110','11111','01110'),
@@ -100,10 +97,6 @@ class IconRenderer:
                 symbol = registry.icon_symbols[kind](obj)
             if registry.icon_patterns[kind]:
                 pattern = registry.icon_patterns[kind](obj)
-        elif kind == 'resource': symbol = self.category(obj.get('resource_kind'))
-        elif kind == 'care_button': symbol = {'plant':'seed','fertilizer':'tool'}.get(obj.get('care_kind'),obj.get('care_kind'))
-        elif kind == 'watering_can': symbol = 'water'
-        elif kind == 'fertilizer': symbol = 'tool'
         elif kind == 'save_slot': symbol = 'save'
         if symbol == 'food': frame = 'double_rectangle'
         # Rowan도 다른 아이콘과 동일하게 1칸 테두리(rectangle) 적용
@@ -150,8 +143,7 @@ class IconRenderer:
 
 class IconLayout:
     """Page policy over the same twelve virtual slots."""
-    PAGES = frozenset(('home',
-        'load_game'))
+    PAGES = frozenset(('load_game',))
 
     def __init__(self, grid=None):
         self.grid = grid or IconGrid()
@@ -165,7 +157,6 @@ class IconLayout:
                   and (only is None or o.get('type') in only)]
         if page in ('home', 'town'):
             order = {
-                'bed': 0, 'chest': 1, 'stove': 2,
                 **(layout_order or {})
             }
             chosen.sort(key=lambda o: order.get(o['type'], 9))

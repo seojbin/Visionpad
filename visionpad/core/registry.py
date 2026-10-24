@@ -51,11 +51,7 @@ EVENTS = {
 
 # Slots exposed by pages that are still part of the core engine. A feature that
 # owns a page declares that page's slots with reg.slot() instead.
-CORE_SLOTS = {
-    "home.objects": "Extra tactile objects on the home page (daytime only). Provider returns a list of objects.",
-    "home.scene_objects": "Home scene hitboxes, inserted after the kitchen and before the roads (daytime only).",
-    "home.scene": "Drawing on the home scene after the furniture (daytime only). Provider draws, returns None.",
-}
+CORE_SLOTS = {}
 
 POINTER_KINDS = ("move", "down", "drag", "up")
 

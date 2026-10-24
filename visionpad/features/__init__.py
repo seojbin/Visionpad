@@ -20,6 +20,7 @@ ENABLED = (
     "cooking",
     "harvest",
     "farming",
+    "home",
 )
 
 

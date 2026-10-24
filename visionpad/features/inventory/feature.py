@@ -20,8 +20,11 @@ class Inventory(Feature):
         reg.page("inventory", objects=self.page_objects, icon_grid=True,
                  menu_text=lambda: f'Inventory. {self.engine.resources["coin"]} gold.',
                  on_menu_open=self.first_page, navigate=self.navigate,
-                 panel=lambda: (self.engine.inventory_page, self.engine.inventory_page_count, None))
+                 panel=lambda: (self.engine.inventory_page, self.engine.inventory_page_count, None),
+                 detail=lambda: "Inventory. Select an item to use.")
         reg.action("inventory_page:", self.turn_page)
+        reg.icon("resource", symbol=lambda obj: self.engine.icons.category(obj.get('resource_kind')))
+        reg.hover_sfx("resource", "hover_resource")
         reg.state("inventory", lambda: {"page": self.engine.inventory_page + 1, "pages": self.engine.inventory_page_count})
         reg.on("reset", self.reset, order=order.Reset.INVENTORY)
         reg.expose("open_inventory", self.open)

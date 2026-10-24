@@ -356,7 +356,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             return []
         pages = {
             "load_game": self.get_load_objects,
-            "home": self.get_home_objects,
         }
         getter = self.registry.page_hook(self.current_page, "objects") or pages.get(self.current_page)
         objects = self.compact_objects(getter()) if getter else []
@@ -384,122 +383,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
 
     def get_objects(self):
         return [o for o in self.get_layout_objects() if o.get("type") != "arrow"]
-
-    def get_home_objects(self):
-        objects = []
-        for obj in self.config.get("home", {}).get("objects", []):
-            copied = dict(obj)
-            if self.day_ended and copied.get("id") != "home_bed":
-                continue
-            if self.day_ended and copied.get("id") == "home_bed":
-                copied["tts"] = "Bed. Sleep until morning."
-            if copied.get("id") == "home_stove" and not self.day_ended:
-                craftable = sum(
-                    1 for rid in self.config.get("recipes", {})
-                    if self.can_craft_recipe(rid)
-                )
-                copied["tts"] = f"Kitchen. Available recipes: {craftable}."
-            objects.append(copied)
-
-        if not self.day_ended:
-            objects.extend(self.registry.collect("home.objects"))
-        return objects + self.home_spatial_objects()
-
-    def home_spatial_objects(self):
-        bed_item = dict(id='home_scene_bed', type='home_hitbox', skip_grid=True,
-                        x=13, y=19, width=9, height=9, hit_width=11, hit_height=10,
-                        label='Bed', tts='Bed. Sleep until morning.', action='rest')
-        if self.day_ended:
-            return [bed_item]
-        craftable = sum(1 for rid in self.config.get("recipes", {}) if self.can_craft_recipe(rid))
-        return [
-            bed_item,
-            dict(id='home_scene_chest', type='home_hitbox', skip_grid=True,
-                 x=30, y=19, width=11, height=8, hit_width=12, hit_height=9,
-                 label='Research', tts='Research. Choose an upgrade.', action='open_research'),
-            dict(id='home_scene_stove', type='home_hitbox', skip_grid=True,
-                 x=46, y=19, width=11, height=8, hit_width=12, hit_height=9,
-                 label='Kitchen', tts=f'Kitchen. Available recipes: {craftable}.', action='open_recipes'),
-            *self.registry.collect("home.scene_objects"),
-            dict(id='home_road_farm', type='home_hitbox', skip_grid=True,
-                 x=2, y=26, width=5, height=7, hit_width=7, hit_height=9,
-                 label='Farm', tts='Farm. Go west.', action='travel:farm'),
-            dict(id='home_road_town', type='home_hitbox', skip_grid=True,
-                 x=57, y=26, width=5, height=7, hit_width=7, hit_height=9,
-                 label='Village', tts='Village. Go east.', action='travel:town'),
-        ]
-
-    def draw_home_scene(self):
-        pad = self.dotpad
-        pad.draw_line(0, 12, pad.width - 1, 12)
-        pad.draw_line(0, 13, pad.width - 1, 13)
-
-        pad.draw_line(4, 39, 55, 39)
-        for y in range(13, 40):
-            if not (24 <= y <= 28):
-                pad.set_dot(4, y)
-                pad.set_dot(55, y)
-        for dx in (3, 4, 5):
-            pad.set_dot(dx, 23)
-            pad.set_dot(dx, 29)
-        for dx in (54, 55, 56):
-            pad.set_dot(dx, 23)
-            pad.set_dot(dx, 29)
-
-        self.draw_icon_pattern(1, 26, (
-            '001',
-            '011',
-            '111',
-            '011',
-            '001',
-        ))
-        self.draw_icon_pattern(58, 26, (
-            '100',
-            '110',
-            '111',
-            '110',
-            '100',
-        ))
-
-        draw_solid_pattern = self.draw_solid_pattern
-
-        draw_solid_pattern(13, 19, (
-            '111111111',
-            '110000011',
-            '110111011',
-            '111111111',
-            '100000001',
-            '111111111',
-            '110111011',
-            '111111111',
-            '111111111',
-        ))
-
-        if self.day_ended:
-            return
-
-        draw_solid_pattern(30, 19, (
-            '..1111111..',
-            '11111011111',
-            '11001010011',
-            '11111111111',
-            '10000000001',
-            '11111111111',
-            '11001110011',
-            '11111111111',
-        ))
-
-        draw_solid_pattern(46, 19, (
-            '....11111..',
-            '...1110111.',
-            '11111111111',
-            '10001101011',
-            '11111111111',
-            '11011100011',
-            '11011100011',
-            '11111111111',
-        ))
-        self.registry.draw_slot("home.scene")
 
     def draw_solid_pattern(self, cx, cy, rows):
         """Centered pattern: '1' raises a dot, '0' clears it, any other character leaves it."""
@@ -595,17 +478,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
                 self.draw_triangle(obj["x"], obj["y"], obj["direction"], obj.get("size", 2))
             elif obj_type == "box":
                 self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 6), obj.get("height", 5))
-            elif obj_type == "bed":
-                self.draw_bed(obj)
-            elif obj_type == "chest":
-                self.draw_chest(obj)
-            elif obj_type == "stove":
-                self.draw_stove(obj)
-            elif obj_type == "resource":
-                self.draw_resource(obj)
 
-        if self.current_page == "home":
-            self.draw_home_scene()
         scene = self.registry.page_hook(self.current_page, "scene")
         if scene:
             scene()
@@ -621,18 +494,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         w,h = (5,9) if direction in ("left","right") else (9,5)
         for col,row in points:
             self.dotpad.set_dot(round(x)-w//2+col, round(y)-h//2+row)
-
-    def draw_bed(self, obj):
-        self.icons.draw(obj)
-
-    def draw_chest(self, obj):
-        self.icons.draw(obj)
-
-    def draw_stove(self, obj):
-        self.icons.draw(obj)
-
-    def draw_resource(self, obj):
-        self.icons.draw(obj)
 
     def draw_filled_square(self, x, y, size=4):
         left, top = round(x)-size//2, round(y)-size//2
@@ -705,12 +566,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         detail = self.registry.page_hook(loc, "detail")
         if detail:
             return detail()
-        if loc == "home":
-            return "Home. Bed, Research, Kitchen, and Flower pot."
-        elif loc == "town":
-            return "Village. Shop and Rowan."
-        elif loc == "inventory":
-            return "Inventory. Select an item to use."
         return f"{self.get_page_name(loc)}."
 
     def get_object_tts(self, obj, detail=False):
@@ -731,7 +586,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
 
         # A map location, transition, building or navigation control has only
         # a name in standard hover, regardless of its verbose TTS.
-        if kind in ("arrow", "home_hitbox"):
+        if kind == "arrow":
             return label
 
         count = obj.get("count")
@@ -746,11 +601,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             return obj["hover_sfx"]
         if obj.get("type") in self.registry.hover_sounds:
             return self.registry.hover_sounds[obj["type"]]
-        mapping = {
-            "bed": "hover_bed", "chest": "hover_chest", "stove": "hover_stove",
-            "resource": "hover_resource", "arrow": "hover_navigation",
-        }
-        return mapping.get(obj.get("type"), "hover_object")
+        return "hover_navigation" if obj.get("type") == "arrow" else "hover_object"
 
     def minigame_input(self, x, y, step):
         """Pointer input on a tracing minigame page. Blocked while paused, at night, asleep or while a

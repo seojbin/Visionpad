@@ -7,6 +7,7 @@ from unittest.mock import patch
 from visionpad.config import load_config
 from visionpad.core import order
 from visionpad.core.engine import GameEngine
+from visionpad.core import registry as registry_module
 from visionpad.core.registry import Feature, Registry
 from visionpad.features import load_features
 from visionpad.services.saves import SAVE_KEY_ORDER
@@ -43,8 +44,9 @@ class ConflictTests(unittest.TestCase):
             build(feature("", lambda self, reg: None))
 
     def test_core_slots_cannot_be_redeclared(self):
-        with self.assertRaises(ValueError):
-            build(feature("a", lambda self, reg: reg.slot("home.objects", "Again")))
+        with patch.dict(registry_module.CORE_SLOTS, {"core.items": "Items exposed by a core page"}):
+            with self.assertRaises(ValueError):
+                build(feature("a", lambda self, reg: reg.slot("core.items", "Again")))
 
 
 class UnknownNameTests(unittest.TestCase):

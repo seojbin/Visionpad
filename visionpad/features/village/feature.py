@@ -17,7 +17,8 @@ class Village(Feature):
 
     def register(self, reg):
         reg.owns("rowan_stage", "rowan_greeted", "rowan_dialogue", "rowan_submit_open")
-        reg.page("town", objects=self.town_objects, scene=self.draw_town_scene, icon_grid=True, arrival=self.arrival)
+        reg.page("town", objects=self.town_objects, scene=self.draw_town_scene, icon_grid=True, arrival=self.arrival,
+                 detail=lambda: "Village. Shop and Rowan.")
         reg.page("shop_calendar", objects=self.calendar_objects, icon_grid=True)
         reg.page("rowan_dialogue", objects=self.rowan_objects, icon_grid=True)
         reg.page("rowan_submit", objects=self.rowan_objects, icon_grid=True)
