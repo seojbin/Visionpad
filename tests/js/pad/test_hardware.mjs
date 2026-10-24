@@ -1,10 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
-import {BluetoothPad,forwardKey,packCells,cellsToHex} from '../../../web/hardware.mjs';
-import {DataCodes,DotPadKey} from '../../../web/vendor/DotPadSDK-3.0.3.js';
+import {BluetoothPad,forwardKey,packCells,cellsToHex} from '../../../web/core/pad/hardware.mjs';
+import {DataCodes,DotPadKey} from '../../../web/core/pad/vendor/DotPadSDK-3.0.3.js';
 const require=createRequire(import.meta.url);
-const {GameKeys}=require('../../../web/game-keys.js');
+const {GameKeys}=require('../../../web/core/game-keys.js');
 Object.defineProperty(globalThis,'navigator',{value:{bluetooth:{}},configurable:true});
 
 // Stand-ins for the SDK objects: callbacks are captured so tests can play pad events.

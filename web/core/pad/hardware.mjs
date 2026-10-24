@@ -150,7 +150,7 @@ if(typeof document!=='undefined'){
         ble.disabled=true;
         try{
             const loaded=await bluetoothModule;
-            if(loaded.error)throw new Error('Bluetooth SDK unavailable. Restore web/vendor/DotPadSDK-3.0.3.js and its dependencies, then reload.');
+            if(loaded.error)throw new Error('Bluetooth SDK unavailable. Restore web/core/pad/vendor/DotPadSDK-3.0.3.js and its dependencies, then reload.');
             if(!bluetoothPad)bluetoothPad=new loaded.module.BluetoothPad(text=>{
                 status.textContent=text;
                 ble.textContent=bluetoothPad?.connected?'Disconnect Bluetooth pad':'Connect Bluetooth pad';

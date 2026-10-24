@@ -177,10 +177,10 @@ The server owns game state and action checks. The browser sends input and receiv
 | File | Responsibility |
 |---|---|
 | `web/game.html` | Pad simulator, pointer input, status, speech controls, and companion connection |
-| `web/game-speech.js` | Speech playback, replay, cancellation, priority, and audio ducking callbacks |
-| `web/game-keys.js` | Function and arrow keys, F3 short/long press, repeat suppression, and cancellation |
-| `web/hardware.mjs` | Web Serial pad output and physical buttons; WebSocket hand coordinates |
-| `web/game-audio.js` | Separate music, action, reward, and one-shot sound channels |
+| `web/core/game-speech.js` | Speech playback, replay, cancellation, priority, and audio ducking callbacks |
+| `web/core/game-keys.js` | Function and arrow keys, F3 short/long press, repeat suppression, and cancellation |
+| `web/core/pad/hardware.mjs` | Web Serial pad output and physical buttons; WebSocket hand coordinates |
+| `web/core/game-audio.js` | Separate music, action, reward, and one-shot sound channels |
 | `web/audio/` | MP3 assets |
 | `game.bat`, `launch_game.py` | Windows startup and server/browser launch helpers |
 
@@ -271,7 +271,7 @@ Farm expansion costs `[30, 50, 70, 90]` gold and `[5, 10, 15, 20]` stone, adding
 | `interaction.inventory.hide_zero_items` | Hide empty items: `true` |
 | `interaction.sleep.blackout_ms` | Sleep blackout and input wait: 2000 |
 
-Harvest tolerance is fixed at 3.5 in the engine and does not follow `harvest_minigame.tolerance`. Adjust the F3 hold threshold through `holdMs` in `web/game-keys.js`.
+Harvest tolerance is fixed at 3.5 in the engine and does not follow `harvest_minigame.tolerance`. Adjust the F3 hold threshold through `holdMs` in `web/core/game-keys.js`.
 
 ### Mining and prices
 

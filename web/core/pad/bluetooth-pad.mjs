@@ -1,4 +1,4 @@
-// Bluetooth Dot Pad adapter built on the vendored DotPadSDK (web/vendor).
+// Bluetooth Dot Pad adapter built on the vendored DotPadSDK (web/core/pad/vendor).
 // The SDK owns the BLE link, packet framing, ACK/retry, diffing and reconnection;
 // this adapter only converts game frames to cell hex and pad keys to game keys.
 import {DotPadSDK,DotPadScanner,DataCodes,DotPadKey,DisplayMode} from './vendor/DotPadSDK-3.0.3.js';

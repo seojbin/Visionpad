@@ -1,6 +1,6 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {GameAudio} = require('../../../web/game-audio.js');
+const {GameAudio} = require('../../../web/core/game-audio.js');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
 function parameter() {

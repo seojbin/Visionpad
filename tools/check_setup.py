@@ -42,7 +42,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
                 "visionpad/features/npc/feature.py", "visionpad/display/keypad.py", "visionpad/features/flowers/feature.py",
                 "visionpad/features/fishing/feature.py", "visionpad/features/seafood/feature.py", "visionpad/display/dotpad.py",
                 "visionpad/spectator/state.py", "config/game.json", "config/npc.json", "requirements.txt",
-                "web/game.html", "web/game-audio.js", "web/game-speech.js", "web/game-keys.js",
+                "web/game.html", "web/core/game-audio.js", "web/core/game-speech.js", "web/core/game-keys.js",
                 "tools/prepare_demo.py", "tools/prepare_speech.py")
     missing = [name for name in required if not (root / name).is_file()]
     add("Game files", not missing, "Complete" if not missing else ", ".join(missing),

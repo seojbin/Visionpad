@@ -175,10 +175,10 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 | 파일 | 역할 |
 |---|---|
 | `web/game.html` | Dot Pad 시뮬레이터, 포인터 입력, 상태 표시, 음성 제어, 시각화 창 연결 |
-| `web/game-speech.js` | 음성 재생, 다시 듣기, 취소, 우선순위와 음량 조정 연결 |
-| `web/game-keys.js` | 기능 키와 방향 키, F3 짧게·길게 누르기, 중복 입력·취소 처리 |
-| `web/hardware.mjs` | Web Serial 패드 통신과 물리 버튼 수신, WebSocket 손 좌표 연결 |
-| `web/game-audio.js` | 배경음악·작업음·성공음·단발 효과음의 독립 재생과 음량 제어 |
+| `web/core/game-speech.js` | 음성 재생, 다시 듣기, 취소, 우선순위와 음량 조정 연결 |
+| `web/core/game-keys.js` | 기능 키와 방향 키, F3 짧게·길게 누르기, 중복 입력·취소 처리 |
+| `web/core/pad/hardware.mjs` | Web Serial 패드 통신과 물리 버튼 수신, WebSocket 손 좌표 연결 |
+| `web/core/game-audio.js` | 배경음악·작업음·성공음·단발 효과음의 독립 재생과 음량 제어 |
 | `web/audio/` | 활동·배경·피드백 MP3 음원 |
 | `game.bat`, `launch_game.py` | Windows 실행 및 서버·브라우저 시작 보조 |
 
@@ -269,7 +269,7 @@ F3을 길게 누르면 누르는 도중 저장이 실행된다. 저장 후 키�
 | `interaction.inventory.hide_zero_items` | 보유량 0인 항목 숨김: `true` |
 | `interaction.sleep.blackout_ms` | 수면 중 도트 소등·입력 대기 시간: 2000 |
 
-수확 허용 거리는 엔진에 3.5로 지정되어 있어 `harvest_minigame.tolerance`로 변경되지 않는다. F3 누름 시간은 `web/game-keys.js`의 `holdMs`에서 조정한다.
+수확 허용 거리는 엔진에 3.5로 지정되어 있어 `harvest_minigame.tolerance`로 변경되지 않는다. F3 누름 시간은 `web/core/game-keys.js`의 `holdMs`에서 조정한다.
 
 ### 광산과 가격
 

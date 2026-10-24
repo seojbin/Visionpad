@@ -27,7 +27,7 @@ class SetupChecks(unittest.TestCase):
             target = self.root / path.relative_to(ROOT)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.touch()
-        for name in ("web/game.html", "web/game-audio.js", "web/game-speech.js", "web/game-keys.js",
+        for name in ("web/game.html", "web/core/game-audio.js", "web/core/game-speech.js", "web/core/game-keys.js",
                      "tools/prepare_demo.py", "tools/prepare_speech.py", "config/game.json", "config/npc.json", "requirements.txt"):
             target = self.root / name
             target.parent.mkdir(parents=True, exist_ok=True)

@@ -39,7 +39,7 @@ def render_cue(notes):
 def main():
     settings = load_config('game')['interaction']['audio']
     cues = json.loads(subprocess.check_output(['node','-e',
-        "process.stdout.write(JSON.stringify(require('./web/game-audio.js').SOUND_CUES))"],cwd=ROOT))
+        "process.stdout.write(JSON.stringify(require('./web/core/game-audio.js').SOUND_CUES))"],cwd=ROOT))
     speech = SpeechService(ROOT)
     output_dir = ROOT/'output'/'audio'
     output_dir.mkdir(parents=True,exist_ok=True)

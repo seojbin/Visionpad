@@ -93,4 +93,4 @@ desktop.ini
 /saves/
 
 # Dot Inc. DotPadSDK: download locally, not committed (see README)
-/web/vendor/DotPadSDK-*
+/web/core/pad/vendor/DotPadSDK-*
