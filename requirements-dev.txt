@@ -1,0 +1,4 @@
+# Development-only tools (not needed to play). Install into the project .venv:
+#   python -m pip install -r requirements-dev.txt
+#   python -m playwright install chromium
+playwright==1.64.1
