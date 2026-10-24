@@ -2,9 +2,8 @@
 
 Engine attributes (save format): shop_page. shop_page_count is a derived cache set in the
 engine's __init__ (excluded from saves) and updated here.
-Declares slots shop.buy_items and shop.sell_items; features handle their own item kinds with
-reg.shop_item(). Until farming is extracted, its rows and the seed/fertilizer purchase and
-crop sale are handled here at their order.ShopBuyItems/ShopSellItems positions.
+Declares slots shop.buy_items and shop.sell_items; features add rows and handle their own item
+kinds with reg.shop_item().
 """
 import math
 
@@ -20,11 +19,6 @@ class Shop(Feature):
         reg.slot("shop.buy_items", "Buy rows: (kind, item_id, label, owned_count, base_price). Prices pass through "
                                    "the weekly market unless the kind is registered with market_price=False.")
         reg.slot("shop.sell_items", "Sell rows: (kind, item_id, label, owned_count, base_price), owned items only.")
-        reg.contribute("shop.buy_items", self.farming_buy_rows, order=order.ShopBuyItems.FARMING)
-        reg.contribute("shop.sell_items", self.farming_sell_rows, order=order.ShopSellItems.FARMING)
-        reg.shop_item("seed", lambda item_id: self.buy_farming_item("seed", item_id))
-        reg.shop_item("fertilizer", lambda item_id: self.buy_farming_item("fertilizer", item_id))
-        reg.shop_item("crop", sell=self.sell_crop)
         reg.page("shop_choice", objects=self.choice_objects, scene=self.draw_scene, icon_grid=True,
                  detail=lambda: "Shop. Sell, Buy, Calendar, or Ask Rowan for advice.",
                  panel=lambda: (0, 1, "shop"))
@@ -50,7 +44,6 @@ class Shop(Feature):
         reg.expose("open_shop", self.open)
         reg.expose("buy_shop_item", self.buy)
         reg.expose("sell_shop_item", self.sell)
-        reg.expose("get_fertilizer_price", self.fertilizer_price)
 
     def reset(self):
         e = self.engine
@@ -102,54 +95,6 @@ class Shop(Feature):
         e.render()
         return e.response(tts=f"{label} sold. Gold left: {e.resources['coin']} gold", sfx="shop_sell", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
 
-    # ---- farming rows, until farming is extracted ----
-
-    def farming_buy_rows(self):
-        e = self.engine
-        entries = [("seed", seed_id, f"{e.get_seed_label(seed_id)} seeds", e.resources["seeds"].get(seed_id, 0),
-                    int(seed.get("seed_price", max(1, round(int(seed.get("crop_price", 1)) * .8)))))
-                   for seed_id, seed in e.config.get("seeds", {}).items()]
-        entries.append(("fertilizer", "fertilizer", "Fertilizer", e.resources["fertilizer"], self.fertilizer_price()))
-        return entries
-
-    def farming_sell_rows(self):
-        e = self.engine
-        return [("crop", key, f"{e.get_seed_label(key)} crops", e.resources["crops"].get(key, 0), int(seed.get("crop_price", 1)))
-                for key, seed in e.config.get("seeds", {}).items() if e.resources["crops"].get(key, 0) > 0]
-
-
-    def buy_farming_item(self, kind, item_id):
-        e = self.engine
-        if kind == "seed":
-            seed = e.get_seed_config(item_id)
-            if not seed:
-                return e.response(tts="Seed not sold here.", sfx="error")
-            price = int(seed.get("seed_price", max(1, round(int(seed.get("crop_price", 1)) * 0.8))))
-            label = f"{e.get_seed_label(item_id)} seeds"
-        else:
-            price = self.fertilizer_price()
-            label = "Fertilizer"
-        price = e.market_price(price, kind, "buy")
-        if int(e.resources.get("coin", 0)) < price:
-            return e.response(tts=f"Not enough gold. {label} costs {price} gold.", sfx="error")
-        e.add_resource("coin", -price)
-        if kind == "seed":
-            e.resources["seeds"][item_id] = int(e.resources["seeds"].get(item_id, 0)) + 1
-        else:
-            e.resources["fertilizer"] = int(e.resources.get("fertilizer", 0)) + 1
-        e.clear_hover()
-        e.render()
-        return e.response(tts=f"{label} bought. Gold left: {e.resources['coin']} gold", sfx="shop_buy", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
-
-    def sell_crop(self, item_id):
-        e = self.engine
-        count = int(e.resources["crops"].get(item_id, 0))
-        if count <= 0:
-            return e.response(tts="No crop to sell.", sfx="error")
-        price = int(e.get_seed_config(item_id).get("crop_price", 1))
-        label = f"{e.get_seed_label(item_id)} crops"
-        e.resources["crops"][item_id] = count - 1
-        return price, label
 
     def choice_objects(self):
         e = self.engine
@@ -294,11 +239,6 @@ class Shop(Feature):
         e.clear_hover()
         e.render()
         return e.response(tts=text, sfx="open_page")
-
-    def fertilizer_price(self):
-        e = self.engine
-        cfg = e.config.get("fertilizer", {})
-        return int(cfg.get("shop_price", cfg.get("price", e.config.get("shop", {}).get("fertilizer_price", 12))))
 
     def build_objects(self, entries, mode):
         e = self.engine

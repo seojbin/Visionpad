@@ -150,18 +150,19 @@ class IconRenderer:
 
 class IconLayout:
     """Page policy over the same twelve virtual slots."""
-    PAGES = frozenset(('home','seed_select',
+    PAGES = frozenset(('home',
         'load_game'))
 
     def __init__(self, grid=None):
         self.grid = grid or IconGrid()
 
-    def arrange(self, page, objects, width, height, types=IconRenderer.TYPES, layout_order=None, grid_pages=()):
+    def arrange(self, page, objects, width, height, types=IconRenderer.TYPES, layout_order=None, grid_pages=(),
+                only=None):
         objects = [dict(o) for o in objects]
-        if page not in self.PAGES and page not in grid_pages and page != 'plot_detail': return objects
+        if page not in self.PAGES and page not in grid_pages: return objects
         chosen = [o for o in objects if o.get('type') in types
                   and not o.get('skip_grid')
-                  and (page != 'plot_detail' or o.get('type') == 'care_button')]
+                  and (only is None or o.get('type') in only)]
         if page in ('home', 'town'):
             order = {
                 'bed': 0, 'chest': 1, 'stove': 2,

@@ -1,6 +1,5 @@
 """Public, detached visual data. Never changes gameplay or exposes hidden rolls."""
 import copy
-import time
 
 
 # Key order of the companion snapshot before features added their own keys; new keys follow.
@@ -8,7 +7,6 @@ SPECTATOR_KEY_ORDER = ('schema', 'objects', 'plots', 'routes', 'rocks', 'care_ta
 
 
 def spectator_snapshot(engine, objects):
-    now = time.monotonic()
     fields = ('grid_row', 'grid_column', 'grid_slot', 'id', 'type', 'x', 'y', 'width', 'height', 'label', 'selected',
               'resource_kind', 'recipe_id', 'seed_id', 'ingredient_id', 'choice',
               'item_kind', 'shop_kind', 'item_id', 'count', 'price', 'direction',
@@ -35,24 +33,10 @@ def spectator_snapshot(engine, objects):
                 public['display_quantities'].append(dict(item=recipe.get('allowed_fish',['salmon'])[0],label='Fish',required=recipe.get('fish_required',1),owned=sum(engine.resources.get('fish',{}).get(k,0) for k in recipe.get('allowed_fish',[]))))
         elif public.get('id') == 'plot_detail_fertilizer':
             public['count'] = int(engine.resources.get('fertilizer', 0))
-    plots = []
-    for definition in engine.get_unlocked_plot_defs():
-        state = engine.farm_plots[definition['id']]
-        seed = engine.config.get('seeds', {}).get(state.get('seed_id'), {})
-        plots.append(dict(id=definition['id'], **copy.deepcopy(state),
-                          growth_days=seed.get('growth_days', 1)))
-
-    def targets(items, collected, deadlines):
-        return [dict(id=t['id'], x=t['x'], y=t['y'],
-                     collected=t['id'] in collected,
-                     visible=t['id'] not in collected or deadlines.get(t['id'], 0) > now)
-                for t in items]
-
     snapshot = {
-        'schema': 1, 'objects': public_objects, 'plots': plots,
+        'schema': 1, 'objects': public_objects,
         'routes': [{k: o[k] for k in ('x1', 'y1', 'x2', 'y2')}
                    for o in objects if o.get('type') == 'route'],
-        'care_targets': targets(engine.care_targets, engine.care_collected_ids, engine.care_visible_until),
     }
     for key, provider in engine.registry.spectator_providers.items():
         if key in snapshot:

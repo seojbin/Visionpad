@@ -56,7 +56,7 @@ class SaveMixin:
         return ("sleep_until", *self.registry.save_clock)
 
     def clock_maps(self):
-        return ("care_visible_until", *self.registry.save_clock_maps)
+        return tuple(self.registry.save_clock_maps)
 
     def snapshot(self):
         names = [k for k in vars(self)
@@ -75,7 +75,7 @@ class SaveMixin:
             deadline, kind = state["pending_visual_completion"]
             state["pending_visual_completion"] = (deadline-now, kind)
         # A physical held gesture cannot safely survive a restart.
-        for key in ("pointer_pressed", "care_dragging"):
+        for key in ("pointer_pressed",):
             state[key] = False
         state["drag_tool"] = None
         state["hover_object_id"] = None

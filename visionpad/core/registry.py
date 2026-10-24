@@ -39,7 +39,7 @@ from visionpad.core import order as run_order
 
 EVENTS = {
     "reset": "End of engine.reset(), after core state. Set the feature's engine attributes.",
-    "end_of_day": "Start of the morning transition, before crops grow and the day number changes.",
+    "end_of_day": "Start of the morning transition, before the day number changes. A handler may return a sentence for the morning speech.",
     "start_of_day": "After the day number changes, before the morning page is rendered.",
     "before_navigation": "First step of travel, return-to-scene and F1/F2/F3 menu changes.",
     "close_dialogue": "A scene change closes open conversations: travel (after its checks) and opening the shop.",
@@ -75,7 +75,7 @@ class Page:
     def __init__(self, feature, name=None, objects=None, scene=None, guidance=None,
                  press=None, single_press=False, icon_grid=False,
                  menu_text=None, on_menu_open=None, navigate=None, arrival=None, detail=None, panel=None,
-                 live=False, **pointer):
+                 live=False, icon_only=None, layout=None, **pointer):
         unknown = set(pointer) - {"pointer_" + kind for kind in POINTER_KINDS}
         if unknown:
             raise TypeError(f"Unknown page hook(s): {', '.join(sorted(unknown))}")
@@ -83,6 +83,7 @@ class Page:
         self.press, self.single_press, self.icon_grid = press, single_press, icon_grid
         self.menu_text, self.on_menu_open, self.navigate = menu_text, on_menu_open, navigate
         self.arrival, self.detail, self.panel, self.live = arrival, detail, panel, live
+        self.icon_only, self.layout = icon_only, layout
         self.pointer = {kind: pointer.get("pointer_" + kind) for kind in POINTER_KINDS}
 
 
@@ -119,6 +120,7 @@ class Registry:
         self.save_clock = []
         self.save_clock_maps = []
         self.visual_completions = {}
+        self.drag_tools = {}
         self._current = None
         self._sequence = 0
 
@@ -157,7 +159,7 @@ class Registry:
     def page(self, page_id, *, name=None, objects=None, scene=None, guidance=None,
              press=None, single_press=False, icon_grid=False,
              menu_text=None, on_menu_open=None, navigate=None, arrival=None, detail=None, panel=None,
-             live=False, **pointer):
+             live=False, icon_only=None, layout=None, **pointer):
         """Own a page.
         objects() -> list of tactile objects; name -> spoken page name; scene() draws after the objects;
         guidance() -> (kind, targets, completed, total) for audio_guidance.
@@ -172,9 +174,11 @@ class Registry:
         detail() -> the location description (get_location_detail).
         panel() -> (page, pages, braille_label) for the lower time panel: a page bar when pages > 1,
         else the braille label when given, else the activity time.
-        live re-renders the page on every state read (minigames whose drawing fades with time)."""
+        live re-renders the page on every state read (minigames whose drawing fades with time).
+        icon_only: with icon_grid, only these object types go on the grid. layout(objects) adjusts the
+        objects after the icon grid placed them."""
         page = Page(self._current, name, objects, scene, guidance, press, single_press, icon_grid,
-                    menu_text, on_menu_open, navigate, arrival, detail, panel, live, **pointer)
+                    menu_text, on_menu_open, navigate, arrival, detail, panel, live, icon_only, layout, **pointer)
         self._claim(self.pages, page_id, page, "Page")
 
     def action(self, key, handler, *, before_night_guard=False):
@@ -266,6 +270,10 @@ class Registry:
         traced dots have faded)."""
         self._claim(self.visual_completions, kind, finish, "Visual completion")
 
+    def drag_tool(self, name, drop):
+        """A tool picked up with a drag_tool:<name> action; drop(x, y) runs for each drag position."""
+        self._claim(self.drag_tools, name, drop, "Drag tool")
+
     def icon_alias(self, kind, symbol):
         self._claim(self.icon_aliases, kind, symbol, "Icon alias")
 
@@ -291,10 +299,15 @@ class Registry:
     # ---- dispatch (called from core) ----
 
     def run(self, event, *args, until=None, since=None):
-        """Run handlers in order with args; until/since restrict to orders below / at or above a boundary."""
+        """Run handlers in order with args; until/since restrict to orders below / at or above a boundary.
+        Returns the handlers' results that are not None (end_of_day: notes for the morning speech)."""
+        results = []
         for order, _, handler in sorted(self.events[event], key=lambda entry: entry[:2]):
             if (until is None or order < until) and (since is None or order >= since):
-                handler(*args)
+                result = handler(*args)
+                if result is not None:
+                    results.append(result)
+        return results
 
     def _providers(self, slot):
         if slot not in self.slot_docs:

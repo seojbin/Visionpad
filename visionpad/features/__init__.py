@@ -19,6 +19,7 @@ ENABLED = (
     "shop",
     "cooking",
     "harvest",
+    "farming",
 )
 
 

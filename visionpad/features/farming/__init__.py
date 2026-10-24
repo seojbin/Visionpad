@@ -1,1 +1,2 @@
-"""farming feature. Code still lives in visionpad/core/engine.py until it is extracted."""
+"""Farming: plots, planting, watering, fertilizing and growth."""
+from visionpad.features.farming.feature import Farming as Feature

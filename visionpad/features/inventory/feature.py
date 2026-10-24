@@ -1,9 +1,8 @@
 """F2 inventory: owned items on pages of twelve, food first; food can be used from here.
 
 Engine attributes (save format): inventory_page, inventory_page_count.
-Declares slot inventory.items. Until farming, cooking, mining and fishing are
-extracted, their entries are contributed here at their order.InventoryItems
-positions; each moves to its feature when that feature is extracted.
+Declares slot inventory.items and contributes the shared resources (gold, fertilizer, wood,
+stone) first; features contribute their own entries at their order.InventoryItems positions.
 """
 from visionpad.core import order
 from visionpad.core.registry import Feature
@@ -18,7 +17,6 @@ class Inventory(Feature):
                                     "action, seed_id, recipe_id, extra_tts. Gold is always shown; other "
                                     "entries only when count > 0.")
         reg.contribute("inventory.items", self.core_resource_items, order=order.InventoryItems.CORE_RESOURCES)
-        reg.contribute("inventory.items", self.farming_items, order=order.InventoryItems.FARMING)
         reg.page("inventory", objects=self.page_objects, icon_grid=True,
                  menu_text=lambda: f'Inventory. {self.engine.resources["coin"]} gold.',
                  on_menu_open=self.first_page, navigate=self.navigate,
@@ -37,7 +35,7 @@ class Inventory(Feature):
     def first_page(self):
         self.engine.inventory_page = 0
 
-    # ---- entries for core and not-yet-extracted features ----
+    # ---- shared resources ----
 
     def core_resource_items(self):
         e = self.engine
@@ -47,15 +45,6 @@ class Inventory(Feature):
             {"id": "wood", "label": "Wood", "count": int(e.resources.get("wood", 0)), "kind": "material", "action": ""},
             {"id": "stone", "label": "Stone", "count": int(e.resources.get("stone", 0)), "kind": "stone", "action": ""}
         ]
-
-    def farming_items(self):
-        e = self.engine
-        entries = []
-        for seed_id, seed_config in e.config.get("seeds", {}).items():
-            entries.append({"id": f"seed_{seed_id}", "label": f"{seed_config.get('label', seed_id)} seeds", "count": int(e.resources["seeds"].get(seed_id, 0)), "kind": "seed", "seed_id": seed_id, "action": ""})
-        for seed_id, seed_config in e.config.get("seeds", {}).items():
-            entries.append({"id": f"crop_{seed_id}", "label": f"{seed_config.get('label', seed_id)} crops", "count": int(e.resources["crops"].get(seed_id, 0)), "kind": "crop", "seed_id": seed_id, "action": ""})
-        return entries
 
     # ---- page ----
 

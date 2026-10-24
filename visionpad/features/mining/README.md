@@ -16,7 +16,7 @@ Daily rocks at the mine, pickaxe wear and breakage, mineral loot (with mineral-d
 | Shop | `pickaxe` (buy; "Pickaxe owned. Limit one." when owned) and `mineral` (buy and sell), market priced. Rows in `shop.buy_items` (`ShopBuyItems.MINING`) and `shop.sell_items` (`ShopSellItems.MINING`). |
 | Spectator key | `rocks` |
 | Engine API provided | `get_mineral_price(mineral, buying=False)` (fishing fish prices), `hit_mine_rock(rock_id)` (tests) |
-| Engine API used | `market_price` (village), `boost_rare_weights`, `loot_amount` (seafood), `get_fertilizer_price` (shop, for the pickaxe price), `buff_multiplier_for` (cooking, core), `item_destroyed_event` (core) |
+| Engine API used | `market_price` (village), `boost_rare_weights`, `loot_amount` (seafood), `get_fertilizer_price` (farming, for the pickaxe price), `buff_multiplier_for` (cooking, core), `item_destroyed_event` (core) |
 | Config | `config/game.json` → `mine.*`, `research.mineral_luck.*`, `time.action_costs.mine` |
 | Tests | `tests/python/audio/test_gameplay_audio.py` (rock guidance, tool break) |
 | Note | `draw_item` was unused before the split (AUDIT.md §2.4); kept for parity. |

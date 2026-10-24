@@ -115,15 +115,13 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         objects = self.icon_layout.arrange(self.current_page, objects,
                                            self.dotpad.width, self.dotpad.height,
                                            types=self.icons.types, layout_order=self.registry.icon_layout_order,
-                                           grid_pages=self.registry.icon_grid_pages())
-        if self.current_page == 'plot_detail':
-            for obj in objects:
-                if obj['type'] == 'growth_gauge':
-                    obj.update(x=30, y=16, hit_width=42, hit_height=5)
-                elif obj['type'] == 'plot_detail_field':
-                    obj.update(x=30, y=30, hit_width=44, hit_height=18)
+                                           grid_pages=self.registry.icon_grid_pages(),
+                                           only=self.registry.page_hook(self.current_page, "icon_only"))
+        layout = self.registry.page_hook(self.current_page, "layout")
+        if layout:
+            layout(objects)
         return objects
-        
+
     def reset(self):
         self._menu_stack = []
         self._load_return = None
@@ -158,21 +156,8 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         for recipe_id in self.config.get("recipes", {}):
             self.resources["foods"].setdefault(recipe_id, 0)
 
-        self.farm_plots = {}
-        for plot in self.config.get("farm", {}).get("plots", []):
-            self.farm_plots[plot["id"]] = self.new_plot_state()
-
-        self.seed_select_plot_id = None
         self.drag_tool = None
         self.drag_target_ids = set()
-
-        self.detail_plot_id = None
-
-        self.care_mode = None
-        self.care_targets = []
-        self.care_dragging = False
-        self.care_collected_ids = set()
-        self.care_visible_until = {}
 
         self.active_buff = {
             "kind": None,
@@ -194,30 +179,10 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
 
         self.render()
 
-    def new_plot_state(self):
-        return {
-            "seed_id": None,
-            "watered": False,
-            "fertilized": False,
-            "growth": 0,
-            "mature": False
-        }
-
     def clear_hover(self):
         self.hover_object_id = None
         self.last_hover_state = (None, False)
         self.location_detail_spoken = False
-
-    def clear_care(self, keep_detail=False):
-        if self.pending_visual_completion and self.pending_visual_completion[1] == "care":
-            self.pending_visual_completion = None
-        self.care_mode = None
-        self.care_targets = []
-        self.care_dragging = False
-        self.care_collected_ids.clear()
-        self.care_visible_until = {}
-        if not keep_detail:
-            self.detail_plot_id = None
 
     def has_final_consonant(self, text):
         if not text:
@@ -256,12 +221,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
 
     def get_recipe_label(self, recipe_id):
         return self.get_recipe_config(recipe_id).get("label", recipe_id)
-
-    def get_plot_label(self, plot_id):
-        for plot in self.config.get("farm", {}).get("plots", []):
-            if plot["id"] == plot_id:
-                return plot.get("label", plot_id)
-        return plot_id
 
     def get_action_cost(self, action_name):
         if action_name == "travel":
@@ -329,21 +288,8 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         return self.response(tts="Sleeping.", sound_events=[{"kind": "one_shot", "sound": "sleep"}])
 
     def finish_sleep(self):
-        self.registry.run("end_of_day")
+        notes = self.registry.run("end_of_day")
         self.sleep_until = None
-        matured = []
-        for state in self.farm_plots.values():
-            if state["seed_id"] is not None and not state["mature"] and state["watered"]:
-                gain = 1
-                seed_config = self.get_seed_config(state["seed_id"])
-                needed = int(seed_config.get("growth_days", 3))
-                state["growth"] = min(needed, state["growth"] + gain)
-                if state["growth"] >= needed:
-                    state["mature"] = True
-                    matured.append(self.get_seed_label(state["seed_id"]))
-
-            state["watered"] = False
-            state["fertilized"] = False
 
         self.day += 1
         self.registry.run("start_of_day")
@@ -359,9 +305,8 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         self.render()
 
         text = f"Day {self.day}. Morning."
-        if matured:
-            names = ", ".join(dict.fromkeys(matured))
-            text += f". {names} ready to harvest."
+        for note in notes:
+            text += f". {note}"
         return self.response(tts=text, sfx="morning")
 
     def lower_panel_state(self):
@@ -406,20 +351,12 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             for dy in range(cell_height):
                 self.timepad.set_dot(x, dy)
 
-    def get_unlocked_plot_defs(self):
-        return self.config.get("farm", {}).get("plots", [])[:self.unlocked_plot_count]
-
     def get_layout_objects(self):
         if self.sleep_until is not None:
             return []
         pages = {
             "load_game": self.get_load_objects,
             "home": self.get_home_objects,
-            "farm": self.get_farm_objects,
-            "seed_select": self.get_seed_select_objects,
-            "plot_detail": self.get_plot_detail_objects,
-            "water_minigame": self.get_care_minigame_objects,
-            "fertilizer_minigame": self.get_care_minigame_objects,
         }
         getter = self.registry.page_hook(self.current_page, "objects") or pages.get(self.current_page)
         objects = self.compact_objects(getter()) if getter else []
@@ -577,295 +514,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
                 elif ch == '0':
                     pad.set_dot(px, py, 0)
 
-    def get_farm_objects(self):
-        farm = self.config.get("farm", {})
-        objects = []
-        grid_positions = [
-            (11, 10), (30, 10), (49, 10),
-            (11, 27), (30, 27), (49, 27),
-        ]
-
-        for idx, plot in enumerate(self.get_unlocked_plot_defs()):
-            obj = dict(plot)
-            obj["type"] = "plot"
-            if idx < len(grid_positions):
-                px, py = grid_positions[idx]
-                obj.update(x=px, y=py, width=16, height=14, hit_width=16, hit_height=14)
-            state = self.farm_plots[plot["id"]]
-            seed_id = state["seed_id"]
-
-            if seed_id is None:
-                obj["tts"] = f"{plot['label']}. Empty. Select to manage."
-                obj["action"] = f"open_plot_detail:{plot['id']}"
-            else:
-                seed_label = self.get_seed_label(seed_id)
-                needed = int(self.get_seed_config(seed_id).get("growth_days", 3))
-                if state["mature"]:
-                    obj["tts"] = f"{plot['label']}. {seed_label}. Ready to harvest."
-                else:
-                    water_text = "Watered" if state["watered"] else "Needs water"
-                    fertilizer_text = "Fertilized" if state["fertilized"] else "Not fertilized"
-                    obj["tts"] = (
-                        f"{plot['label']}. {seed_label} is growing. "
-                        f"Growth {state['growth']} of {needed} days. {water_text}. {fertilizer_text}. "
-                        "Select to manage."
-                    )
-                obj["action"] = f"open_plot_detail:{plot['id']}"
-            objects.append(obj)
-
-        for obj in farm.get("objects", []):
-            objects.append(dict(obj))
-        return objects
-
-    def draw_plot(self, obj):
-        pad = self.dotpad
-        cx, cy = round(obj["x"]), round(obj["y"])
-        rx, ry = int(obj.get("width", 16)) // 2 - 1, int(obj.get("height", 14)) // 2 - 1
-        pad.draw_box(cx, cy, 2 * rx, 2 * ry)
-
-        state = self.farm_plots.get(obj["id"], self.new_plot_state())
-        seed_id = state.get("seed_id")
-
-        if not seed_id:
-            for dy in (-3, 0, 3):
-                for dx in range(-rx + 2, rx - 1, 2):
-                    pad.set_dot(cx + dx, cy + dy)
-            return
-
-        if state.get("watered"):
-            pad.draw_line(cx - rx + 1, cy + ry - 1, cx + rx - 1, cy + ry - 1)
-        if state.get("fertilized"):
-            pad.set_dot(cx - rx + 2, cy - ry + 2)
-            pad.set_dot(cx + rx - 2, cy - ry + 2)
-
-        growth = int(state.get("growth", 0))
-        mature = bool(state.get("mature"))
-
-        if mature:
-            mature_patterns = {
-                "tomato": (
-                    "001010100",
-                    "011111110",
-                    "111101111",
-                    "111000111",
-                    "111101111",
-                    "111111111",
-                    "011111110",
-                ),
-                "carrot": (
-                    "101010101",
-                    "011111110",
-                    "001111100",
-                    "011111110",
-                    "001111100",
-                    "000111000",
-                    "000010000",
-                ),
-                "potato": (
-                    "011100110",
-                    "111111111",
-                    "110111011",
-                    "011111110",
-                    "111101111",
-                    "111111111",
-                    "011001110",
-                ),
-            }
-            self.draw_icon_pattern(cx, cy, mature_patterns.get(seed_id, mature_patterns["tomato"]))
-            return
-
-        if growth <= 0:
-            sprout_patterns = {
-                "tomato": ("00100", "01110", "00100"),
-                "carrot": ("10101", "01110", "00100"),
-                "potato": ("01100", "11110", "00110"),
-            }
-            self.draw_icon_pattern(cx, cy + 1, sprout_patterns.get(seed_id, ("010", "111", "010")))
-        else:
-            mid_patterns = {
-                "tomato": (
-                    "0101010",
-                    "1111111",
-                    "0011100",
-                    "0111110",
-                    "0001000",
-                ),
-                "carrot": (
-                    "1010101",
-                    "0111110",
-                    "0011100",
-                    "0011100",
-                    "0001000",
-                ),
-                "potato": (
-                    "0011100",
-                    "0111110",
-                    "1110111",
-                    "0111110",
-                    "0110110",
-                ),
-            }
-            self.draw_icon_pattern(cx, cy, mid_patterns.get(seed_id, mid_patterns["tomato"]))
-
-    def get_plot_detail_objects(self):
-        plot_id = self.detail_plot_id
-        state = self.farm_plots.get(plot_id) if plot_id else None
-        if state is None:
-            return [self.back_arrow("plot_detail_back", "Back to farm", "return_scene")]
-
-        plot_label = self.get_plot_label(plot_id)
-        seed_id = state.get("seed_id")
-        if seed_id is None:
-            return [
-                {
-                    "id": "plot_detail_empty", "type": "plot_detail_field",
-                    "x": 30, "y": 17, "width": 44, "height": 18,
-                    "hit_width": 48, "hit_height": 18,
-                    "label": f"{plot_label} details",
-                    "tts": f"{plot_label}. Empty plot.",
-                    "action": ""
-                },
-                {
-                    "id": "plot_detail_plant", "type": "care_button", "care_kind": "plant",
-                    "x": 30, "y": 31, "width": 18, "height": 6,
-                    "hit_width": 22, "hit_height": 10,
-                    "label": "Plant seeds",
-                    "tts": "Plant. Choose seeds.",
-                    "action": f"open_seed_select:{plot_id}"
-                },
-                self.back_arrow("plot_detail_back", "Back to farm", "return_scene")
-            ]
-
-        seed_label = self.get_seed_label(seed_id)
-        needed = int(self.get_seed_config(seed_id).get("growth_days", 3))
-        water_text = "Watered" if state["watered"] else "Needs water"
-        if state["fertilized"]:
-            fertilizer_text = "Fertilized"
-        elif int(self.resources.get("fertilizer", 0)) <= 0:
-            fertilizer_text = "No fertilizer. Buy at the shop."
-        else:
-            fertilizer_text = f"Not fertilized. Stock: {self.resources.get('fertilizer', 0)} in stock"
-
-        field_tts = (
-            f"{plot_label}. {seed_label}. "
-            f"Growth {state['growth']} of {needed} days. {water_text}. {fertilizer_text}"
-        )
-        if state["mature"]:
-            field_tts = f"{plot_label}. {seed_label}. Ready to harvest."
-
-        objects = [{
-            "id": "plot_detail_field", "type": "plot_detail_field",
-            "x": 30, "y": 17, "width": 44, "height": 18,
-            "hit_width": 48, "hit_height": 18,
-            "label": f"{plot_label} details", "tts": field_tts, "action": ""
-        }, {
-            "id": "plot_detail_growth_gauge", "type": "growth_gauge",
-            "x": 30, "y": 4, "width": 42, "height": 5,
-            "hit_width": 44, "hit_height": 6,
-            "label": "Growth",
-            "tts": f"Growth. {seed_label}. {needed if state['mature'] else state['growth']} of {needed} days",
-            "action": ""
-        }]
-
-        if state["mature"]:
-            objects.append({
-                "id": "plot_detail_harvest", "type": "care_button", "care_kind": "harvest",
-                "x": 30, "y": 31, "width": 18, "height": 6,
-                "hit_width": 22, "hit_height": 10,
-                "label": "Harvest",
-                "tts": f"Harvest. {seed_label}. Ready to harvest.",
-                "action": f"start_harvest:{plot_id}"
-            })
-        else:
-            water_action = "" if state["watered"] else f"start_care:water:{plot_id}"
-            water_tts = (
-                "Already watered."
-                if state["watered"]
-                else "Water. Drag over targets."
-            )
-            objects.append({
-                "id": "plot_detail_water", "type": "care_button", "care_kind": "water",
-                "x": 23, "y": 31, "width": 18, "height": 6,
-                "hit_width": 21, "hit_height": 10,
-                "label": "Water", "tts": water_tts, "action": water_action
-            })
-
-            fertilizer_count = int(self.resources.get("fertilizer", 0))
-            fertilizer_action = ""
-            if not state["fertilized"] and fertilizer_count > 0:
-                fertilizer_action = f"start_care:fertilizer:{plot_id}"
-            if state["fertilized"]:
-                fertilizer_tts = "Already fertilized."
-            elif fertilizer_count <= 0:
-                fertilizer_tts = "No fertilizer. Buy at the shop."
-            else:
-                fertilizer_tts = f"Fertilizer. Stock: {fertilizer_count}."
-            objects.append({
-                "id": "plot_detail_fertilizer", "type": "care_button", "care_kind": "fertilizer",
-                "x": 46, "y": 31, "width": 18, "height": 6,
-                "hit_width": 21, "hit_height": 10,
-                "label": "Fertilize", "tts": fertilizer_tts, "action": fertilizer_action
-            })
-
-        objects.append(self.back_arrow("plot_detail_back", "Back to farm", "return_scene"))
-        return objects
-
-    def get_care_minigame_objects(self):
-        plot_id = self.detail_plot_id
-        state = self.farm_plots.get(plot_id) if plot_id else None
-        if state is None or state.get("seed_id") is None:
-            return []
-        seed_label = self.get_seed_label(state["seed_id"])
-        mode_label = "Water" if self.care_mode == "water" else "Fertilizer"
-        field = self.config.get("care_minigame", {}).get("field", {})
-        objects = [{
-            "id": "care_field", "type": "care_field",
-            "x": int(field.get("x", 30)), "y": int(field.get("y", 20)),
-            "width": int(field.get("width", 46)), "height": int(field.get("height", 30)),
-            "hit_width": int(field.get("width", 46)), "hit_height": int(field.get("height", 30)),
-            "label": f"{mode_label} plot",
-            "tts": f" {seed_label} plot. Move to apply {mode_label}.",
-            "action": ""
-        }]
-        for target in self.care_targets:
-            if (target["id"] in self.care_collected_ids
-                    and self.care_visible_until.get(target["id"], 0) <= time.monotonic()):
-                continue
-            objects.append({
-                "id": target["id"], "type": "care_target", "care_kind": self.care_mode,
-                "x": target["x"], "y": target["y"],
-                "width": 5, "height": 5, "hit_width": 8, "hit_height": 8,
-                "label": f"{mode_label} target",
-                "tts": f"{mode_label} target. Move.",
-                "action": ""
-            })
-        return objects
-
-    def get_seed_select_objects(self):
-        objects = []
-        positions = [(12, 18), (30, 18), (48, 18)]
-        available = []
-        for seed_id, seed_config in self.config.get("seeds", {}).items():
-            count = int(self.resources["seeds"].get(seed_id, 0))
-            if count > 0:
-                available.append((seed_id, seed_config, count))
-
-        for index, (seed_id, seed_config, count) in enumerate(available[:len(positions)]):
-            x, y = positions[index]
-            yield_count = self.get_harvest_base_yield(seed_id)
-            growth_days = int(seed_config.get("growth_days", 3))
-            objects.append({
-                "id": f"seed_{seed_id}", "type": "seed", "seed_id": seed_id,
-                "x": x, "y": y, "width": 12, "height": 10,
-                "hit_width": 15, "hit_height": 13,
-                "label": f"{seed_config.get('label', seed_id)} seeds", "count": count,
-                "tts": f"{seed_config.get('label', seed_id)} seeds {count}. Growth {growth_days} days, Harvest {yield_count}, Seed recovery level {self.research_levels.get('seed_return', 0)}",
-                "action": f"plant:{self.seed_select_plot_id}:{seed_id}"
-            })
-
-        objects.append(self.back_arrow("seed_back", "Back to farm", "return_scene"))
-        return objects
-
     @staticmethod
     def compress_axis(intervals, margin=2, max_gap=8):
         merged = []
@@ -953,32 +601,11 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
                 self.draw_chest(obj)
             elif obj_type == "stove":
                 self.draw_stove(obj)
-            elif obj_type == "plot":
-                self.draw_plot(obj)
-            elif obj_type == "watering_can":
-                self.draw_watering_can(obj)
-            elif obj_type == "fertilizer":
-                self.draw_fertilizer(obj)
-            elif obj_type == "seed":
-                self.draw_seed(obj)
             elif obj_type == "resource":
                 self.draw_resource(obj)
-            elif obj_type == "plot_detail_field":
-                self.draw_plot_detail_field(obj)
-            elif obj_type == "growth_gauge":
-                self.draw_plot_detail_gauge(obj)
-            elif obj_type == "care_button":
-                self.draw_care_button(obj)
-            elif obj_type == "care_field":
-                self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 46), obj.get("height", 30))
-            elif obj_type == "care_target":
-                self.draw_care_target(obj)
 
         if self.current_page == "home":
             self.draw_home_scene()
-        elif self.current_page == "plot_detail":
-            self.dotpad.draw_line(0, 12, self.dotpad.width - 1, 12)
-            self.dotpad.draw_line(0, 13, self.dotpad.width - 1, 13)
         scene = self.registry.page_hook(self.current_page, "scene")
         if scene:
             scene()
@@ -1004,41 +631,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
     def draw_stove(self, obj):
         self.icons.draw(obj)
 
-    @staticmethod
-    def plot_bounds(obj):
-        width, height = int(obj.get("width", 10)), int(obj.get("height", 8))
-        return round(obj["x"])-width//2, round(obj["y"])-height//2, width, height
-
-    def draw_plot_progress(self, obj, state):
-        if state["seed_id"] is None: return
-        needed = max(1, int(self.get_seed_config(state["seed_id"]).get("growth_days", 3)))
-        ratio = 1.0 if state["mature"] else max(0.0, min(1.0, float(state["growth"]) / needed))
-        left, top, width, height = self.plot_bounds(obj)
-        rows = min(height-2, math.ceil((height-2)*ratio))
-        for y in range(top+height-1-rows, top+height-1):
-            for x in range(left+1, left+width-1): self.dotpad.set_dot(x, y)
-
-    def draw_watering_can(self, obj):
-        self.icons.draw(obj)
-
-    def draw_fertilizer(self, obj):
-        self.icons.draw(obj)
-
-    def draw_seed(self, obj):
-        self.icons.draw(obj)
-
-    def draw_crop_symbol(self, x, y, seed_id):
-        patterns = {
-            "tomato": ["00100", "01010", "10001", "10001", "01110"],
-            "carrot": ["10101", "01110", "01010", "00100", "00100"],
-            "potato": ["11000", "10110", "01101", "00101", "00010"]
-        }
-        rows = patterns.get(seed_id, ["00100", "01110", "00100", "00000", "00000"])
-        for j, row in enumerate(rows):
-            for i, raised in enumerate(row):
-                if raised == "1":
-                    self.dotpad.set_dot(x + i - 2, y + j - 2)
-
     def draw_resource(self, obj):
         self.icons.draw(obj)
 
@@ -1055,64 +647,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             for column, value in enumerate(row):
                 if value == "1":
                     self.dotpad.set_dot(int(x) + column - width // 2, int(y) + row_index - height // 2)
-
-    def draw_plot_detail_field(self, obj):
-        x, y = int(obj["x"]), int(obj["y"])
-        width, height = int(obj.get("width", 44)), int(obj.get("height", 18))
-        self.dotpad.draw_box(x, y, width, height)
-        plot_id = self.detail_plot_id
-        state = self.farm_plots.get(plot_id) if plot_id else None
-        if not state or state.get("seed_id") is None:
-            return
-        if state.get("mature"):
-            for dx, dy in [(-8, 1), (-4, -2), (0, 2), (5, -1), (9, 2)]:
-                for ox, oy in [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)]:
-                    self.dotpad.set_dot(x + dx + ox, y + dy + oy)
-        else:
-            self.dotpad.set_dot(x, y)
-            if state.get("watered"):
-                self.dotpad.draw_line(x - 8, y + 5, x + 8, y + 5)
-            if state.get("fertilized"):
-                self.dotpad.set_dot(x - 10, y - 5)
-                self.dotpad.set_dot(x + 10, y - 5)
-
-    def draw_plot_detail_gauge(self, obj):
-        plot_id = self.detail_plot_id
-        state = self.farm_plots.get(plot_id) if plot_id else None
-        if not state or state.get("seed_id") is None:
-            return
-        needed = max(1, int(self.get_seed_config(state["seed_id"]).get("growth_days", 3)))
-        growth = needed if state.get("mature") else min(needed, int(state.get("growth", 0)))
-        x1 = obj["x"] - obj["width"] // 2
-        x2 = x1 + obj["width"] - 1
-        y1 = obj["y"] - obj["height"] // 2
-        y2 = y1 + obj["height"] - 1
-        self.dotpad.draw_line(x1, y1, x2, y1)
-        self.dotpad.draw_line(x2, y1, x2, y2)
-        self.dotpad.draw_line(x2, y2, x1, y2)
-        self.dotpad.draw_line(x1, y2, x1, y1)
-        inner_width = x2 - x1 - 1
-        fill = int(round(inner_width * growth / needed))
-        for x in range(x1 + 1, x1 + 1 + fill):
-            for y in range(y1 + 1, y2):
-                self.dotpad.set_dot(x, y)
-
-    def draw_care_button(self, obj):
-        self.icons.draw(obj)
-
-    def draw_care_target(self, obj):
-        x, y = int(obj["x"]), int(obj["y"])
-        if obj.get("care_kind") == "water":
-            self.dotpad.set_dot(x, y - 1)
-            self.dotpad.set_dot(x - 1, y)
-            self.dotpad.set_dot(x, y)
-            self.dotpad.set_dot(x + 1, y)
-            self.dotpad.set_dot(x, y + 1)
-        else:
-            self.dotpad.set_dot(x - 1, y - 1)
-            self.dotpad.set_dot(x + 1, y - 1)
-            self.dotpad.set_dot(x - 1, y + 1)
-            self.dotpad.set_dot(x + 1, y + 1)
 
     def defer_visual_completion(self, kind, visible_until):
         deadline = max(visible_until.values(), default=0)
@@ -1131,10 +665,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             deadline, kind = self.pending_visual_completion
             if time.monotonic() >= deadline:
                 self.pending_visual_completion = None
-                finish = self.registry.visual_completions.get(kind)
-                if finish:
-                    return finish()
-                return self.finish_care_minigame()
+                return self.registry.visual_completions[kind]()
         return self.response()
 
     def point_to_segment_distance(self, px, py, x1, y1, x2, y2):
@@ -1169,12 +700,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
                 return obj
         return None
 
-    def find_farm_plot_at(self, x, y):
-        for obj in self.get_objects():
-            if obj.get("type") == "plot" and self.object_contains(obj, x, y):
-                return obj
-        return None
-        
     def get_location_detail(self):
         loc = self.current_page
         detail = self.registry.page_hook(loc, "detail")
@@ -1182,16 +707,10 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             return detail()
         if loc == "home":
             return "Home. Bed, Research, Kitchen, and Flower pot."
-        elif loc == "farm":
-            return "Farm. Choose a plot to manage your crops."
         elif loc == "town":
             return "Village. Shop and Rowan."
         elif loc == "inventory":
             return "Inventory. Select an item to use."
-        elif loc == "plot_detail":
-            return "Plot details. Plant, water, or fertilize."
-        elif loc == "seed_select":
-            return "Seeds. Choose seeds to plant."
         return f"{self.get_page_name(loc)}."
 
     def get_object_tts(self, obj, detail=False):
@@ -1215,18 +734,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         if kind in ("arrow", "home_hitbox"):
             return label
 
-        if kind in ("plot", "plot_detail_field"):
-            plot_id = (self.detail_plot_id if kind == "plot_detail_field"
-                       else obj.get("id"))
-            state = self.farm_plots.get(plot_id) or {}
-            plot_label = (self.get_plot_label(plot_id) if kind == "plot_detail_field"
-                          and plot_id else label)
-            seed_id = state.get("seed_id")
-            return f"{plot_label}, {self.get_seed_label(seed_id)}." if seed_id else f"{plot_label}, empty."
-
         count = obj.get("count")
-        if kind == "seed" and count is None:
-            count = self.resources.get("seeds", {}).get(obj.get("seed_id"))
         if count is not None:
             return f"{label}, {count}."
         if obj.get("price") is not None:
@@ -1240,12 +748,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             return self.registry.hover_sounds[obj["type"]]
         mapping = {
             "bed": "hover_bed", "chest": "hover_chest", "stove": "hover_stove",
-            "plot": "hover_plot",
-            "watering_can": "hover_water_tool", "fertilizer": "hover_fertilizer",
-            "seed": "hover_seed", "resource": "hover_resource",
-            "arrow": "hover_navigation",
-            "plot_detail_field": "hover_plot", "growth_gauge": "hover_plot", "care_button": "hover_tool", "care_field": "hover_plot",
-            "care_target": "hover_tool"
+            "resource": "hover_resource", "arrow": "hover_navigation",
         }
         return mapping.get(obj.get("type"), "hover_object")
 
@@ -1266,30 +769,12 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
 
     def release_pointer(self):
         """Drop the pointer and any held drag (menus, save, pause, release command)."""
-        self.pointer_pressed = self.care_dragging = False
+        self.pointer_pressed = False
         self.registry.run("release_drag")
         self.drag_tool = None
 
     def leave_activities(self):
-        self.clear_care()
         self.registry.run("leave_activity")
-
-    def move_minigame(self, x, y):
-        return self.minigame_input(x, y, self.collect_step)
-
-    def collect_step(self, px, py, x, y):
-        self.care_dragging=True
-        before=len(self.care_collected_ids)
-        self.collect_care_segment(px,py,x,y)
-        gained=len(self.care_collected_ids)-before
-        complete=bool(self.care_targets) and len(self.care_collected_ids) == len(self.care_targets)
-        if complete:
-            result=self.finish_care_minigame()
-        else:
-            if gained:self.render()
-            result=self.response(sfx='care_spray' if gained else None)
-        if gained:result.setdefault('sound_events',[]).append({'kind':'correct','count':gained})
-        return result
 
     def page_pointer(self, kind, x, y):
         """Raw pointer input for a feature-owned page; None lets the core handler continue."""
@@ -1304,14 +789,14 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
             return self.response()
-            
+
         self.last_pointer = (x, y)
         if self.paused:
             return self.response()
-            
+
         is_pointing = False  # Press/click does not double as detailed inspection.
         obj = self.find_object(x, y)
-        
+
         if obj is None:
             self.hover_object_id = None
             self.last_hover_state = (None, is_pointing)
@@ -1328,15 +813,13 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             self.hover_object_id = object_id
             tts_text = self.get_object_tts(obj, detail=is_pointing)
             return self.response(tts=tts_text, sfx=self.get_hover_sfx(obj))
-            
+
         return self.response()
 
     def pointer_down(self, x, y):
         result = self.page_pointer("down", x, y)
         if result is not None:
             return result
-        if self.current_page in ('water_minigame','fertilizer_minigame'):
-            return self.move_minigame(x,y)
         if self.sleep_until is not None:
             return self.response()
         if self.pending_visual_completion:
@@ -1358,112 +841,57 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         if press:
             return press(x, y)
 
-        if self.current_page in ("water_minigame", "fertilizer_minigame"):
-            self.care_dragging = True
-            before = len(self.care_collected_ids)
-            collected = self.collect_care_point(x, y)
-            if collected:
-                self.render()
-                return self.response(sfx="care_spray", sound_events=[{"kind": "correct", "count": len(self.care_collected_ids) - before}])
-            mode_label = "Water " if self.care_mode == "water" else " fertilizer "
-            return self.response(tts=f"{mode_label}. Move over targets.", sfx="tool_pickup")
-
         obj = self.find_object(x, y)
         if obj is None:
             return self.response()
         action = obj.get("action", "")
-
-        if action.startswith("drag_tool:"):
-            if self.day_ended:
-                return self.night_only_response()
-            self.drag_tool = action.split(":", 1)[1]
-            self.drag_target_ids.clear()
-            if self.drag_tool == "water":
-                return self.response(tts="Watering can. Drag to a plot.", sfx="tool_pickup")
-            if self.drag_tool == "fertilizer":
-                count = int(self.resources.get("fertilizer", 0))
-                if count <= 0:
-                    self.drag_tool = None
-                    return self.response(tts="No fertilizer.", sfx="error")
-                return self.response(tts=f"Fertilizer. Stock: {count}. Drag to a watered plot.", sfx="tool_pickup")
-
         return self.perform_action(action, obj)
 
     def pointer_drag(self, x, y):
         result = self.page_pointer("drag", x, y)
         if result is not None:
             return result
-        if self.current_page in ('water_minigame','fertilizer_minigame'):
-            return self.move_minigame(x,y)
         if self.sleep_until is not None:
             return self.response()
         if self.pending_visual_completion:
             return self.response()
-            
+
         previous_x, previous_y = self.last_pointer
         self.last_pointer = (x, y)
         if self.paused:
             return self.response()
 
-        if self.current_page in ("water_minigame", "fertilizer_minigame") and self.care_dragging:
-            if previous_x is None or previous_y is None:
-                previous_x, previous_y = x, y
-            before = len(self.care_collected_ids)
-            collected = self.collect_care_segment(previous_x, previous_y, x, y)
-            if collected:
-                self.render()
-                return self.response(sfx="care_spray", sound_events=[{"kind": "correct", "count": len(self.care_collected_ids) - before}])
-            return self.response()
-
         if self.drag_tool is None:
             return self.pointer_move(x, y)
-
-        plot = self.find_farm_plot_at(x, y)
-        if plot is None:
-            return self.response()
-        plot_id = plot["id"]
-        if plot_id in self.drag_target_ids:
-            return self.response()
-        self.drag_target_ids.add(plot_id)
-        if self.drag_tool == "water":
-            return self.water_plot(plot_id)
-        if self.drag_tool == "fertilizer":
-            return self.fertilize_plot(plot_id)
-        return self.response()
+        drop = self.registry.drag_tools.get(self.drag_tool)
+        return drop(x, y) if drop else self.response()
 
     def pointer_up(self, x, y):
         result = self.page_pointer("up", x, y)
         if result is not None:
             return result
-        if self.current_page in ('water_minigame','fertilizer_minigame'):
-            self.pointer_pressed=False
-            return self.response()
         if self.sleep_until is not None:
             return self.response()
-            
+
         self.location_detail_spoken = False
         self.last_hover_state = (None, False)
-        
+
         if self.paused:
             self.release_pointer()
             return self.response()
-            
+
         final = self.pointer_drag(x, y) if self.pointer_pressed else None
         self.pointer_pressed = False
         self.last_pointer = (x, y)
-        
+
         if final and (final.get("sfx") in ("cooking_success", "cooking_step", "cooking_wait", "day_end")):
             final["state"] = self.get_state()
             return final
-            
-        if self.current_page in ("water_minigame", "fertilizer_minigame") and self.care_dragging:
-            self.care_dragging = False
-            result = self.finish_care_minigame()
-        else:
-            self.drag_tool = None
-            self.drag_target_ids.clear()
-            result = self.response()
-            
+
+        self.drag_tool = None
+        self.drag_target_ids.clear()
+        result = self.response()
+
         if final:
             result["sound_events"] = final.get("sound_events", []) + result.get("sound_events", [])
         return result
@@ -1493,16 +921,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             return self.travel_to(action.split(":", 1)[1])
         if action == "return_scene":
             return self.return_to_scene()
-        if action.startswith("open_plot_detail:"):
-            return self.open_plot_detail(action.split(":", 1)[1])
-        if action.startswith("start_care:"):
-            _, mode, plot_id = action.split(":", 2)
-            return self.start_care_minigame(plot_id, mode)
-        if action.startswith("open_seed_select:"):
-            return self.open_seed_select(action.split(":", 1)[1])
-        if action.startswith("plant:"):
-            _, plot_id, seed_id = action.split(":", 2)
-            return self.plant_seed(plot_id, seed_id)
         if action.startswith("inspect:"):
             return self.response(tts=self.get_object_tts(obj))
         if action == "rest":
@@ -1562,248 +980,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         self.render()
         return self.response(tts=f"{self.get_page_name(self.current_location)}.", sfx="open_page")
 
-    def plot_status_text(self, plot_id):
-        state = self.farm_plots.get(plot_id)
-        if state is None:
-            return "Plot unavailable."
-        label = self.get_plot_label(plot_id)
-        if not state.get("seed_id"):
-            return f"{label}. Empty. Plant seeds."
-        seed = self.get_seed_label(state["seed_id"])
-        if state["mature"]:
-            return f"{label}, {seed}. Ready to harvest"
-        needed = int(self.get_seed_config(state["seed_id"]).get("growth_days", 3))
-        water = "Watered" if state["watered"] else "Needs water"
-        fertilizer = "Fertilized" if state["fertilized"] else "Not fertilized"
-        return f"{label}, {seed}. Growth {state['growth']} of {needed} days. {water}. {fertilizer}"
-
-    def open_plot_detail(self, plot_id):
-        unlocked = {p["id"] for p in self.get_unlocked_plot_defs()}
-        state = self.farm_plots.get(plot_id)
-        if state is None or plot_id not in unlocked:
-            return self.response(tts="Plot unavailable.", sfx="error")
-        self.detail_plot_id = plot_id
-        self.current_location = "farm"
-        self.current_page = "plot_detail"
-        self.clear_care(keep_detail=True)
-        self.clear_harvest()
-        self.clear_hover()
-        self.render()
-        return self.response(tts=f"{self.get_plot_label(plot_id)}.", sfx="open_page")
-
-    def start_care_minigame(self, plot_id, mode):
-        self.last_pointer = (None, None)
-        state = self.farm_plots.get(plot_id)
-        if state is None or state.get("seed_id") is None:
-            return self.response(tts="Plant seeds first.", sfx="error")
-        if state.get("mature"):
-            return self.response(tts="Crop ready. Harvest now.", sfx="error")
-        if mode == "water" and state.get("watered"):
-            return self.response(tts="Already watered.", sfx="error")
-        if mode == "fertilizer":
-            if not state.get("watered"):
-                return self.response(tts="Water first.", sfx="error")
-            if state.get("fertilized"):
-                return self.response(tts="Already fertilized.", sfx="error")
-            if int(self.resources.get("fertilizer", 0)) <= 0:
-                return self.response(tts="No fertilizer. Buy at the shop.", sfx="error")
-
-        cfg = self.config.get("care_minigame", {})
-        positions = [tuple(v) for v in cfg.get("target_positions", [])]
-        target_count = min(int(cfg.get("target_count", 8)), len(positions))
-        selected = random.sample(positions, target_count) if target_count else []
-        self.detail_plot_id = plot_id
-        self.care_mode = mode
-        self.care_targets = [
-            {"id": f"care_target_{i}", "x": x, "y": y}
-            for i, (x, y) in enumerate(selected)
-        ]
-        self.care_collected_ids.clear()
-        self.care_visible_until = {}
-        self.care_dragging = False
-        self.current_page = "water_minigame" if mode == "water" else "fertilizer_minigame"
-        self.clear_hover()
-        self.render()
-        mode_label = "Water" if mode == "water" else "Fertilize"
-        return self.response(
-            tts=f"{mode_label}. Move over targets.",
-            sfx="care_start"
-        )
-
-    def collect_care_point(self, x, y):
-        collected = False
-        tolerance = float(self.config.get("care_minigame", {}).get("tolerance", 4.0))
-        for target in self.care_targets:
-            if target["id"] not in self.care_collected_ids and math.hypot(x - target["x"], y - target["y"]) <= tolerance:
-                self.care_collected_ids.add(target["id"])
-                self.care_visible_until[target["id"]] = time.monotonic() + self.disappear_delay_seconds
-                collected = True
-        return collected
-
-    def collect_care_segment(self, x1, y1, x2, y2):
-        collected = False
-        tolerance = float(self.config.get("care_minigame", {}).get("tolerance", 4.0))
-        for target in self.care_targets:
-            if target["id"] in self.care_collected_ids:
-                continue
-            if self.point_to_segment_distance(target["x"], target["y"], x1, y1, x2, y2) <= tolerance:
-                self.care_collected_ids.add(target["id"])
-                self.care_visible_until[target["id"]] = time.monotonic() + self.disappear_delay_seconds
-                collected = True
-        return collected
-
-    def finish_care_minigame(self):
-        if self.detail_plot_id is None or not self.care_targets:
-            self.clear_care()
-            return self.return_to_scene()
-        total = len(self.care_targets)
-        collected = len(self.care_collected_ids)
-        mode = self.care_mode
-        plot_id = self.detail_plot_id
-
-        # All visible targets must be collected, regardless of the old
-        # care_minigame.success_ratio configuration setting.
-        if collected < total:
-            self.render()
-            mode_label = "Water" if mode == "water" else "Fertilizer"
-            return self.response(
-                tts=f"{mode_label} {collected} of {total}. Continue over remaining targets.",
-                sfx="error"
-            )
-
-        if self.defer_visual_completion("care", self.care_visible_until):
-            return self.response()
-
-        state = self.farm_plots[plot_id]
-        if mode == "water":
-            state["watered"] = True
-            action_name = "water"
-            text = f"Watered. Sleep to grow crops."
-            sfx = "water"
-        else:
-            count = int(self.resources.get("fertilizer", 0))
-            if count <= 0:
-                self.clear_care(keep_detail=True)
-                self.current_page = "plot_detail"
-                self.render()
-                return self.response(tts="No fertilizer. Buy at the shop.", sfx="error")
-            self.resources["fertilizer"] = count - 1
-            fertilizer_text = self.apply_fertilizer_bonus(state)
-            action_name = "fertilize"
-            text = f"Fertilized. {fertilizer_text}.  fertilizer {self.resources['fertilizer']} remaining"
-            sfx = "fertilize"
-
-        self.clear_care(keep_detail=True)
-        self.current_page = "plot_detail"
-        self.clear_hover()
-        result = self.consume_time(action_name)
-        if result["night"]:
-            return self.night_response(text)
-        self.render()
-        return self.response(tts=text, sfx=sfx)
-
-    def open_seed_select(self, plot_id):
-        if self.day_ended:
-            return self.night_only_response()
-        state = self.farm_plots.get(plot_id)
-        unlocked = [p["id"] for p in self.get_unlocked_plot_defs()]
-        if state is None or plot_id not in unlocked:
-            return self.response(tts="Plot unavailable.", sfx="error")
-        if state["seed_id"] is not None:
-            return self.response(tts="Plot occupied.")
-        if not any(int(count) > 0 for count in self.resources["seeds"].values()):
-            return self.response(tts="No seeds. Buy at the shop.", sfx="error")
-        self.seed_select_plot_id = plot_id
-        self.current_page = "seed_select"
-        self.clear_hover()
-        self.render()
-        return self.response(tts="Seeds.", sfx="open_page")
-
-    def plant_seed(self, plot_id, seed_id):
-        state = self.farm_plots.get(plot_id)
-        seed_config = self.get_seed_config(seed_id)
-        if state is None or not seed_config:
-            return self.response(tts="Cannot plant here.", sfx="error")
-        if state["seed_id"] is not None:
-            return self.response(tts="Plot occupied.", sfx="error")
-        count = int(self.resources["seeds"].get(seed_id, 0))
-        if count <= 0:
-            return self.response(tts="No seeds of this type.", sfx="error")
-        self.resources["seeds"][seed_id] = count - 1
-        self.farm_plots[plot_id] = self.new_plot_state()
-        self.farm_plots[plot_id]["seed_id"] = seed_id
-        self.detail_plot_id = plot_id
-        self.current_page = "plot_detail"
-        self.current_location = "farm"
-        self.seed_select_plot_id = None
-        self.clear_hover()
-        result = self.consume_time("plant")
-        if result["night"]:
-            return self.night_response(f"{self.get_seed_label(seed_id)} planted.")
-        self.render()
-        return self.response(tts=f"{self.get_seed_label(seed_id)} planted. Water, then sleep.", sfx="plant")
-
-    def water_plot(self, plot_id):
-        state = self.farm_plots.get(plot_id)
-        if state is None:
-            return self.response()
-        label = self.get_plot_label(plot_id)
-        if state["seed_id"] is None:
-            return self.response(tts=f"{label} is empty. Plant seeds first.", sfx="error")
-        if state["mature"]:
-            return self.response(tts=f"{label} is ready to harvest.", sfx="error")
-        if state["watered"]:
-            return self.response(tts=f"{label} Already watered.", sfx="error")
-        state["watered"] = True
-        result = self.consume_time("water")
-        if result["night"]:
-            return self.night_response(f"{label} watered")
-        self.render()
-        return self.response(tts=f"{label} watered. {self.get_seed_label(state['seed_id'])} will grow after sleep.", sfx="water")
-
-    def apply_fertilizer_bonus(self, state):
-        needed = int(self.get_seed_config(state["seed_id"]).get("growth_days", 3))
-        bonus = max(0, int(self.config.get("fertilizer", {}).get("growth_day_bonus", 1)))
-        before = state["growth"]
-        state["growth"] = min(needed, before + bonus)
-        state["fertilized"] = True
-        state["mature"] = state["growth"] >= needed
-        saved = state["growth"] - before
-        remaining = max(0, needed - state["growth"])
-        status = "Ready to harvest" if state["mature"] else f"Water, then sleep {remaining} more days to harvest."
-        return f"Harvest {saved} days sooner. {status}"
-
-    def fertilize_plot(self, plot_id):
-        state = self.farm_plots.get(plot_id)
-        if state is None:
-            return self.response()
-        label = self.get_plot_label(plot_id)
-        if state["seed_id"] is None:
-            return self.response(tts=f"{label} is empty. Plant first.", sfx="error")
-        if state["mature"]:
-            return self.response(tts=f"{label} is ready to harvest.", sfx="error")
-        if not state["watered"]:
-            return self.response(tts=f"{label} needs water first.", sfx="error")
-        if state["fertilized"]:
-            return self.response(tts=f"{label} is already fertilized.", sfx="error")
-        count = int(self.resources.get("fertilizer", 0))
-        if count <= 0:
-            return self.response(tts="No fertilizer. Buy at the shop.", sfx="error")
-        self.resources["fertilizer"] = count - 1
-        fertilizer_text = self.apply_fertilizer_bonus(state)
-        result = self.consume_time("fertilize")
-        if result["night"]:
-            return self.night_response(f"{label} fertilized.")
-        self.render()
-        return self.response(tts=f"{label} fertilized. {fertilizer_text}.  fertilizer {self.resources.get('fertilizer', 0)} remaining", sfx="fertilize")
-
-    def get_effective_seed_return_chance(self, seed_id):
-        cfg = self.config.get("research", {}).get("seed_return", {})
-        level = int(self.research_levels.get("seed_return", 0))
-        chances = cfg.get("return_chances", [0.3, 0.6])
-        chance = chances[min(level - 1, len(chances) - 1)] if level > 0 else self.get_seed_config(seed_id).get("seed_return_chance", 0.0)
-        return min(1.0, max(0.0, float(chance)))
-
     def build_path_samples(self, path, spacing=1.5):
         if len(path) < 2:
             return [tuple(path[0])] if path else []
@@ -1854,21 +1030,15 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
     def audio_guidance(self):
         kind, targets, completed, total = None, [], 0, 0
         if not (self.paused or self.day_ended or self.sleep_until is not None):
-            if self.current_page in ("water_minigame", "fertilizer_minigame"):
-                kind = "water" if self.care_mode == "water" else "soil"
-                targets = [dict(target) for target in self.care_targets if target["id"] not in self.care_collected_ids]
-                completed, total = len(self.care_collected_ids), len(self.care_targets)
-            else:
-                guidance = self.registry.page_hook(self.current_page, "guidance")
-                if guidance:
-                    kind, targets, completed, total = guidance()
+            guidance = self.registry.page_hook(self.current_page, "guidance")
+            if guidance:
+                kind, targets, completed, total = guidance()
         return {"kind": kind, "targets": targets, "completed": completed, "total": total}
 
     def get_state(self):
         self.registry.run("before_state")
-        if self.current_page in ("water_minigame", "fertilizer_minigame") or self.registry.page_hook(self.current_page, "live"):
+        if self.registry.page_hook(self.current_page, "live"):
             self.render()
-        plots = {plot_id: dict(state) for plot_id, state in self.farm_plots.items()}
         objects = self.get_objects()
         return self.ordered_state({
             "spectator": spectator_snapshot(self, objects),
@@ -1912,16 +1082,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             "resources": self.resources,
             "active_buff": dict(self.active_buff),
             "buff_text": self.buff_text(),
-            "farm_plots": plots,
-            "seed_select_plot_id": self.seed_select_plot_id,
             "drag_tool": self.drag_tool,
-            "plot_detail_id": self.detail_plot_id,
-            "care": {
-                "mode": self.care_mode,
-                "total_targets": len(self.care_targets),
-                "collected_targets": len(self.care_collected_ids),
-                "dragging": self.care_dragging
-            },
             "dots": self.dotpad.to_list(),
             "width": self.dotpad.width,
             "height": self.dotpad.height,
