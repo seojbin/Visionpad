@@ -8,8 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def collect():
     entries = []
-    for path in sorted(ROOT.glob("game_*.py")):
-        if path.name == "game_speech.py":
+    for path in sorted(ROOT.glob("visionpad/**/*.py")):
+        if path.relative_to(ROOT).as_posix() == "visionpad/services/speech.py":
             continue
         source = path.read_text(encoding="utf-8")
         tree = ast.parse(source)
@@ -33,7 +33,7 @@ def collect():
             if key in seen:
                 continue
             seen.add(key)
-            entries.append({"source": path.name, "line": node.lineno,
+            entries.append({"source": path.relative_to(ROOT).as_posix(), "line": node.lineno,
                             "kind": "fixed" if isinstance(node, ast.Constant) else "dynamic",
                             "text": node.value if isinstance(node, ast.Constant) else ast.get_source_segment(source, node)})
     return sorted(entries, key=lambda entry: (entry["source"], entry["line"]))

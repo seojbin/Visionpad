@@ -14,6 +14,15 @@ Replaces AUDIT.md §1 as the reference. Recorded on branch `refactor/modular-str
 
 ## Commands
 
+Since Phase 1 (tests live under `tests/`):
+
+```
+.venv\Scripts\python.exe -m unittest discover -s tests/python -t . -v
+node --test "tests/js/**/test_*.cjs" "tests/js/**/test_*.mjs"
+```
+
+Phase 0 (tests at the repo root), as recorded below:
+
 ```
 .venv\Scripts\python.exe -m unittest test_team_audio test_speech_queue test_speech_api test_gameplay_audio test_speech test_sound_events test_audio_flow test_demo_speech test_startup test_save_compat -v
 node --test test_speech.cjs test_guidance.cjs test_fishing_audio.cjs test_effects.cjs test_audio_integration.cjs test_hardware.mjs test_tracking_input.mjs

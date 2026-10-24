@@ -8,8 +8,9 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 import uvicorn
 from fastapi.responses import HTMLResponse
-import game_app
-from game_engine import GameEngine
+from visionpad.app import runtime
+from visionpad.app.main import app
+from visionpad.core.engine import GameEngine
 from tools.audio_flow import fixture_config
 
 
@@ -41,9 +42,9 @@ def main():
                     engine.pointer_drag(target['x'],target['y'])
                 engine.pointer_up(targets[-1]['x'],targets[-1]['y'])
                 engine.travel_to('town')
-        game_app.engine=engine
+        runtime.engine=engine
 
-        @game_app.app.middleware('http')
+        @app.middleware('http')
         async def label_test_progress(request,call_next):
             if request.url.path=='/':
                 text=(ROOT/'web/game.html').read_text(encoding="utf-8-sig")
@@ -53,7 +54,7 @@ def main():
                 return HTMLResponse(text)
             return await call_next(request)
 
-        uvicorn.run(game_app.app,host='127.0.0.1',port=args.port,access_log=False)
+        uvicorn.run(app,host='127.0.0.1',port=args.port,access_log=False)
 
 
 if __name__=='__main__':

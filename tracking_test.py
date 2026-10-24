@@ -5,13 +5,14 @@ import time
 import cv2
 
 from tracking import VisionPadTracker
+from visionpad.config import config_path
 
 
 BASE_DIR = Path(__file__).resolve().parent
 
 
 with open(
-    BASE_DIR / "tracking_config.json",
+    config_path("tracking"),
     "r",
     encoding="utf-8"
 ) as file:
@@ -75,7 +76,7 @@ def main():
     if not cap.isOpened():
         raise RuntimeError(
             "카메라를 열 수 없습니다. "
-            "tracking_config.json의 camera.index를 확인하세요."
+            "config/tracking.json의 camera.index를 확인하세요."
         )
 
     print("Tracking Test 시작")

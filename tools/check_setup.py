@@ -37,9 +37,11 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
         except PackageNotFoundError:
             add(name, False, "Not installed", "Run the setup file in this project folder.")
 
-    required = ("game_app.py", "game_engine.py", "game_speech.py", "speech_queue.py", "game_npc.py", "game_ui.py", "game_flowers.py",
-                "game_saves.py", "game_fishing.py", "game_seafood.py", "dotpad.py",
-                "spectator_state.py", "game_config.json", "npc_config.json", "requirements.txt",
+    required = ("visionpad/app/main.py", "visionpad/app/runtime.py", "visionpad/core/engine.py",
+                "visionpad/services/speech.py", "visionpad/services/speech_queue.py", "visionpad/services/saves.py",
+                "visionpad/features/npc/mixin.py", "visionpad/display/keypad.py", "visionpad/features/flowers/mixin.py",
+                "visionpad/features/fishing/mixin.py", "visionpad/features/seafood/mixin.py", "visionpad/display/dotpad.py",
+                "visionpad/spectator/state.py", "config/game.json", "config/npc.json", "requirements.txt",
                 "web/game.html", "web/game-audio.js", "web/game-speech.js", "web/game-keys.js",
                 "tools/prepare_demo.py", "tools/prepare_speech.py")
     missing = [name for name in required if not (root / name).is_file()]
@@ -52,7 +54,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
 
     config = None
     try:
-        config = json.loads((root / "speech_config.json").read_text(encoding="utf-8"))
+        config = json.loads((root / "config/speech.json").read_text(encoding="utf-8"))
         if not isinstance(config, dict):
             raise ValueError("Invalid voice configuration")
         if not isinstance(config.get("profiles"), dict) or not config["profiles"] or not config.get("samples"):
@@ -73,7 +75,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
             add("Voice: " + profile, good, entry["model"] if good else reason or "Invalid voice configuration: " + str(model_config),
                 "Run setup-mac.command or setup-windows.bat. If a damaged download remains, rename that model and its .onnx.json file before retrying setup.")
     except (OSError, ValueError, KeyError, TypeError, AssertionError):
-        add("Voice configuration", False, "speech_config.json is missing or invalid", "Restore speech_config.json.")
+        add("Voice configuration", False, "config/speech.json is missing or invalid", "Restore config/speech.json.")
 
     # Probe existing writable locations using disposable files; no saves or caches are removed.
     for name in ("saves", ".cache/speech"):
@@ -91,7 +93,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
 
     if synthesize and config and all(check["ok"] for check in checks):
         sys.path.insert(0, str(root))
-        from game_speech import SpeechService
+        from visionpad.services.speech import SpeechService
         with tempfile.TemporaryDirectory(prefix="visionpad-voice-check-") as cache:
             service = SpeechService(root, cache_dir=cache)
             for profile in config["profiles"]:

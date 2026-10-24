@@ -9,7 +9,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from game_speech import SpeechService
+from visionpad.config import load_config
+from visionpad.services.speech import SpeechService
 
 RATE = 22050
 
@@ -36,7 +37,7 @@ def render_cue(notes):
 
 
 def main():
-    settings = json.loads((ROOT/'game_config.json').read_text(encoding="utf-8-sig"))['interaction']['audio']
+    settings = load_config('game')['interaction']['audio']
     cues = json.loads(subprocess.check_output(['node','-e',
         "process.stdout.write(JSON.stringify(require('./web/game-audio.js').SOUND_CUES))"],cwd=ROOT))
     speech = SpeechService(ROOT)

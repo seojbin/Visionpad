@@ -12,7 +12,8 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from game_speech import spoken_text
+from visionpad.config import load_config
+from visionpad.services.speech import spoken_text
 from tools.audio_flow import run_flow
 from tools.speech_inventory import collect
 
@@ -33,23 +34,23 @@ def demo_lines():
         if entry["kind"] == "fixed":
             add(entry["text"], "system", f'{entry["source"]}:{entry["line"]}')
 
-    config = json.loads((ROOT / "speech_config.json").read_text(encoding="utf-8-sig"))
+    config = load_config("speech")
     for sample in config["samples"]:
-        add(sample["text"], "system", "speech_config.json:" + sample["id"])
+        add(sample["text"], "system", "config/speech.json:" + sample["id"])
 
-    npcs = json.loads((ROOT / "npc_config.json").read_text(encoding="utf-8-sig"))
+    npcs = load_config("npc")
     for npc_id, npc in npcs.items():
         topics = {key: npc[key] for key in ("greeting", "return_greeting", "goodbye")}
         topics.update({f"farming.{key}": text for key, text in npc["farming"].items()})
         topics.update({f"fishing.{key}": text for key, text in npc["fishing"].items()})
         for topic, text in topics.items():
-            add(f'{npc["name"]}. {text}', npc["voice_profile"], f"npc_config.json:{npc_id}.{topic}")
+            add(f'{npc["name"]}. {text}', npc["voice_profile"], f"config/npc.json:{npc_id}.{topic}")
 
     # Exercise the team's tutorial in temporary progress, so gifts/rewards only
     # shape the sample lines and never touch a running player's game.
-    from game_engine import GameEngine
+    from visionpad.core.engine import GameEngine
     with tempfile.TemporaryDirectory(prefix="visionpad-demo-quest-") as saved:
-        engine = GameEngine(json.loads((ROOT / "game_config.json").read_text(encoding="utf-8-sig")), save_dir=saved)
+        engine = GameEngine(load_config("game"), save_dir=saved)
         engine.travel_to("town")
 
         def quest_line(result):

@@ -7,13 +7,14 @@ import cv2
 import websockets
 
 from tracking import VisionPadTracker
+from visionpad.config import config_path
 
 
 BASE_DIR = Path(__file__).resolve().parent
 
 
 with open(
-    BASE_DIR / "tracking_config.json",
+    config_path("tracking"),
     "r",
     encoding="utf-8"
 ) as file:

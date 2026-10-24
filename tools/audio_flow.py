@@ -10,11 +10,12 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from game_engine import GameEngine
+from visionpad.config import load_config
+from visionpad.core.engine import GameEngine
 
 
 def fixture_config():
-    config = json.loads((ROOT/'game_config.json').read_text(encoding="utf-8-sig"))
+    config = load_config('game')
     config['resources']['coin'] = 500
     return config
 

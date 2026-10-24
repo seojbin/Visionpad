@@ -111,7 +111,7 @@ def main(argv=None):
             show_report(report)
             if not report["ready"]:
                 return 1
-            process = subprocess.Popen([sys.executable, "-m", "uvicorn", "game_app:app", "--host", "127.0.0.1", "--port", str(args.port)], cwd=ROOT)
+            process = subprocess.Popen([sys.executable, "-m", "uvicorn", "visionpad.app.main:app", "--host", "127.0.0.1", "--port", str(args.port)], cwd=ROOT)
             wait_for_server(process, url)
         if args.prepare_demo:
             prepared = subprocess.run([sys.executable, str(ROOT / "tools/prepare_demo.py"), "--server", url], cwd=ROOT)
