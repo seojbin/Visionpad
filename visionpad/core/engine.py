@@ -4,6 +4,7 @@ import random
 import time
 
 from pathlib import Path
+from visionpad.core.order import Reset
 from visionpad.core.registry import Registry
 from visionpad.core.state import SharedState
 from visionpad.display.dotpad import DotPad
@@ -134,7 +135,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         self.sleep_until = None
         self.pending_visual_completion = None
         self.shop_page = 0
-        self._pickaxe_hits = 0
         self.shop_page_count = 1
         self.day = int(self.config.get("game", {}).get("start_day", 1))
         self.current_location = "home"
@@ -211,9 +211,10 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         time_config = self.config.get("time", {})
         self.time_total_cells = int(time_config.get("total_cells", 20))
         self.time_used_cells = 0
-        self.regenerate_mine()
+        # Until fishing is a feature, its reset keeps its place after the mine's random draws.
+        self.registry.run("reset", until=Reset.FISHING)
         self.reset_fishing()
-        self.registry.run("reset")
+        self.registry.run("reset", since=Reset.FISHING)
 
         self.render()
 
@@ -422,7 +423,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         self.day += 1
         self.new_fishing_target()
         self.fishing_last_catch = None
-        self.regenerate_mine()
         self.registry.run("start_of_day")
         self.time_used_cells = 0
         self.day_ended = False
@@ -524,7 +524,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
             "load_game": self.get_load_objects,
             "home": self.get_home_objects,
             "farm": self.get_farm_objects,
-            "mine": self.get_mine_objects,
             "fishing": self.get_fishing_objects,
             "seed_select": self.get_seed_select_objects,
             "plot_detail": self.get_plot_detail_objects,
@@ -958,23 +957,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
             })
         return objects
 
-    def get_mine_objects(self):
-        objects = []
-        for rock in self.mine_rocks:
-            objects.append({"id": rock["id"], "type": "mine_rock",
-                            "x": rock["left"] + rock["width"] // 2,
-                            "y": rock["top"] + rock["height"] // 2,
-                            "width": rock["width"], "height": rock["height"],
-                            "hits": rock.get("hits", 0),
-                            "label": "Rock", "tts": "Rock. Tap to break." if self.resources["pickaxe"] else "Pickaxe required.",
-                            "action": f"mine_hit:{rock['id']}"})
-        exit_left = self.back_arrow("mine_exit_left", "Village", "travel:town")
-        exit_left.update(x=3, y=self.dotpad.height-5, direction="left", size=3, hit_width=7, hit_height=9)
-        exit_right = self.back_arrow("mine_exit_right", "Village", "travel:town")
-        exit_right.update(x=self.dotpad.width-4, y=5, direction="right", size=3, hit_width=7, hit_height=9)
-        objects.extend([exit_left, exit_right])
-        return objects
-
     def get_seed_select_objects(self):
         objects = []
         positions = [(12, 18), (30, 18), (48, 18)]
@@ -1299,8 +1281,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
             elif obj_type == "save_slot":
                 self.dotpad.draw_box(obj["x"], obj["y"], obj["width"], obj["height"])
                 self.dotpad.draw_box(obj["x"], obj["y"], 4, 4)
-            elif obj_type == "mine_rock":
-                self.draw_mine_rock(obj)
             elif obj_type == "arrow":
                 self.draw_triangle(obj["x"], obj["y"], obj["direction"], obj.get("size", 2))
             elif obj_type == "box":
@@ -1587,12 +1567,9 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         return ((px - nx) ** 2 + (py - ny) ** 2) ** 0.5
 
     def object_contains(self, obj, x, y):
-        if obj.get("type") == "mine_rock":
-            left, top = obj["x"] - obj["width"] // 2, obj["y"] - obj["height"] // 2
-            return left <= x < left + obj["width"] and top <= y < top + obj["height"]
-        if obj.get("type") == "route":
-            distance = self.point_to_segment_distance(x, y, obj["x1"], obj["y1"], obj["x2"], obj["y2"])
-            return distance <= float(obj.get("hit_radius", 3.0))
+        contains = self.registry.hit_tests.get(obj.get("type"))
+        if contains:
+            return contains(obj, x, y)
         half_width = obj.get("hit_width", obj.get("width", 8)) / 2
         half_height = obj.get("hit_height", obj.get("height", 8)) / 2
         return abs(x - obj["x"]) <= half_width and abs(y - obj["y"]) <= half_height
@@ -1620,9 +1597,10 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         
     def get_location_detail(self):
         loc = self.current_page
-        if loc == "mine":
-            return "Mine. Tap rocks to break them." if self.resources.get("pickaxe") else "Mine. Buy a pickaxe to break rocks."
-        elif loc == "fishing":
+        detail = self.registry.page_hook(loc, "detail")
+        if detail:
+            return detail()
+        if loc == "fishing":
             return "Fishing lake. Follow the water sound. Tap to fish." if self.resources.get("fishing_rod") else "Fishing lake. Buy a fishing rod to catch fish."
         elif loc == "home":
             return "Home. Bed, Research, Kitchen, and Flower pot."
@@ -1806,7 +1784,7 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         self.location_detail_spoken = False
         self.last_hover_state = (None, True)
 
-        single_press = self.current_page in ("mine", "fishing") or self.registry.page_hook(self.current_page, "single_press")
+        single_press = self.current_page == "fishing" or self.registry.page_hook(self.current_page, "single_press")
         if single_press and self.pointer_pressed:
             return self.response()
 
@@ -1988,8 +1966,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         if owned:
             handler, arg = owned
             return handler(arg, obj)
-        if action.startswith("mine_hit:"):
-            return self.hit_mine_rock(action.split(":", 1)[1])
         if action.startswith("shop_page:"):
             if self.current_page not in ("shop_buy", "shop_sell"):
                 return self.response()
@@ -2068,9 +2044,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
         name = self.get_page_name(location)
         if location == "fishing":
             text = "Fishing lake." if self.resources.get("fishing_rod") else "Fishing lake. Buy a fishing rod"
-            return self.response(tts=text, sfx="travel")
-        if location == "mine":
-            text = "Mine." if self.resources["pickaxe"] else "Mine. Buy a pickaxe"
             return self.response(tts=text, sfx="travel")
         arrival = self.registry.page_hook(location, "arrival")
         text = arrival() if arrival else None
@@ -2714,8 +2687,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
             if result is not None: return result
         if kind == "fishing_rod" and item_id == "fishing_rod":
             return self.buy_fishing_rod()
-        if kind in ("pickaxe", "mineral"):
-            return self.buy_mine_item(kind, item_id)
         if kind == "seed":
             seed = self.get_seed_config(item_id)
             if not seed:
@@ -2821,11 +2792,6 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
                 kind = "crop"
                 targets = [dict(target) for target in self.harvest_targets if target["id"] not in self.harvest_collected_ids]
                 completed, total = len(self.harvest_collected_ids), len(self.harvest_targets)
-            elif self.current_page == "mine":
-                kind = "mine"
-                targets = [{"id": obj["id"], "x": obj["x"], "y": obj["y"]}
-                           for obj in self.get_mine_objects() if obj["type"] == "mine_rock"]
-                total = len(targets)
             else:
                 guidance = self.registry.page_hook(self.current_page, "guidance")
                 if guidance:
@@ -2952,115 +2918,12 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
     def get_pickaxe_price(self):
         return int(math.ceil(self.get_fertilizer_price() * float(self.config.get("mine", {}).get("pickaxe_price_multiplier", 5))))
 
-    def get_mineral_price(self, mineral, buying=False):
-        prices = sorted(float(s.get("crop_price", 1)) for s in self.config.get("seeds", {}).values()) or [1]
-        mid = len(prices) // 2
-        base = prices[mid] if len(prices) % 2 else (prices[mid - 1] + prices[mid]) / 2
-        cfg = self.config.get("mine", {})
-        price = int(math.ceil(base * float(cfg.get("mineral_sell_multipliers", {}).get(mineral, 1))))
-        price += int(cfg.get("mineral_sell_price_bonus", 3))
-        return int(math.ceil(price * float(cfg.get("mineral_buy_multiplier", 2)))) if buying else price
-
-    def regenerate_mine(self):
-        cfg = self.config.get("mine", {})
-        width, height = self.dotpad.width, self.dotpad.height
-        rw, rh = int(cfg.get("rock_width", 10)), int(cfg.get("rock_height", 10))
-        gap = max(5, int(cfg.get("rock_gap", 5)))
-        if rw < 1 or rh < 1 or rw > width or rh > height:
-            raise ValueError("Rock size must fit the pad.")
-        columns, rows = (width + gap) // (rw + gap), (height + gap) // (rh + gap)
-        slack_x = width - (columns * rw + (columns - 1) * gap)
-        slack_y = height - (rows * rh + (rows - 1) * gap)
-        origin_y = random.randint(0, slack_y)
-        candidates = []
-        for row in range(rows):
-            origin_x = random.randint(0, slack_x)
-            top = origin_y + row * (rh + gap)
-            for col in range(columns):
-                left = origin_x + col * (rw + gap)
-                candidates.append((left, top))
-        random.shuffle(candidates)
-        limit = max(0, min(7, int(cfg.get("daily_rock_limit", 7))))
-        self.mine_rocks = [
-            {"id": f"mine_rock_{self.day}_{i}", "left": x, "top": y,
-             "width": rw, "height": rh, "hits": 0}
-            for i, (x, y) in enumerate(candidates[:limit])
-        ]
-
-    def draw_mine_rock(self, obj):
-        width, height = int(obj["width"]), int(obj["height"])
-        left, top = obj["x"] - width // 2, obj["y"] - height // 2
-        hits = max(0, int(obj.get("hits", 0)))
-        hits_to_break = max(1, int(self.config.get("mine", {}).get("hits_to_break", 3)))
-        stage = min(2, (2 * hits) // max(1, hits_to_break - 1))
-        for row in range(height):
-            for col in range(width):
-                border = col < 2 or col >= width - 2 or row < 2 or row >= height - 2
-                grid_x, grid_y = (col - 2) % 3 == 0, (row - 2) % 3 == 0
-                filled = stage == 0 or (stage == 1 and (grid_x or grid_y)) or (grid_x and grid_y)
-                if border or filled:
-                    self.dotpad.set_dot(left + col, top + row)
-
     def item_destroyed_event(self, item_id, reward_sound=None, loot_tts=None):
         self.registry.run("activity", "tool_broken", "Fishing rod" if item_id == "fishing_rod" else "Pickaxe")
         event = {"kind": "item_destroyed", "item_id": item_id}
         if reward_sound is not None:
             event.update(reward_sound=reward_sound, tts=loot_tts or "")
         return event
-
-    def hit_mine_rock(self, rock_id):
-        if self.current_page != "mine" or self.paused or self.day_ended:
-            return self.response()
-        rock = next((r for r in self.mine_rocks if r["id"] == rock_id), None)
-        if rock is None:
-            return self.response()
-        self.hover_object_id = rock_id
-        if self.resources.get("pickaxe", 0) < 1:
-            return self.response(tts="Pickaxe required. Buy at the shop.", sfx="error")
-        cfg = self.config.get("mine", {})
-        rock["hits"] += 1
-        self._pickaxe_hits += 1
-        destroyed = rock["hits"] >= int(cfg.get("hits_to_break", 3))
-        text = ""
-        events = []
-        if destroyed:
-            level = self.research_levels.get("mineral_luck", 0)
-            research = self.config.get("research", {}).get("mineral_luck", {})
-            weights = dict(cfg.get("loot_weights", {"diamond": 1, "iron": 15, "copper": 34, "stone": 50}))
-            bonus = float(research.get("diamond_weight_per_level", 1)) * level
-            weights["diamond"] += bonus
-            weights["stone"] = max(0, weights["stone"] - bonus)
-            weights = self.boost_rare_weights(weights, ("iron", "diamond"))
-            mineral = random.choices(list(weights), weights=list(weights.values()), k=1)[0]
-            doubled = random.random() < min(1, level * float(research.get("double_drop_chance_per_level", .15)))
-            amount = self.loot_amount(2 if doubled else 1)
-            doubled = amount > 1
-            self.resources[mineral] += amount
-            self.registry.run("activity", "mining", self.MINERAL_LABELS[mineral], amount)
-            self.mine_rocks.remove(rock)
-            text = f"{self.MINERAL_LABELS[mineral]} {amount} collected." + (". Bonus." if doubled else "")
-        else:
-            events.append({"kind": "one_shot", "sound": "pickaxe",
-                           "progress": rock["hits"] / max(1, int(cfg.get("hits_to_break", 3)))})
-        safe_hits = int(cfg.get("pickaxe_safe_hits", 9))
-        break_chance = min(1, max(0, self._pickaxe_hits - safe_hits) * float(cfg.get("pickaxe_break_increment", .05)))
-        break_chance *= self.buff_multiplier_for("pickaxe_protection")
-        item_destroyed = break_chance > 0 and random.random() < break_chance
-        if item_destroyed:
-            self.resources["pickaxe"] = 0
-            self._pickaxe_hits = 0
-            text += (". " if text else "") + "Pickaxe broken. Buy another at the shop."
-        if destroyed:
-            fatigue = self.consume_time("mine")
-            if fatigue["night"]:
-                text += ". Night. Home now. Select the bed."
-        self.render()
-        if item_destroyed:
-            reward_sound = ("shine" if mineral == "diamond" else "correct") if destroyed else None
-            events = [self.item_destroyed_event("pickaxe", reward_sound, text if destroyed else None)]
-        elif destroyed:
-            events.append({"kind": "mining_loot", "sound": "shine" if mineral == "diamond" else "correct", "tts": text})
-        return self.response(tts=None if destroyed else (text or None), sound_events=events)
 
     def get_harvest_base_yield(self, seed_id):
         return int(self.get_seed_config(seed_id).get("yield", 1))
@@ -3089,37 +2952,3 @@ class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
             objects.append({"id": "shop_empty", "type": "box", "x": 30, "y": 16, "width": 20, "height": 8,
                             "label": "Nothing to sell", "tts": "Nothing to sell.", "action": ""})
         return objects
-
-    def buy_mine_item(self, kind, item_id):
-        if kind == "pickaxe":
-            if self.resources["pickaxe"] >= 1:
-                return self.response(tts="Only one pickaxe allowed.", sfx="error")
-            price, label = self.get_pickaxe_price(), "Pickaxe"
-        elif kind == "mineral" and item_id in ("stone", "copper", "iron"):
-            price, label = self.get_mineral_price(item_id, buying=True), self.MINERAL_LABELS[item_id]
-        else:
-            return self.response(tts="Item unavailable.", sfx="error")
-        price = self.market_price(price, kind, "buy")
-        if self.resources["coin"] < price:
-            return self.response(tts=f"Not enough gold. Need {price} gold for {label}.", sfx="error")
-        self.resources["coin"] -= price
-        if kind == "pickaxe":
-            self.resources["pickaxe"] = 1
-            self._pickaxe_hits = 0
-        else:
-            self.resources[item_id] += 1
-        self.clear_hover()
-        self.render()
-        return self.response(tts=f"{label} bought. Gold left: {self.resources['coin']} gold", sound_events=[{"kind": "one_shot", "sound": "coin"}])
-
-    def draw_mine_item(self, x, y, kind):
-        x, y = int(x), int(y)
-        if kind == "pickaxe":
-            self.dotpad.draw_line(x - 3, y - 2, x + 3, y - 2)
-            self.dotpad.draw_line(x, y - 2, x, y + 2)
-        elif kind == "diamond":
-            for a, b in [((-3, 0), (0, -2)), ((0, -2), (3, 0)), ((3, 0), (0, 2)), ((0, 2), (-3, 0))]:
-                self.dotpad.draw_line(x+a[0], y+a[1], x+b[0], y+b[1])
-        else:
-            for row in range({"stone": 1, "copper": 2, "iron": 3}.get(kind, 1)):
-                self.dotpad.draw_line(x-2, y-1+row, x+2, y-1+row)

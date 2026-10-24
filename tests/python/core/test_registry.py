@@ -178,6 +178,8 @@ class ExposeTests(unittest.TestCase):
     # legacy entry point: review it (AGENTS.md: prefer events or slots).
     EXPECTED = {
         "get_inventory_objects": "inventory",
+        "get_mineral_price": "mining",
+        "hit_mine_rock": "mining",
         "market_price": "village",
         "next_rowan_advice": "npc",
         "npc_action": "npc",

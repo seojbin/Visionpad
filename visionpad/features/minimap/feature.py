@@ -14,6 +14,7 @@ class Minimap(Feature):
                  navigate=self.navigate)
         reg.renderer("node", self.draw_node)
         reg.renderer("route", self.draw_route)
+        reg.hit_test("route", self.route_contains)
         reg.object_tts("node", self.label_only)
         reg.object_tts("route", self.label_only)
         reg.hover_sfx("node", "hover_node")
@@ -66,6 +67,10 @@ class Minimap(Feature):
             e.draw_filled_square(obj["x"], obj["y"], 7)
         else:
             e.dotpad.draw_box(obj["x"], obj["y"], 7, 7)
+
+    def route_contains(self, obj, x, y):
+        distance = self.engine.point_to_segment_distance(x, y, obj["x1"], obj["y1"], obj["x2"], obj["y2"])
+        return distance <= float(obj.get("hit_radius", 3.0))
 
     def draw_route(self, obj):
         self.engine.dotpad.draw_line(obj["x1"], obj["y1"], obj["x2"], obj["y2"])

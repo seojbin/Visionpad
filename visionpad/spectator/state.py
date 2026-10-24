@@ -3,6 +3,10 @@ import copy
 import time
 
 
+# Key order of the companion snapshot before features added their own keys; new keys follow.
+SPECTATOR_KEY_ORDER = ('schema', 'objects', 'plots', 'routes', 'rocks', 'care_targets', 'harvest_targets', 'path')
+
+
 def spectator_snapshot(engine, objects):
     now = time.monotonic()
     fields = ('grid_row', 'grid_column', 'grid_slot', 'id', 'type', 'x', 'y', 'width', 'height', 'label', 'selected',
@@ -48,8 +52,6 @@ def spectator_snapshot(engine, objects):
         'schema': 1, 'objects': public_objects, 'plots': plots,
         'routes': [{k: o[k] for k in ('x1', 'y1', 'x2', 'y2')}
                    for o in objects if o.get('type') == 'route'],
-        'rocks': [{k: r[k] for k in ('id', 'left', 'top', 'width', 'height', 'hits')}
-                  for r in engine.mine_rocks],
         'care_targets': targets(engine.care_targets, engine.care_collected_ids, engine.care_visible_until),
         'harvest_targets': targets(engine.harvest_targets, engine.harvest_collected_ids, {}),
         'path': [dict(x=p[0], y=p[1], passed=i < engine.cooking_progress_index,
@@ -60,4 +62,6 @@ def spectator_snapshot(engine, objects):
         if key in snapshot:
             raise ValueError(f"Spectator key {key!r} is provided by both core and a feature")
         snapshot[key] = provider(objects)
-    return snapshot
+    ordered = {key: snapshot.pop(key) for key in SPECTATOR_KEY_ORDER if key in snapshot}
+    ordered.update(snapshot)
+    return ordered

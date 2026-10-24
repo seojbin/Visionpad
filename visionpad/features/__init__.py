@@ -13,6 +13,7 @@ ENABLED = (
     "inventory",
     "npc",
     "village",
+    "mining",
 )
 
 

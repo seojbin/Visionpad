@@ -18,7 +18,6 @@ class Inventory(Feature):
                                     "action, seed_id, recipe_id, extra_tts. Gold is always shown; other "
                                     "entries only when count > 0.")
         reg.contribute("inventory.items", self.core_resource_items, order=order.InventoryItems.CORE_RESOURCES)
-        reg.contribute("inventory.items", self.mining_items, order=order.InventoryItems.MINING)
         reg.contribute("inventory.items", self.farming_items, order=order.InventoryItems.FARMING)
         reg.contribute("inventory.items", self.cooking_items, order=order.InventoryItems.COOKING)
         reg.contribute("inventory.items", self.fishing_items, order=order.InventoryItems.FISHING)
@@ -49,11 +48,6 @@ class Inventory(Feature):
             {"id": "wood", "label": "Wood", "count": int(e.resources.get("wood", 0)), "kind": "material", "action": ""},
             {"id": "stone", "label": "Stone", "count": int(e.resources.get("stone", 0)), "kind": "stone", "action": ""}
         ]
-
-    def mining_items(self):
-        e = self.engine
-        return [{"id": item_id, "label": label, "count": e.resources[item_id], "kind": item_id, "action": ""}
-                for item_id, label in [("pickaxe", "Pickaxe"), ("copper", "Copper"), ("iron", "Iron"), ("diamond", "Diamond")]]
 
     def farming_items(self):
         e = self.engine

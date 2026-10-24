@@ -73,14 +73,14 @@ class Feature:
 class Page:
     def __init__(self, feature, name=None, objects=None, scene=None, guidance=None,
                  press=None, single_press=False, icon_grid=False,
-                 menu_text=None, on_menu_open=None, navigate=None, arrival=None, **pointer):
+                 menu_text=None, on_menu_open=None, navigate=None, arrival=None, detail=None, **pointer):
         unknown = set(pointer) - {"pointer_" + kind for kind in POINTER_KINDS}
         if unknown:
             raise TypeError(f"Unknown page hook(s): {', '.join(sorted(unknown))}")
         self.feature, self.name, self.objects, self.scene, self.guidance = feature, name, objects, scene, guidance
         self.press, self.single_press, self.icon_grid = press, single_press, icon_grid
         self.menu_text, self.on_menu_open, self.navigate = menu_text, on_menu_open, navigate
-        self.arrival = arrival
+        self.arrival, self.detail = arrival, detail
         self.pointer = {kind: pointer.get("pointer_" + kind) for kind in POINTER_KINDS}
 
 
@@ -90,6 +90,7 @@ class Registry:
         self.pages = {}
         self.actions = {}
         self.renderers = {}
+        self.hit_tests = {}
         self.tts = {}
         self.hover_sounds = {}
         self.state_providers = {}
@@ -147,7 +148,7 @@ class Registry:
 
     def page(self, page_id, *, name=None, objects=None, scene=None, guidance=None,
              press=None, single_press=False, icon_grid=False,
-             menu_text=None, on_menu_open=None, navigate=None, arrival=None, **pointer):
+             menu_text=None, on_menu_open=None, navigate=None, arrival=None, detail=None, **pointer):
         """Own a page.
         objects() -> list of tactile objects; name -> spoken page name; scene() draws after the objects;
         guidance() -> (kind, targets, completed, total) for audio_guidance.
@@ -158,9 +159,10 @@ class Registry:
         icon_grid places the page's icon objects on the shared twelve-slot grid.
         For pages opened as F-key menus: on_menu_open() runs as the menu opens and menu_text() -> the
         spoken text. navigate(direction) handles Left/Right on the page (return None for the default).
-        For travel locations: arrival() -> text spoken on arrival, or None for the location name."""
+        For travel locations: arrival() -> text spoken on arrival, or None for the location name.
+        detail() -> the location description (get_location_detail)."""
         page = Page(self._current, name, objects, scene, guidance, press, single_press, icon_grid,
-                    menu_text, on_menu_open, navigate, arrival, **pointer)
+                    menu_text, on_menu_open, navigate, arrival, detail, **pointer)
         self._claim(self.pages, page_id, page, "Page")
 
     def action(self, key, handler, *, before_night_guard=False):
@@ -172,6 +174,10 @@ class Registry:
     def renderer(self, object_type, draw):
         """draw(obj) puts the object on the dot pad when the icon renderer did not draw it."""
         self._claim(self.renderers, object_type, draw, "Renderer")
+
+    def hit_test(self, object_type, contains):
+        """contains(obj, x, y) -> bool replaces the default hit-box test for this object type."""
+        self._claim(self.hit_tests, object_type, contains, "Hit test")
 
     def object_tts(self, object_type, describe):
         """describe(obj) -> short hover text (detail=False)."""
