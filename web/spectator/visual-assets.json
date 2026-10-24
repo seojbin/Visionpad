@@ -7,12 +7,12 @@
     "facilities": "assets/facilities.png",
     "scenes2": "assets/scenes2.png",
     "scene3": "assets/scene3.png",
-    "items2": "assets/items2.png",
-    "rowan": "assets/rowan.png",
+    "items2": "../features/fishing/assets/items2.png",
+    "rowan": "../features/npc/assets/rowan.png",
     "items3": "assets/items3.png",
-    "flower-items": "assets/flower-items.png",
-    "flower-stages": "assets/flower-stages.png",
-    "flower-backgrounds": "assets/flower-backgrounds.png"
+    "flower-items": "../features/flowers/assets/flower-items.png",
+    "flower-stages": "../features/flowers/assets/flower-stages.png",
+    "flower-backgrounds": "../features/flowers/assets/flower-backgrounds.png"
   },
   "backgrounds": {
     "home": {

@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from visionpad.config import load_config
 from visionpad.services.speech import SpeechService
+from tools.check_setup import sound_path
 
 RATE = 22050
 
@@ -60,7 +61,7 @@ def main():
         if kind == 'cue':
             effect = render_cue(cues[name])
         else:
-            effect = pcm(ROOT/'web'/'audio'/(name+'.mp3'),seconds)
+            effect = pcm(ROOT/sound_path(name),seconds)
             gain = settings['work_gain'][name] if kind=='work' else settings['one_shot_gain'][settings.get('one_shot_gain_links',{}).get(name,name)]
             effect *= gain
         effect *= settings['default_volume']

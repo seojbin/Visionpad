@@ -12,6 +12,8 @@ const SOUND_CUES = {
     night: [[392,0,0.12,0.06],[294,0.15,0.18,0.05]],
     morning: [[392,0,0.1,0.06],[523,0.13,0.16,0.055]]
 };
+// Feature sounds live next to their feature; shared sounds stay in web/audio/.
+const FEATURE_SOUND_URLS = {'water':'/static/features/farming/audio/water.mp3', 'soil':'/static/features/farming/audio/soil.mp3', 'crop':'/static/features/harvest/audio/crop.mp3', 'cut':'/static/features/cooking/audio/cut.mp3', 'cook':'/static/features/cooking/audio/cook.mp3', 'pickaxe':'/static/features/mining/audio/pickaxe.mp3', 'break':'/static/features/mining/audio/break.mp3', 'splash':'/static/features/fishing/audio/splash.mp3'};
 class GameAudio {
     constructor(options = {}) {
         this.contextFactory = options.contextFactory || (() => new (window.AudioContext || window.webkitAudioContext)());
@@ -53,7 +55,7 @@ class GameAudio {
         this.effectToken = 0; this.lastPosition = null; this.lastCorrectAt = -Infinity; this.lastMotion = 0;
         this.guidanceEnabled=true;this.guidancePosition=null;this.guidanceTargetId=null;
         this.guidanceSources=new Set();this.guidanceTimer=null;this.lastGuidanceAt=-Infinity;
-        this.urls = Object.fromEntries(['water','soil','cut','cook','crop','correct','sleep','door','coin','background-basic','background-minigame','background-shop','step','pickaxe','break','shine','destroy','splash'].map(n => [n, `/static/audio/${n}.mp3`]));
+        this.urls = Object.fromEntries(['water','soil','cut','cook','crop','correct','sleep','door','coin','background-basic','background-minigame','background-shop','step','pickaxe','break','shine','destroy','splash'].map(n => [n, FEATURE_SOUND_URLS[n] || `/static/audio/${n}.mp3`]));
     }
     configure(settings = {}) {
         this.settings = {

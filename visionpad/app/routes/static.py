@@ -16,6 +16,19 @@ LEGACY_STATIC = {
     "hardware.mjs": "core/pad/hardware.mjs",
     "bluetooth-pad.mjs": "core/pad/bluetooth-pad.mjs",
     "vendor/": "core/pad/vendor/",
+    "audio/water.mp3": "features/farming/audio/water.mp3",
+    "audio/soil.mp3": "features/farming/audio/soil.mp3",
+    "audio/crop.mp3": "features/harvest/audio/crop.mp3",
+    "audio/cut.mp3": "features/cooking/audio/cut.mp3",
+    "audio/cook.mp3": "features/cooking/audio/cook.mp3",
+    "audio/pickaxe.mp3": "features/mining/audio/pickaxe.mp3",
+    "audio/break.mp3": "features/mining/audio/break.mp3",
+    "audio/splash.mp3": "features/fishing/audio/splash.mp3",
+    "spectator/assets/items2.png": "features/fishing/assets/items2.png",
+    "spectator/assets/rowan.png": "features/npc/assets/rowan.png",
+    "spectator/assets/flower-items.png": "features/flowers/assets/flower-items.png",
+    "spectator/assets/flower-stages.png": "features/flowers/assets/flower-stages.png",
+    "spectator/assets/flower-backgrounds.png": "features/flowers/assets/flower-backgrounds.png",
 }
 
 

@@ -179,7 +179,7 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 | `web/core/game-keys.js` | 기능 키와 방향 키, F3 짧게·길게 누르기, 중복 입력·취소 처리 |
 | `web/core/pad/hardware.mjs` | Web Serial 패드 통신과 물리 버튼 수신, WebSocket 손 좌표 연결 |
 | `web/core/game-audio.js` | 배경음악·작업음·성공음·단발 효과음의 독립 재생과 음량 제어 |
-| `web/audio/` | 활동·배경·피드백 MP3 음원 |
+| `web/audio/` | 공통 배경·피드백 MP3 음원 (기능별 음원은 `web/features/<name>/audio/`) |
 | `game.bat`, `launch_game.py` | Windows 실행 및 서버·브라우저 시작 보조 |
 
 ### Visual Companion
@@ -220,7 +220,7 @@ F3을 길게 누르면 누르는 도중 저장이 실행된다. 저장 후 키�
 | `sleep` | 수면 시작 |
 | `pickaxe`, `break`, `shine`, `destroy` | 타격·돌 파괴·다이아몬드 획득·아이템 파괴 |
 
-음원은 `web/audio/`의 같은 이름 MP3를 사용한다. 작업음과 성공음은 별도 채널이므로 성공음이 작업음을 끊지 않는다. 같은 배경음악 그룹 안에서는 음악을 다시 시작하지 않는다. 영어 음성은 서버가 생성한 WAV를 재생하며, 효과음 음량 설정과 음성 설정은 별개다. TTS 중 배경음악 배율은 `interaction.audio.bgm_during_tts`로 조정하며 기본값은 0.25다.
+음원은 `web/audio/`(공통)와 `web/features/<name>/audio/`(기능별)의 같은 이름 MP3를 사용한다. 작업음과 성공음은 별도 채널이므로 성공음이 작업음을 끊지 않는다. 같은 배경음악 그룹 안에서는 음악을 다시 시작하지 않는다. 영어 음성은 서버가 생성한 WAV를 재생하며, 효과음 음량 설정과 음성 설정은 별개다. TTS 중 배경음악 배율은 `interaction.audio.bgm_during_tts`로 조정하며 기본값은 0.25다.
 
 작업 녹음과 짧은 결과음을 `GameAudio`로 통합했다. 목표 통과·전체 완료·행동 불가·낚시 실패를 구분하고, 길게 누를 때 클릭 녹음과 작업 녹음이 겹치지 않도록 한다. 음성 시작과 종료가 멈춰 있는 자르기·젓기 소리를 다시 키우지 않는다. 문·발걸음·동전 녹음이 있으면 합성음을 중복하지 않는다. 음악은 낮추고 작은 수확·희귀 보상 녹음은 보정했으며 단발 효과음도 TTS 중 줄인다. 원본 MP3는 변경하지 않았다. `python tools/prepare_effects_preview.py`로 약 37초의 모노 비교 음원 `output/audio/effects-preview.wav`를 만든다. FFmpeg와 Node가 필요하며 실제 동시 혼합이나 HRTF를 재현하는 파일은 아니다.
 
@@ -452,7 +452,7 @@ Rowan은 마을의 상점 옆에 서 있습니다. 선택하면 고정 영어 Ro
 
 `game_village.py`는 Rowan 퀘스트와 대사, 작물 제출, 요일별 가격 계산을 담당합니다. `game_config.json`의 `rowan.seed_gift_each`는 종류별 선물 씨앗 수, `rowan.vegetable_reward_gold`는 채소 제출 보상입니다. `weekly_market.discount_percent`, `bonus_percent`, `days`에서 할인·고가 매입 비율과 요일별 적용 분류를 설정합니다. 수프는 `recipes.rowan_soup`에서 설정합니다.
 
-`web/spectator/assets/rowan.png`에 대화 초상화·전신·낚싯대를 함께 담았습니다. `visual-assets.json`에서 각 이미지 영역을, `scene-objects.json`에서 마을 배치를 관리합니다. 기존 이미지는 그대로 사용합니다. 새 에셋은 기본 이미지 생성 도구로 제작했으며, 밀짚모자·녹색 셔츠·갈색 멜빵바지를 입은 갈색 머리의 수염 있는 남성 농부와 나무 낚싯대를 투명 배경의 픽셀 아트로 구성했습니다.
+`web/features/npc/assets/rowan.png`에 대화 초상화·전신·낚싯대를 함께 담았습니다. `visual-assets.json`에서 각 이미지 영역을, `scene-objects.json`에서 마을 배치를 관리합니다. 기존 이미지는 그대로 사용합니다. 새 에셋은 기본 이미지 생성 도구로 제작했으며, 밀짚모자·녹색 셔츠·갈색 멜빵바지를 입은 갈색 머리의 수염 있는 남성 농부와 나무 낚싯대를 투명 배경의 픽셀 아트로 구성했습니다.
 
 검증 명령: `python -m unittest test_village -v`, `node test_hardware.mjs`. 카메라 및 실물 닷패드 검증에는 별도 tracking 모듈과 장치가 필요합니다.
 

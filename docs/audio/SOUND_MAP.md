@@ -26,7 +26,7 @@
 | 저장과 로드 완료 | complete 합성음 | 진행 저장이나 복원 성공 확인 |
 | 농사·광산 미완료 목표 | HRTF 짧은 sine 방향음 | 가장 가까운 남은 목표. 가까울수록 간격이 짧고 높아짐. Target cues로 개별 조절 |
 
-원본 녹음은 `web/audio/`의 MP3 18개다. 원본 파일은 변경하지 않았다. 짧은 안내 효과음은 `web/game-audio.js`의 `SOUND_CUES`, `feedback`, `cue`에서 관리한다. 화면 코드에 따로 있던 `playSfx` 처리는 공통 재생 모듈로 합쳤다.
+원본 녹음은 `web/audio/`(공통)와 `web/features/<name>/audio/`(기능별)의 MP3 18개다. 원본 파일은 변경하지 않았다. 짧은 안내 효과음은 `web/core/game-audio.js`의 `SOUND_CUES`, `feedback`, `cue`에서 관리한다. 화면 코드에 따로 있던 `playSfx` 처리는 공통 재생 모듈로 합쳤다.
 
 ## 효과음 재생과 음량 정책
 

@@ -54,8 +54,8 @@ def scan():
             url = resolve(base, ref)
             if url and (url.startswith("/static/") or url == "/"):
                 urls.add(url)
-        # GameAudio builds sound URLs from a name list and a template.
-        for names, template in re.findall(r"\[((?:'[\w-]+',?\s*)+)\]\.map\(n => \[n, `([^`]+)`\]\)", text):
+        # GameAudio builds shared sound URLs from a name list and a template (feature sounds are quoted).
+        for names, template in re.findall(r"\[((?:'[\w-]+',?\s*)+)\]\.map\(n => \[n, (?:\w+\[n\] \|\| )?`([^`]+)`\]\)", text):
             for name in re.findall(r"'([\w-]+)'", names):
                 urls.add(template.replace("${n}", name))
         if path.name == "visual-assets.json":

@@ -7,12 +7,12 @@
 | 기능 | 동작 | 주요 파일 |
 |---|---|---|
 | 일정한 영어 음성 | Piper의 고정 시스템/Rowan 목소리, 발음 보정, WAV 캐시 | `game_speech.py`, `speech_config.json` |
-| 음성 재생 | 다시 듣기·중지·음소거·속도·별도 음량 85%, 늦은 안내 취소 | `web/game-speech.js`, `game_app.py`, `speech_queue.py` |
-| 퀘스트 안내 | 팀 Rowan 튜토리얼을 같은 목소리로 읽고, 다른 행동 안내는 대사가 끝날 때까지 보류 | `game_npc.py`, `web/game-speech.js` |
+| 음성 재생 | 다시 듣기·중지·음소거·속도·별도 음량 85%, 늦은 안내 취소 | `web/core/game-speech.js`, `game_app.py`, `speech_queue.py` |
+| 퀘스트 안내 | 팀 Rowan 튜토리얼을 같은 목소리로 읽고, 다른 행동 안내는 대사가 끝날 때까지 보류 | `game_npc.py`, `web/core/game-speech.js` |
 | Rowan 조언 | **상점 → Ask Rowan for advice → Farming / Fishing / Open shop / Goodbye** | `game_npc.py`, `npc_config.json` |
 | 최근 행동 반응 | 실제 수확·요리·낚시·채굴·도구 파괴를 다음 대화에 한 번 반영, 저장/로드 지원 | `game_npc.py`, `game_saves.py` |
-| 효과음 | 작업·목표 통과·전체 완료·실패 구분, 중복/이전 화면 소리 방지, 음원 실패 후 재시도 | `web/game-audio.js`, 엔진의 `sound_events` |
-| 목표 안내 | 물·비료·수확·광산의 남은 목표를 HRTF 방향음으로 안내, 거리/진행에 따른 변화 | `GameEngine.audio_guidance`, `web/game-audio.js` |
+| 효과음 | 작업·목표 통과·전체 완료·실패 구분, 중복/이전 화면 소리 방지, 음원 실패 후 재시도 | `web/core/game-audio.js`, 엔진의 `sound_events` |
+| 목표 안내 | 물·비료·수확·광산의 남은 목표를 HRTF 방향음으로 안내, 거리/진행에 따른 변화 | `GameEngine.audio_guidance`, `web/core/game-audio.js` |
 | 준비/실행 | 프로젝트 가상환경·모델 설치, 실제 음성 생성 점검, 기존 게임 재사용, 시연 음성 준비 | `setup-*`, `launch_game.py`, `tools/` |
 
 원본 MP3 18개와 낚시 HRTF는 유지한다. 최신 팀 코드의 작업음 위치 처리, 게임 음량 기본 90%, 이동만으로 수행하는 농사·요리, F4 선택, 아이콘/날짜/요일별 거래와 Rowan 퀘스트도 보존한다. 원본 퀘스트의 수프·씨앗·100골드 보상을 조언 기능에서 중복 지급하지 않는다. 조언만 듣거나 Replay를 눌러도 게임 시간·재화는 소비하지 않는다.

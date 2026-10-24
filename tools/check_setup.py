@@ -13,6 +13,15 @@ DEPENDENCIES = {"fastapi": ((0, 110), (1,)), "uvicorn": ((0, 29), (1,)),
 ASSETS = ("water", "soil", "cut", "cook", "crop", "correct", "sleep", "door", "coin",
           "background-basic", "background-minigame", "background-shop", "step", "pickaxe",
           "break", "shine", "destroy", "splash")
+# Feature sounds moved next to their feature (web/features/<name>/audio/); the rest stay in web/audio/.
+FEATURE_SOUNDS = {"water": "farming", "soil": "farming", "crop": "harvest", "cut": "cooking", "cook": "cooking",
+                  "pickaxe": "mining", "break": "mining", "splash": "fishing"}
+
+
+def sound_path(name):
+    """Path of a game sound relative to the project root."""
+    folder = f"web/features/{FEATURE_SOUNDS[name]}/audio" if name in FEATURE_SOUNDS else "web/audio"
+    return f"{folder}/{name}.mp3"
 
 
 def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=False):
@@ -47,10 +56,10 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
     missing = [name for name in required if not (root / name).is_file()]
     add("Game files", not missing, "Complete" if not missing else ", ".join(missing),
         "Copy the complete project source, including web and tools folders.")
-    missing = [name for name in ASSETS if not (root / "web/audio" / (name + ".mp3")).is_file()
-               or not (root / "web/audio" / (name + ".mp3")).stat().st_size]
+    missing = [name for name in ASSETS if not (root / sound_path(name)).is_file()
+               or not (root / sound_path(name)).stat().st_size]
     add("Game sounds", not missing, "18 files present" if not missing else ", ".join(missing),
-        "Restore web/audio from the project source.")
+        "Restore web/audio and web/features/*/audio from the project source.")
 
     config = None
     try:

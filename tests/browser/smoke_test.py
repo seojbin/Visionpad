@@ -8,12 +8,13 @@ Allowed: the hand-downloaded Dot Pad SDK may be missing, and speech requests tha
 aborts when a newer line replaces them (GameSpeech cancellation, net::ERR_ABORTED on /api/speech). Travels to every location through the F1 map
 using the page's own "Objects nearby" buttons, which send the same pointer input as the pad.
 """
+import json
 import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from url_check import OPTIONAL, free_port, ROOT  # noqa: E402
+from url_check import OPTIONAL, WEB, free_port, resolve, ROOT  # noqa: E402
 
 import subprocess  # noqa: E402
 import time  # noqa: E402
@@ -25,6 +26,9 @@ def cancelled_speech(request):
     return request.url.split("?")[0].endswith(("/api/speech", "/api/speech/cancel")) and "ERR_ABORTED" in (request.failure or "")
 
 
+# Every texture sheet in the companion's asset registry must actually load (they may live in feature folders).
+TEXTURES = {resolve("/static/spectator", path) for path in
+            json.loads((WEB / "spectator/visual-assets.json").read_text(encoding="utf-8"))["textures"].values()}
 LOCATIONS = [("farm", "Farm"), ("town", "Village"), ("mine", "Mine"), ("fishing", "Fishing lake"), ("home", "Home")]
 
 
@@ -34,6 +38,7 @@ def main():
                                "--port", str(port), "--log-level", "warning"], cwd=ROOT)
     base = f"http://127.0.0.1:{port}"
     problems = []
+    loaded = set()
     try:
         for _ in range(150):
             try:
@@ -55,6 +60,7 @@ def main():
                         else problems.append(f"{name} request failed: {req.url} ({req.failure})"))
                 page.on("response", lambda res: None if res.status < 400 or OPTIONAL.search(res.url)
                         else problems.append(f"{name} HTTP {res.status}: {res.url}"))
+                page.on("response", lambda res: res.status == 200 and loaded.add(res.url.removeprefix(base).split("?")[0]))
 
             page = context.new_page()
             watch(page, "game")
@@ -68,6 +74,8 @@ def main():
             popup.wait_for_timeout(1500)
             if not popup.query_selector("canvas"):
                 problems.append("companion: no canvas rendered")
+            for texture in sorted(TEXTURES - loaded):
+                problems.append(f"companion texture not loaded: {texture}")
 
             def state():
                 return page.evaluate("fetch('/api/state').then(r => r.json()).then(s => s.page)")

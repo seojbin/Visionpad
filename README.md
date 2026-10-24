@@ -181,7 +181,7 @@ The server owns game state and action checks. The browser sends input and receiv
 | `web/core/game-keys.js` | Function and arrow keys, F3 short/long press, repeat suppression, and cancellation |
 | `web/core/pad/hardware.mjs` | Web Serial pad output and physical buttons; WebSocket hand coordinates |
 | `web/core/game-audio.js` | Separate music, action, reward, and one-shot sound channels |
-| `web/audio/` | MP3 assets |
+| `web/audio/` | Shared MP3 assets (feature sounds are in `web/features/<name>/audio/`) |
 | `game.bat`, `launch_game.py` | Windows startup and server/browser launch helpers |
 
 ### Visual Companion
@@ -222,7 +222,7 @@ Saves are JSON files in `saves/`; the latest 12 are retained. They restore progr
 | `sleep` | Sleep transition |
 | `pickaxe`, `break`, `shine`, `destroy` | Hits, broken rocks, diamonds, and broken items |
 
-Assets use matching MP3 names in `web/audio/`. Reward sounds do not interrupt action sounds. Moving within the same music group does not restart the track. Speech uses server-generated English audio and has separate controls from game audio.
+Assets use matching MP3 names in `web/audio/` (shared) and `web/features/<name>/audio/` (feature sounds). Reward sounds do not interrupt action sounds. Moving within the same music group does not restart the track. Speech uses server-generated English audio and has separate controls from game audio.
 
 Recorded action sounds and short outcome cues now share `GameAudio`: target progress, task completion, unavailable actions and fishing misses have distinct feedback. Held work avoids overlapping its tap recording, and TTS cannot revive idle chopping or stirring. Recorded doors, footsteps and coins suppress duplicate synthetic cues. Music is quieter, low-level crop and rare-reward recordings are amplified, and one-shot effects also reduce during speech. Original MP3 files are unchanged. Run `python tools/prepare_effects_preview.py` (requires FFmpeg and Node) for a labelled 37-second mono effects reel in `output/audio/effects-preview.wav`; it does not reproduce live mixing or HRTF.
 
@@ -409,7 +409,7 @@ The first inventory page contains gold and usable food. Materials, seeds, crops,
 
 `game_village.py` contains Rowan's quest state, dialogue, crop submission and daily market calculations. `game_config.json` exposes `rowan.seed_gift_each`, `rowan.vegetable_reward_gold`, `weekly_market.discount_percent`, `weekly_market.bonus_percent`, and the seven `weekly_market.days` entries. Rowan's soup is defined in `recipes.rowan_soup`.
 
-`web/spectator/assets/rowan.png` is a transparent atlas containing the dialogue portrait, standing character and fishing rod. Crop rectangles and scene placement are registered in `visual-assets.json` and `scene-objects.json`; existing images are reused. The atlas was generated with the built-in image generator using a cozy pixel-art farmer with auburn hair, beard, straw hat, green shirt and brown overalls, plus a wooden fishing rod on a transparent background.
+`web/features/npc/assets/rowan.png` is a transparent atlas containing the dialogue portrait, standing character and fishing rod. Crop rectangles and scene placement are registered in `visual-assets.json` and `scene-objects.json`; existing images are reused. The atlas was generated with the built-in image generator using a cozy pixel-art farmer with auburn hair, beard, straw hat, green shirt and brown overalls, plus a wooden fishing rod on a transparent background.
 
 Validation: `python -m unittest test_village -v` and `node test_hardware.mjs`. Camera and physical-pad checks require the separately supplied tracking module and hardware.
 

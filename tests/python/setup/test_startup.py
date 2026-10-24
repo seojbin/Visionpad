@@ -11,7 +11,7 @@ from importlib.metadata import PackageNotFoundError
 from urllib.error import URLError
 
 import launch_game
-from tools.check_setup import ASSETS, check_setup
+from tools.check_setup import ASSETS, check_setup, sound_path
 from tools.setup_game import environment_python, setup
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -33,7 +33,7 @@ class SetupChecks(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.touch()
         for name in ASSETS:
-            target = self.root / "web/audio" / (name + ".mp3")
+            target = self.root / sound_path(name)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(b"sound")
         config = {"profiles": {"system": {"model": "test-voice"}}, "samples": [{"text": "Hello."}]}
@@ -65,7 +65,7 @@ class SetupChecks(unittest.TestCase):
         self.assertFalse(next(check for check in report["checks"] if check["name"] == "Voice: system")["ok"])
 
     def test_missing_sound_and_game_module_are_both_reported(self):
-        (self.root / "web/audio/water.mp3").unlink()
+        (self.root / sound_path("water")).unlink()
         (self.root / "visionpad/core/engine.py").unlink()
         failed = {check["name"] for check in self.report()["checks"] if not check["ok"]}
         self.assertEqual(failed, {"Game sounds", "Game files"})
