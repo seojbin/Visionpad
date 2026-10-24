@@ -80,7 +80,7 @@ def run_flow():
         with tempfile.TemporaryDirectory(prefix='visionpad-audio-flow-') as saved:
             flow = Flow(GameEngine(fixture_config(),save_dir=saved))
             engine = flow.engine
-            with patch('game_engine.time.monotonic',side_effect=lambda:flow.now):
+            with patch('time.monotonic',side_effect=lambda:flow.now):
                 flow.go('farm')
                 plot = engine.get_unlocked_plot_defs()[0]['id']
                 flow.click('open_plot_detail:'+plot)
@@ -136,7 +136,7 @@ def run_flow():
                 flow.go('mine')
                 rock=engine.mine_rocks[0]['id']
                 for _ in range(engine.config['mine']['hits_to_break']):
-                    with patch('game_engine.random.choices',return_value=['diamond']):
+                    with patch('random.choices',return_value=['diamond']):
                         flow.click('mine_hit:'+rock)
                 assert engine.resources['diamond']>=1
                 flow.tick(1.0)
