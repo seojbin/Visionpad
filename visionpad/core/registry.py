@@ -100,6 +100,7 @@ class Registry:
         self.slots = {}
         self.owners = {}
         self.api = {}
+        self.api_owners = {}
         self.shop_buyers = {}
         self.fixed_price_kinds = set()
         self.icon_patterns = {}
@@ -203,8 +204,10 @@ class Registry:
         self.slots.setdefault(slot, []).append((order, self._next(), provider))
 
     def expose(self, name, function):
-        """Keep `engine.<name>(...)` working for callers outside the features (tests, tools)."""
+        """Make `engine.<name>(...)` call this feature. Use it for tests and tools, or between paired
+        features; prefer events and slots for everything else (AGENTS.md)."""
         self._claim(self.api, name, function, "Engine method")
+        self.api_owners[name] = self._current
 
     def owns(self, *names):
         for name in names:

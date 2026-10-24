@@ -32,8 +32,8 @@ def decode(value):
 
 
 # Key order of save files written before the modular refactor. Features now create their
-# attributes in their own reset handlers, so attribute order no longer matches it; snapshot()
-# writes these keys in this order and any newer keys after them.
+# attributes in their own reset handlers, so attribute order no longer matches it. snapshot()
+# writes these keys in this order, then every other saved attribute in alphabetical order.
 SAVE_KEY_ORDER = (
     "rowan_stage", "rowan_greeted", "rowan_dialogue", "rowan_submit_open", "_menu_stack", "sleep_until",
     "pending_visual_completion", "shop_page", "_pickaxe_hits", "inventory_page", "inventory_page_count", "day",
@@ -56,7 +56,7 @@ class SaveMixin:
         names = [k for k in vars(self)
                  if k not in self._static_fields and k not in {"_static_fields", "_load_return", "_save_slots"}]
         known = set(names)
-        ordered = [k for k in SAVE_KEY_ORDER if k in known] + [k for k in names if k not in SAVE_KEY_ORDER]
+        ordered = [k for k in SAVE_KEY_ORDER if k in known] + sorted(known.difference(SAVE_KEY_ORDER))
         state = {k: copy.deepcopy(getattr(self, k)) for k in ordered}
         state.update(self.registry.save_transient)
         state["random_state"] = random.getstate()

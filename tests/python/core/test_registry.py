@@ -2,11 +2,14 @@
 import tempfile
 import types
 import unittest
+from unittest.mock import patch
 
 from visionpad.config import load_config
 from visionpad.core import order
 from visionpad.core.engine import GameEngine
 from visionpad.core.registry import Feature, Registry
+from visionpad.features import load_features
+from visionpad.services.saves import SAVE_KEY_ORDER
 
 
 def feature(name, register):
@@ -127,6 +130,101 @@ class OwnershipTests(unittest.TestCase):
         for name, owner in engine.registry.owners.items():
             with self.subTest(attribute=name, feature=owner):
                 self.assertIn(name, saved)
+
+
+def engine_with(*extra_features):
+    """A real engine whose feature list has extra test features appended."""
+    features = load_features() + list(extra_features)
+    with patch("visionpad.core.engine.load_features", return_value=features):
+        return GameEngine(load_config("game"), save_dir=tempfile.mkdtemp())
+
+
+class SaveOrderTests(unittest.TestCase):
+    class Extra(Feature):
+        name = "extra"
+
+        def register(self, reg):
+            reg.owns("zeta_extra", "alpha_extra")
+            reg.on("reset", self.reset)
+
+        def reset(self):
+            self.engine.zeta_extra = {"kept": True}
+            self.engine.alpha_extra = 3
+
+    def test_new_attributes_follow_the_listed_keys_alphabetically(self):
+        features = load_features() + [self.Extra]
+        with patch("visionpad.core.engine.load_features", return_value=features):
+            engine = GameEngine(load_config("game"), save_dir=tempfile.mkdtemp())
+            keys = list(engine.snapshot())
+            listed = [key for key in SAVE_KEY_ORDER if key in keys]
+            self.assertEqual(keys[:len(listed)], listed)
+            self.assertEqual(keys[len(listed):], ["alpha_extra", "zeta_extra", "random_state"])
+
+    def test_new_attributes_survive_save_and_load(self):
+        features = load_features() + [self.Extra]
+        with patch("visionpad.core.engine.load_features", return_value=features):
+            engine = GameEngine(load_config("game"), save_dir=tempfile.mkdtemp())
+            engine.alpha_extra = 9
+            engine.save_game()
+            engine.alpha_extra = 0
+            engine.open_load_game()
+            result = engine.load_game(engine._save_slots[0]["id"])
+            self.assertTrue(result["tts"].startswith("Game loaded."))
+            self.assertEqual((engine.alpha_extra, engine.zeta_extra), (9, {"kept": True}))
+
+
+class ExposeTests(unittest.TestCase):
+    # Every engine method provided by a feature. A new entry here is a new cross-feature or
+    # legacy entry point: review it (AGENTS.md: prefer events or slots).
+    EXPECTED = {
+        "get_inventory_objects": "inventory",
+        "market_price": "village",
+        "next_rowan_advice": "npc",
+        "npc_action": "npc",
+        "npc_voice_profile": "npc",
+        "open_calendar": "village",
+        "open_inventory": "inventory",
+        "recent_reaction": "npc",
+        "record_activity": "npc",
+        "rowan_advice": "npc",
+        "submit_rowan_crop": "village",
+        "talk_rowan": "village",
+    }
+
+    def test_exposed_names_and_owners_are_reviewed(self):
+        engine = GameEngine(load_config("game"), save_dir=tempfile.mkdtemp())
+        self.assertEqual(engine.registry.api_owners, self.EXPECTED)
+
+    def test_engine_calls_reach_the_exposed_function(self):
+        engine = engine_with(feature("probe", lambda self, reg: reg.expose("probe_value", lambda x: ("probe", x))))
+        self.assertEqual(engine.probe_value(4), ("probe", 4))
+        with self.assertRaises(AttributeError):
+            engine.not_exposed_anywhere
+
+    def test_exposed_names_cannot_shadow_engine_methods_or_repeat(self):
+        class Host:
+            def render(self):
+                pass
+        with self.assertRaisesRegex(ValueError, "already defined"):
+            Registry.build(Host(), [feature("a", lambda self, reg: reg.expose("render", lambda: None))])
+        with self.assertRaises(ValueError):
+            build(feature("a", lambda self, reg: reg.expose("same", lambda: None)),
+                  feature("b", lambda self, reg: reg.expose("same", lambda: None)))
+
+
+class ArrivalTests(unittest.TestCase):
+    def test_arrival_hook_is_stored_on_the_page(self):
+        arrival = lambda: "Welcome."
+        registry = build(feature("a", lambda self, reg: reg.page("p", arrival=arrival)))
+        self.assertIs(registry.page_hook("p", "arrival"), arrival)
+        self.assertIsNone(registry.page_hook("other", "arrival"))
+
+    def test_arrival_text_replaces_the_location_name_until_it_returns_none(self):
+        engine = GameEngine(load_config("game"), save_dir=tempfile.mkdtemp())
+        self.assertEqual(engine.travel_to("town")["tts"], "Village. Rowan would like to meet you.")
+        engine.travel_to("home")
+        self.assertEqual(engine.travel_to("town")["tts"], "Village")
+        self.assertEqual(engine.travel_to("farm")["tts"], "Farm")
 
 
 if __name__ == "__main__":

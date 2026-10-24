@@ -212,3 +212,19 @@ Added with the approved registry changes. These 16 tests are new; every result a
 | tests.python.core.test_registry | UnknownNameTests | test_unknown_event_is_rejected_at_registration | ok |  |
 | tests.python.core.test_registry | UnknownNameTests | test_unknown_page_hook_is_rejected | ok |  |
 | tests.python.core.test_registry | UnknownNameTests | test_unknown_slot_is_rejected_after_all_features_register | ok |  |
+
+## Python results addendum: save order, expose, arrival and root aliases (Phase 3)
+
+Added after the npc + village review. These 9 tests are new; every result above is unchanged. Python total becomes 95 (86 ok, 6 FAIL, 3 ERROR).
+
+| Module | Class | Test | Result | Note |
+|---|---|---|---|---|
+| tests.python.core.test_registry | ArrivalTests | test_arrival_hook_is_stored_on_the_page | ok |  |
+| tests.python.core.test_registry | ArrivalTests | test_arrival_text_replaces_the_location_name_until_it_returns_none | ok |  |
+| tests.python.core.test_registry | ExposeTests | test_engine_calls_reach_the_exposed_function | ok |  |
+| tests.python.core.test_registry | ExposeTests | test_exposed_names_and_owners_are_reviewed | ok |  |
+| tests.python.core.test_registry | ExposeTests | test_exposed_names_cannot_shadow_engine_methods_or_repeat | ok |  |
+| tests.python.core.test_registry | SaveOrderTests | test_new_attributes_follow_the_listed_keys_alphabetically | ok |  |
+| tests.python.core.test_registry | SaveOrderTests | test_new_attributes_survive_save_and_load | ok |  |
+| tests.python.core.test_root_aliases | RootAliasTests | test_every_root_alias_imports_the_moved_module | ok |  |
+| tests.python.core.test_root_aliases | RootAliasTests | test_game_app_alias_serves_the_same_app | ok |  |
