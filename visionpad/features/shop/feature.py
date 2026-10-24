@@ -3,8 +3,8 @@
 Engine attributes (save format): shop_page. shop_page_count is a derived cache set in the
 engine's __init__ (excluded from saves) and updated here.
 Declares slots shop.buy_items and shop.sell_items; features handle their own item kinds with
-reg.shop_item(). Until farming and cooking are extracted, their rows and the seed/fertilizer
-purchase and crop/food sale are handled here at their order.ShopBuyItems/ShopSellItems positions.
+reg.shop_item(). Until farming is extracted, its rows and the seed/fertilizer purchase and
+crop sale are handled here at their order.ShopBuyItems/ShopSellItems positions.
 """
 import math
 
@@ -22,11 +22,9 @@ class Shop(Feature):
         reg.slot("shop.sell_items", "Sell rows: (kind, item_id, label, owned_count, base_price), owned items only.")
         reg.contribute("shop.buy_items", self.farming_buy_rows, order=order.ShopBuyItems.FARMING)
         reg.contribute("shop.sell_items", self.farming_sell_rows, order=order.ShopSellItems.FARMING)
-        reg.contribute("shop.sell_items", self.cooking_sell_rows, order=order.ShopSellItems.COOKING)
         reg.shop_item("seed", lambda item_id: self.buy_farming_item("seed", item_id))
         reg.shop_item("fertilizer", lambda item_id: self.buy_farming_item("fertilizer", item_id))
         reg.shop_item("crop", sell=self.sell_crop)
-        reg.shop_item("food", sell=self.sell_food)
         reg.page("shop_choice", objects=self.choice_objects, scene=self.draw_scene, icon_grid=True,
                  detail=lambda: "Shop. Sell, Buy, Calendar, or Ask Rowan for advice.",
                  panel=lambda: (0, 1, "shop"))
@@ -104,7 +102,7 @@ class Shop(Feature):
         e.render()
         return e.response(tts=f"{label} sold. Gold left: {e.resources['coin']} gold", sfx="shop_sell", sound_events=[{"kind": "one_shot", "sound": "coin"}] if price > 0 else [])
 
-    # ---- farming and cooking rows, until those features are extracted ----
+    # ---- farming rows, until farming is extracted ----
 
     def farming_buy_rows(self):
         e = self.engine
@@ -119,10 +117,6 @@ class Shop(Feature):
         return [("crop", key, f"{e.get_seed_label(key)} crops", e.resources["crops"].get(key, 0), int(seed.get("crop_price", 1)))
                 for key, seed in e.config.get("seeds", {}).items() if e.resources["crops"].get(key, 0) > 0]
 
-    def cooking_sell_rows(self):
-        e = self.engine
-        return [("food", key, recipe.get("label", key), e.resources["foods"].get(key, 0), self.food_sell_price(key))
-                for key, recipe in e.config.get("recipes", {}).items() if e.resources["foods"].get(key, 0) > 0]
 
     def buy_farming_item(self, kind, item_id):
         e = self.engine
@@ -156,29 +150,6 @@ class Shop(Feature):
         label = f"{e.get_seed_label(item_id)} crops"
         e.resources["crops"][item_id] = count - 1
         return price, label
-
-    def sell_food(self, item_id):
-        e = self.engine
-        count = int(e.resources["foods"].get(item_id, 0))
-        if count <= 0:
-            return e.response(tts="No food to sell.", sfx="error")
-        price = self.food_sell_price(item_id)
-        label = e.get_recipe_label(item_id)
-        e.resources["foods"][item_id] = count - 1
-        return price, label
-
-    def food_sell_price(self, recipe_id):
-        e = self.engine
-        recipe = e.get_recipe_config(recipe_id)
-        if recipe.get("sell_price") is not None: return int(recipe["sell_price"])
-        ingredient_total = 0
-        for seed_id, count in recipe.get("ingredients", {}).items():
-            crop_price = int(e.get_seed_config(seed_id).get("crop_price", 1))
-            ingredient_total += crop_price * int(count)
-        if recipe.get('seafood'):
-            prices=[e.get_fish_price(k) for k,v in e.fishing_config()['fish'].items() if v['grade']==recipe.get('fish_grade','low')]
-            ingredient_total += min(prices)*recipe.get('fish_required',1)
-        return max(1, int(math.ceil(ingredient_total * 1.2)))
 
     def choice_objects(self):
         e = self.engine

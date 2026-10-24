@@ -45,6 +45,13 @@ class BeforeNavigation:
     FLOWERS = 10
 
 
+class LeaveActivity:
+    """leave_activity: clear minigames in the order the engine always cleared them."""
+    FARMING = 10    # care minigame (and the plot detail page)
+    HARVEST = 20
+    COOKING = 30
+
+
 class HomeObjects:
     """Slot home.objects: appended after bed, research and kitchen."""
     FLOWERS = 10

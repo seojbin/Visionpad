@@ -52,6 +52,12 @@ SAVE_KEY_ORDER = (
 
 
 class SaveMixin:
+    def clock_fields(self):
+        return ("sleep_until", *self.registry.save_clock)
+
+    def clock_maps(self):
+        return ("care_visible_until", *self.registry.save_clock_maps)
+
     def snapshot(self):
         names = [k for k in vars(self)
                  if k not in self._static_fields and k not in {"_static_fields", "_load_return", "_save_slots"}]
@@ -61,15 +67,15 @@ class SaveMixin:
         state.update(self.registry.save_transient)
         state["random_state"] = random.getstate()
         now = time.monotonic()
-        for key in ("sleep_until", "cooking_last_progress_at"):
+        for key in self.clock_fields():
             if state.get(key) is not None: state[key] -= now
-        for key in ("care_visible_until", "cooking_visible_until"):
+        for key in self.clock_maps():
             state[key] = {k: v-now for k, v in state.get(key, {}).items()}
         if state.get("pending_visual_completion"):
             deadline, kind = state["pending_visual_completion"]
             state["pending_visual_completion"] = (deadline-now, kind)
         # A physical held gesture cannot safely survive a restart.
-        for key in ("pointer_pressed", "care_dragging", "harvest_dragging", "cooking_dragging"):
+        for key in ("pointer_pressed", "care_dragging", "harvest_dragging"):
             state[key] = False
         state["drag_tool"] = None
         state["hover_object_id"] = None
@@ -93,14 +99,14 @@ class SaveMixin:
         if set(state) != expected: raise ValueError("Incompatible save")
         if any(type(state[k]) is not type(v) and not (type(v) in (int, float) and type(state[k]) in (int, float))
                for k, v in fresh.snapshot().items()
-               if v is not None and k not in {"pending_visual_completion", "sleep_until", "cooking_last_progress_at"}):
+               if v is not None and k not in {"pending_visual_completion", *self.clock_fields()}):
             raise ValueError("Invalid save state")
         rng = state.pop("random_state")
         random.Random().setstate(rng)
         now = time.monotonic()
-        for key in ("sleep_until", "cooking_last_progress_at"):
+        for key in self.clock_fields():
             if state.get(key) is not None: state[key] += now
-        for key in ("care_visible_until", "cooking_visible_until"):
+        for key in self.clock_maps():
             state[key] = {k: v+now for k, v in state[key].items()}
         if state.get("pending_visual_completion"):
             deadline, kind = state["pending_visual_completion"]
@@ -140,9 +146,7 @@ class SaveMixin:
         if self.current_page == "load_game":
             self._save_slots = self.list_saves()
             self.render()
-        self.pointer_pressed = False
-        self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
-        self.drag_tool = None
+        self.release_pointer()
         return self.response(tts="Game saved.", sfx="saved")
 
     def open_load_game(self):

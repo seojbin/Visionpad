@@ -43,6 +43,9 @@ EVENTS = {
     "start_of_day": "After the day number changes, before the morning page is rendered.",
     "before_navigation": "First step of travel, return-to-scene and F1/F2/F3 menu changes.",
     "close_dialogue": "A scene change closes open conversations: travel (after its checks) and opening the shop.",
+    "leave_activity": "Clear minigame and selection state when leaving a scene, at night and in the morning.",
+    "release_drag": "Drop any held drag (menus, save, pause, release command); handlers clear their dragging flags.",
+    "before_state": "Start of get_state(), before the page is re-rendered for live pages.",
     "activity": "A real result happened. Handlers get (kind, item='', count=1), e.g. ('harvest', 'Tomato', 3).",
 }
 
@@ -73,14 +76,14 @@ class Page:
     def __init__(self, feature, name=None, objects=None, scene=None, guidance=None,
                  press=None, single_press=False, icon_grid=False,
                  menu_text=None, on_menu_open=None, navigate=None, arrival=None, detail=None, panel=None,
-                 **pointer):
+                 live=False, **pointer):
         unknown = set(pointer) - {"pointer_" + kind for kind in POINTER_KINDS}
         if unknown:
             raise TypeError(f"Unknown page hook(s): {', '.join(sorted(unknown))}")
         self.feature, self.name, self.objects, self.scene, self.guidance = feature, name, objects, scene, guidance
         self.press, self.single_press, self.icon_grid = press, single_press, icon_grid
         self.menu_text, self.on_menu_open, self.navigate = menu_text, on_menu_open, navigate
-        self.arrival, self.detail, self.panel = arrival, detail, panel
+        self.arrival, self.detail, self.panel, self.live = arrival, detail, panel, live
         self.pointer = {kind: pointer.get("pointer_" + kind) for kind in POINTER_KINDS}
 
 
@@ -114,6 +117,9 @@ class Registry:
         self.save_transient = {}
         self.save_defaults = []
         self.save_migrations = []
+        self.save_clock = []
+        self.save_clock_maps = []
+        self.visual_completions = {}
         self._current = None
         self._sequence = 0
 
@@ -152,7 +158,7 @@ class Registry:
     def page(self, page_id, *, name=None, objects=None, scene=None, guidance=None,
              press=None, single_press=False, icon_grid=False,
              menu_text=None, on_menu_open=None, navigate=None, arrival=None, detail=None, panel=None,
-             **pointer):
+             live=False, **pointer):
         """Own a page.
         objects() -> list of tactile objects; name -> spoken page name; scene() draws after the objects;
         guidance() -> (kind, targets, completed, total) for audio_guidance.
@@ -166,9 +172,10 @@ class Registry:
         For travel locations: arrival() -> text spoken on arrival, or None for the location name.
         detail() -> the location description (get_location_detail).
         panel() -> (page, pages, braille_label) for the lower time panel: a page bar when pages > 1,
-        else the braille label when given, else the activity time."""
+        else the braille label when given, else the activity time.
+        live re-renders the page on every state read (minigames whose drawing fades with time)."""
         page = Page(self._current, name, objects, scene, guidance, press, single_press, icon_grid,
-                    menu_text, on_menu_open, navigate, arrival, detail, panel, **pointer)
+                    menu_text, on_menu_open, navigate, arrival, detail, panel, live, **pointer)
         self._claim(self.pages, page_id, page, "Page")
 
     def action(self, key, handler, *, before_night_guard=False):
@@ -255,17 +262,26 @@ class Registry:
         if layout_order is not None:
             self.icon_layout_order[object_type] = layout_order
 
+    def visual_completion(self, kind, finish):
+        """finish() runs from visual_tick once a deferred completion of this kind is due (the last
+        traced dots have faded)."""
+        self._claim(self.visual_completions, kind, finish, "Visual completion")
+
     def icon_alias(self, kind, symbol):
         self._claim(self.icon_aliases, kind, symbol, "Icon alias")
 
-    def save_fields(self, *, transient=None, defaults=(), migrate=None):
+    def save_fields(self, *, transient=None, defaults=(), migrate=None, clock=(), clock_maps=()):
         """transient: attribute -> value written into every save and after every load.
         defaults: attributes that older saves may lack; filled from a fresh engine on load.
         migrate(state, fresh): rewrites an older save's state dict in place before defaults are filled;
-        fresh is a newly built engine with default values."""
+        fresh is a newly built engine with default values.
+        clock: attributes holding a time.monotonic() deadline or None; clock_maps: dicts of such
+        deadlines. Both are saved relative to the save time."""
         for key, value in (transient or {}).items():
             self._claim(self.save_transient, key, value, "Transient save field")
         self.save_defaults.extend(defaults)
+        self.save_clock.extend(clock)
+        self.save_clock_maps.extend(clock_maps)
         if migrate:
             self.save_migrations.append(migrate)
 

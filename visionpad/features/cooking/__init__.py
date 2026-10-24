@@ -1,1 +1,2 @@
-"""cooking feature. Code still lives in visionpad/core/engine.py until it is extracted."""
+"""Cooking: recipes, ingredients, the cooking minigame and eating food."""
+from visionpad.features.cooking.feature import Cooking as Feature

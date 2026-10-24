@@ -1,13 +1,9 @@
 """Seafood: fish as cooking ingredients, graded seafood dishes, and the food effects they grant.
 
-Owns no engine attributes. Paired with cooking (still core): cooking calls the exposed seafood
-functions while a seafood recipe is selected, and seafood writes cooking's selected_ingredients
-and active_buff. The food-effect modifiers (boost_rare_weights, loot_amount, sale_price,
-consume_sale) are used by mining, fishing, harvest, cooking and the village market.
+Owns no engine attributes. Paired with cooking: cooking calls the exposed seafood functions while a
+seafood recipe is selected, and seafood writes cooking's selected_ingredients. Food effects
+(rare finds, double loot, better sales) are applied by the core effects module.
 """
-import math
-import random
-
 from visionpad.core.registry import Feature
 
 
@@ -16,8 +12,7 @@ class Seafood(Feature):
 
     def register(self, reg):
         reg.save_fields(migrate=self.migrate)
-        for name in ("selected_fish", "seafood_ready", "seafood_ingredient_objects", "toggle_fish", "finish_seafood",
-                     "boost_rare_weights", "loot_amount", "sale_price", "consume_sale"):
+        for name in ("selected_fish", "seafood_ready", "seafood_ingredient_objects", "toggle_fish", "finish_seafood"):
             reg.expose(name, getattr(self, name))
 
     @staticmethod
@@ -88,37 +83,10 @@ class Seafood(Feature):
         rid=e.selected_recipe_id+'_'+grade
         for key,count in recipe['ingredients'].items():e.add_resource('crops', -count, item=key)
         e.add_resource('fish', -recipe.get('fish_required',1), item=fish)
-        amount=self.loot_amount(1)
+        amount=e.loot_amount(1)
         e.resources['foods'][rid]=e.resources['foods'].get(rid,0)+amount
         e.registry.run('activity', 'cooking', e.get_recipe_config(rid)['label'], amount)
         text=f"{e.get_recipe_config(rid)['label']} {amount} made."+(' Bonus.' if amount>1 else '')
         e.clear_cooking();e.clear_hover();e.current_page=e.current_location='home'
         result=e.consume_time('cook');e.render()
         return e.night_response(text) if result['night'] else e.response(tts=text,sfx='cooking_success')
-
-    def boost_rare_weights(self, weights, rare_keys):
-        buff = self.engine.active_buff
-        result=dict(weights)
-        if buff.get('kind')=='rare_find' and buff.get('remaining_ticks',0)>0:
-            multiplier=buff.get('rare_weight_multiplier',1)
-            for key in rare_keys:result[key]=result.get(key,0)*multiplier
-        return result
-
-    def loot_amount(self, amount):
-        buff = self.engine.active_buff
-        if buff.get('kind')=='double_loot' and buff.get('remaining_ticks',0)>0:
-            if random.random()<buff.get('double_chance',0):return amount*2
-        return amount
-
-    def sale_price(self, price):
-        buff = self.engine.active_buff
-        if buff.get('kind')=='sale_boost' and buff.get('remaining_sales',0)>0:
-            return math.floor(price*buff.get('multiplier',1))
-        return price
-
-    def consume_sale(self):
-        e = self.engine
-        if e.active_buff.get('kind')=='sale_boost' and e.active_buff.get('remaining_sales',0)>0:
-            e.active_buff['remaining_sales']-=1
-            if not e.active_buff['remaining_sales']:
-                e.active_buff={'kind':None,'source':None,'multiplier':1,'remaining_ticks':0}

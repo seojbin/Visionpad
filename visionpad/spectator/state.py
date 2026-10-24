@@ -54,9 +54,6 @@ def spectator_snapshot(engine, objects):
                    for o in objects if o.get('type') == 'route'],
         'care_targets': targets(engine.care_targets, engine.care_collected_ids, engine.care_visible_until),
         'harvest_targets': targets(engine.harvest_targets, engine.harvest_collected_ids, {}),
-        'path': [dict(x=p[0], y=p[1], passed=i < engine.cooking_progress_index,
-                      visible=i >= engine.cooking_progress_index or engine.cooking_visible_until.get(i, 0) > now)
-                 for i, p in enumerate(engine.cooking_path_samples)],
     }
     for key, provider in engine.registry.spectator_providers.items():
         if key in snapshot:

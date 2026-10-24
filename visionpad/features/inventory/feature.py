@@ -19,7 +19,6 @@ class Inventory(Feature):
                                     "entries only when count > 0.")
         reg.contribute("inventory.items", self.core_resource_items, order=order.InventoryItems.CORE_RESOURCES)
         reg.contribute("inventory.items", self.farming_items, order=order.InventoryItems.FARMING)
-        reg.contribute("inventory.items", self.cooking_items, order=order.InventoryItems.COOKING)
         reg.page("inventory", objects=self.page_objects, icon_grid=True,
                  menu_text=lambda: f'Inventory. {self.engine.resources["coin"]} gold.',
                  on_menu_open=self.first_page, navigate=self.navigate,
@@ -56,20 +55,6 @@ class Inventory(Feature):
             entries.append({"id": f"seed_{seed_id}", "label": f"{seed_config.get('label', seed_id)} seeds", "count": int(e.resources["seeds"].get(seed_id, 0)), "kind": "seed", "seed_id": seed_id, "action": ""})
         for seed_id, seed_config in e.config.get("seeds", {}).items():
             entries.append({"id": f"crop_{seed_id}", "label": f"{seed_config.get('label', seed_id)} crops", "count": int(e.resources["crops"].get(seed_id, 0)), "kind": "crop", "seed_id": seed_id, "action": ""})
-        return entries
-
-    def cooking_items(self):
-        e = self.engine
-        entries = []
-        for recipe_id, recipe in e.config.get("recipes", {}).items():
-            count = int(e.resources["foods"].get(recipe_id, 0))
-            if count <= 0 and e.inventory_hide_zero_items:
-                continue
-            entries.append({
-                "id": f"food_{recipe_id}", "label": recipe.get("label", recipe_id),
-                "count": count, "kind": "food", "recipe_id": recipe_id, "action": f"use_food:{recipe_id}",
-                "extra_tts": f"Use: {e.recipe_effect_text(recipe)}"
-            })
         return entries
 
     # ---- page ----
@@ -145,9 +130,7 @@ class Inventory(Feature):
         e.inventory_page = 0
         e.set_page("inventory")
         e.seed_select_plot_id = None
-        e.clear_care()
-        e.clear_harvest()
-        e.clear_cooking()
+        e.leave_activities()
         e.clear_hover()
         e.render()
         return e.response(tts="Inventory.", sfx="open_page")

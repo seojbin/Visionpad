@@ -19,8 +19,7 @@ class KeypadUI:
         # Menus return to the current region, so do not build nested return stacks.
         self._menu_stack.clear()
         self.pending_visual_completion = None
-        self.pointer_pressed = self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
-        self.drag_tool = None
+        self.release_pointer()
         self.current_page = page
         on_open = self.registry.page_hook(page, 'on_menu_open')
         if on_open: on_open()
@@ -46,8 +45,7 @@ class KeypadUI:
         if not arrows: return self.response(tts=f'Cannot go {direction}.')
         # Keep the pressed key direction even when Right aliases a Back action.
         obj = dict(arrows[0], direction=direction)
-        self.pointer_pressed = self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
-        self.drag_tool = None
+        self.release_pointer()
         result = self.perform_action(obj.get('action',''), obj)
         if obj.get('action','').startswith('travel:'):
             name = self.get_page_name(self.current_location)

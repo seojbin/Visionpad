@@ -82,9 +82,7 @@ class Minimap(Feature):
             return e.night_only_response()
         e.set_page("minimap")
         e.seed_select_plot_id = None
-        e.clear_care()
-        e.clear_harvest()
-        e.clear_cooking()
+        e.leave_activities()
         e.clear_hover()
         e.render()
         return e.response(tts="Map.", sfx="open_page")

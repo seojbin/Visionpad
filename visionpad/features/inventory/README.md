@@ -12,7 +12,7 @@ The F2 item pages: gold and food first, then everything else, twelve per page. F
 | Shared attributes read | `resources`, `config`, `paused`, `day_ended`, `inventory_items_per_page`, `inventory_hide_zero_items`, `fishing_config()`, `recipe_effect_text()` |
 | Read by other code | `lower_panel_state` (page bar), `perform_action` (step sound on page change) |
 | Slot declared | `inventory.items` (order table `order.InventoryItems`) |
-| Slot contributions | Built-in entries for gold/fertilizer/wood/stone, mining, farming, cooking and fishing, at their `InventoryItems` order. Each moves to its own feature when that feature is extracted. Flowers already contributes its seeds. |
+| Slot contributions | Built-in entries for gold/fertilizer/wood/stone and farming (seeds, crops), at their `InventoryItems` order, until farming is extracted. Mining, cooking, fishing and flowers contribute their own entries. |
 | Events | `reset` (`Reset.INVENTORY`) |
 | State key | `inventory` in `/api/state` |
 | Engine methods kept for callers | `engine.open_inventory()` (tests, `tools/prepare_demo.py`), `engine.get_inventory_objects()` |

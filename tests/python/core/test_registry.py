@@ -178,29 +178,30 @@ class ExposeTests(unittest.TestCase):
     # Every engine method provided by a feature. A new entry here is a new cross-feature or
     # legacy entry point: review it (AGENTS.md: prefer events or slots).
     EXPECTED = {
-        "boost_rare_weights": "seafood",
         "buy_shop_item": "shop",
+        "can_craft_recipe": "cooking",
         "cast_fishing": "fishing",
-        "consume_sale": "seafood",
+        "clear_cooking": "cooking",
+        "finish_cooking_success": "cooking",
         "finish_seafood": "seafood",
         "fishing_config": "fishing",
+        "get_cooking_gesture": "cooking",
         "get_fertilizer_price": "shop",
         "get_fish_price": "fishing",
         "get_inventory_objects": "inventory",
         "get_mineral_price": "mining",
         "hit_mine_rock": "mining",
-        "loot_amount": "seafood",
         "market_price": "village",
         "next_rowan_advice": "npc",
         "npc_action": "npc",
         "npc_voice_profile": "npc",
         "open_calendar": "village",
+        "open_cooking_minigame": "cooking",
         "open_inventory": "inventory",
         "open_shop": "shop",
         "recent_reaction": "npc",
         "record_activity": "npc",
         "rowan_advice": "npc",
-        "sale_price": "seafood",
         "seafood_ingredient_objects": "seafood",
         "seafood_ready": "seafood",
         "selected_fish": "seafood",
@@ -208,6 +209,7 @@ class ExposeTests(unittest.TestCase):
         "submit_rowan_crop": "village",
         "talk_rowan": "village",
         "toggle_fish": "seafood",
+        "use_food": "cooking",
     }
 
     def test_exposed_names_and_owners_are_reviewed(self):

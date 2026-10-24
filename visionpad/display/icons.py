@@ -45,7 +45,7 @@ class IconRenderer:
     """One thin frame plus one filled semantic symbol; optional selection/progress overlays."""
     TYPES = frozenset(('bed','chest','stove',
         'save_slot','seed','resource','care_button',
-        'recipe','ingredient','cooking_start','watering_can',
+        'watering_can',
         'fertilizer'))
 
     PATTERNS = {
@@ -101,13 +101,10 @@ class IconRenderer:
             if registry.icon_patterns[kind]:
                 pattern = registry.icon_patterns[kind](obj)
         elif kind == 'resource': symbol = self.category(obj.get('resource_kind'))
-        elif kind == 'recipe': symbol = 'food'
-        elif kind == 'ingredient': symbol = 'check' if obj.get('selected') else self.category(obj.get('item_kind','crop'))
         elif kind == 'care_button': symbol = {'plant':'seed','fertilizer':'tool'}.get(obj.get('care_kind'),obj.get('care_kind'))
         elif kind == 'watering_can': symbol = 'water'
         elif kind == 'fertilizer': symbol = 'tool'
         elif kind == 'save_slot': symbol = 'save'
-        elif kind == 'cooking_start': symbol = 'start'
         if symbol == 'food': frame = 'double_rectangle'
         # Rowan도 다른 아이콘과 동일하게 1칸 테두리(rectangle) 적용
         return IconSpec(frame, symbol, pattern)
@@ -154,7 +151,6 @@ class IconRenderer:
 class IconLayout:
     """Page policy over the same twelve virtual slots."""
     PAGES = frozenset(('home','seed_select',
-        'recipe_select','ingredient_select',
         'load_game'))
 
     def __init__(self, grid=None):

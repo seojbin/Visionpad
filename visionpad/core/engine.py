@@ -4,6 +4,7 @@ import random
 import time
 
 from pathlib import Path
+from visionpad.core.effects import FoodEffects
 from visionpad.core.registry import Registry
 from visionpad.core.state import SharedState
 from visionpad.display.dotpad import DotPad
@@ -15,7 +16,7 @@ from visionpad.services.saves import SaveMixin
 from visionpad.spectator.state import spectator_snapshot
 
 
-class GameEngine(KeypadUI, SaveMixin, SharedState):
+class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
 
     def __init__(self, config, save_dir=None):
         config = self.prepare_display_config(config)
@@ -178,16 +179,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         self.harvest_dragging = False
         self.harvest_collected_ids = set()
 
-        self.selected_recipe_id = None
-        self.selected_ingredients = set()
-        self.cooking_dragging = False
-        self.cooking_path_samples = []
-        self.cooking_visible_until = {}
-        self.cooking_progress_index = 0
-        self.cooking_stage_index = 0
-        self.cooking_last_progress_at = None
-        self.cooking_resume_marker = False
-
         self.active_buff = {
             "kind": None,
             "source": None,
@@ -238,20 +229,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         self.harvest_targets = []
         self.harvest_dragging = False
         self.harvest_collected_ids.clear()
-
-    def clear_cooking(self, keep_recipe=False):
-        if self.pending_visual_completion and self.pending_visual_completion[1] == "cooking":
-            self.pending_visual_completion = None
-        if not keep_recipe:
-            self.selected_recipe_id = None
-            self.selected_ingredients.clear()
-        self.cooking_dragging = False
-        self.cooking_path_samples = []
-        self.cooking_visible_until = {}
-        self.cooking_progress_index = 0
-        self.cooking_stage_index = 0
-        self.cooking_last_progress_at = None
-        self.cooking_resume_marker = False
 
     def has_final_consonant(self, text):
         if not text:
@@ -315,33 +292,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
             return "Night. Select the bed."
         return f"Activity: {remaining} hours left"
 
-    def recipe_effect_text(self, recipe):
-        if recipe.get('buff_kind') == 'sale_boost':
-            return f"{recipe.get('buff_label', 'Better sales')}, {recipe.get('sale_uses', 3)} sales"
-        return f"{recipe.get('buff_label', 'Food effect')}, {float(recipe.get('buff_ticks', 0)):g} hours"
-
-    def buff_multiplier_for(self, kind):
-        if self.active_buff.get("kind") == kind and float(self.active_buff.get("remaining_ticks", 0)) > 0:
-            return float(self.active_buff.get("multiplier", 1.0))
-        return 1.0
-
-    def buff_text(self):
-        if self.active_buff.get('kind')=='sale_boost' and self.active_buff.get('remaining_sales',0)>0:
-            return f"Better sales, {self.active_buff['remaining_sales']} sales left"
-        remaining = float(self.active_buff.get("remaining_ticks", 0))
-        if remaining <= 0:
-            return "No food effect"
-        recipe = self.get_recipe_config(self.active_buff.get("source")) or {}
-        return f"{recipe.get('buff_label', 'Food effect')}, {remaining:g} hours left"
-
-    def tick_buff(self, cost):
-        if self.active_buff.get("kind") == "sale_boost": return
-        remaining = float(self.active_buff.get("remaining_ticks", 0))
-        remaining = max(0, remaining - max(0, float(cost)))
-        self.active_buff["remaining_ticks"] = remaining
-        if remaining == 0:
-            self.active_buff = {"kind": None, "source": None, "multiplier": 1.0, "remaining_ticks": 0}
-
     def consume_time(self, action_name):
         cost = max(0, self.get_action_cost(action_name))
         if self.day_ended:
@@ -368,9 +318,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         self.seed_select_plot_id = None
         self.drag_tool = None
         self.drag_target_ids.clear()
-        self.clear_care()
-        self.clear_harvest()
-        self.clear_cooking()
+        self.leave_activities()
         self.pointer_pressed = False
         self.clear_hover()
         self.render()
@@ -386,9 +334,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
             return self.response()
         self.sleep_until = time.monotonic() + self.sleep_blackout_seconds
         self.pointer_pressed = False
-        self.clear_care()
-        self.clear_harvest()
-        self.clear_cooking()
+        self.leave_activities()
         self.clear_hover()
         self.render()
         return self.response(tts="Sleeping.", sound_events=[{"kind": "one_shot", "sound": "sleep"}])
@@ -419,9 +365,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         self.seed_select_plot_id = None
         self.drag_tool = None
         self.drag_target_ids.clear()
-        self.clear_care()
-        self.clear_harvest()
-        self.clear_cooking()
+        self.leave_activities()
         self.clear_hover()
         self.render()
 
@@ -476,18 +420,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
     def get_unlocked_plot_defs(self):
         return self.config.get("farm", {}).get("plots", [])[:self.unlocked_plot_count]
 
-    def can_craft_recipe(self, recipe_id):
-        recipe = self.get_recipe_config(recipe_id)
-        if recipe.get("quest_only"): return False
-        ingredients = recipe.get("ingredients", {})
-        if recipe.get("seafood"): return self.seafood_ready(recipe)
-        if len(ingredients) < 2:
-            return False
-        for seed_id, needed in ingredients.items():
-            if int(self.resources["crops"].get(seed_id, 0)) < int(needed):
-                return False
-        return True
-
     def get_layout_objects(self):
         if self.sleep_until is not None:
             return []
@@ -500,9 +432,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
             "water_minigame": self.get_care_minigame_objects,
             "fertilizer_minigame": self.get_care_minigame_objects,
             "harvest": self.get_harvest_objects,
-            "recipe_select": self.get_recipe_select_objects,
-            "ingredient_select": self.get_ingredient_select_objects,
-            "cooking": self.get_cooking_objects,
         }
         getter = self.registry.page_hook(self.current_page, "objects") or pages.get(self.current_page)
         objects = self.compact_objects(getter()) if getter else []
@@ -1018,65 +947,12 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
             })
         return objects
 
-    def get_recipe_select_objects(self):
-        craftable = [(rid, cfg) for rid, cfg in self.config.get("recipes", {}).items() if not cfg.get("hidden_recipe") and self.can_craft_recipe(rid)]
-        positions = [(0, 0)] * (self.icon_layout.grid.rows * self.icon_layout.grid.columns)
-        objects = []
-        for index, (recipe_id, recipe) in enumerate(craftable[:len(positions)]):
-            x, y = positions[index]
-            ingredient_text = self.recipe_ingredient_text(recipe_id)
-            objects.append({
-                "id": f"recipe_{recipe_id}", "type": "recipe", "recipe_id": recipe_id,
-                "x": x, "y": y, "width": 12, "height": 9, "hit_width": 14, "hit_height": 11,
-                "label": recipe.get("label", recipe_id),
-                "tts": f"{recipe.get('label', recipe_id)}. {ingredient_text}. {self.recipe_effect_text(recipe)}",
-                "action": f"select_recipe:{recipe_id}"
-            })
-        objects.append(self.back_arrow("recipe_back", "Back home", "return_scene"))
-        return objects
-
-    def get_ingredient_select_objects(self):
-        recipe = self.get_recipe_config(self.selected_recipe_id)
-        if not recipe:
-            return [self.back_arrow("ingredient_back", "Back to kitchen", "open_recipes")]
-        positions = [(15, 17), (30, 17), (45, 17)]
-        objects = []
-        for index, (seed_id, needed) in enumerate(recipe.get("ingredients", {}).items()):
-            if index >= len(positions):
-                break
-            x, y = positions[index]
-            selected = seed_id in self.selected_ingredients
-            count = int(self.resources["crops"].get(seed_id, 0))
-            label = self.get_seed_label(seed_id)
-            status = "Selected" if selected else "Not selected"
-            objects.append({
-                "id": f"ingredient_{seed_id}", "type": "ingredient", "ingredient_id": seed_id,
-                "count": count, "required_count": int(needed), "selected": selected, "x": x, "y": y, "width": 12, "height": 9,
-                "hit_width": 14, "hit_height": 11, "label": f"{label} ingredient",
-                "tts": f"{label}. Need {needed}, stock {count}. {status}",
-                "action": f"toggle_ingredient:{seed_id}"
-            })
-
-        objects.append(self.back_arrow("ingredient_back", "Back to recipes", "open_recipes"))
-        return self.seafood_ingredient_objects(objects)
-
-    def get_cooking_objects(self):
-        return []
-
     def back_arrow(self, object_id, label, action):
         return {
             "id": object_id, "type": "arrow", "x": 6, "y": 35,
             "direction": "left", "size": 2, "hit_width": 11, "hit_height": 9,
             "label": label, "tts": f"{label}.", "action": action
         }
-
-    def recipe_ingredient_text(self, recipe_id):
-        recipe = self.get_recipe_config(recipe_id)
-        parts = []
-        for seed_id, count in recipe.get("ingredients", {}).items():
-            parts.append(f"{self.get_seed_label(seed_id)} {count} ")
-        if recipe.get("seafood"): parts.append("Choose one fish")
-        return ", ".join(parts)
 
     def get_relative_direction(self, origin, target):
         if origin is None:
@@ -1140,20 +1016,12 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
                 self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 46), obj.get("height", 30))
             elif obj_type == "harvest_crop":
                 self.draw_harvest_crop(obj)
-            elif obj_type == "recipe":
-                self.draw_recipe(obj)
-            elif obj_type == "ingredient":
-                self.draw_ingredient(obj)
-            elif obj_type == "cooking_start":
-                self.draw_cooking_start(obj)
 
         if self.current_page == "home":
             self.draw_home_scene()
         elif self.current_page == "plot_detail":
             self.dotpad.draw_line(0, 12, self.dotpad.width - 1, 12)
             self.dotpad.draw_line(0, 13, self.dotpad.width - 1, 13)
-        if self.current_page == "cooking":
-            self.draw_cooking_path()
         scene = self.registry.page_hook(self.current_page, "scene")
         if scene:
             scene()
@@ -1231,9 +1099,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
                 if value == "1":
                     self.dotpad.set_dot(int(x) + column - width // 2, int(y) + row_index - height // 2)
 
-    def draw_recipe_icon(self, x, y, recipe_id):
-        self.draw_icon_pattern(x, y, self.get_recipe_config(recipe_id).get("icon", []))
-
     def draw_plot_detail_field(self, obj):
         x, y = int(obj["x"]), int(obj["y"])
         width, height = int(obj.get("width", 44)), int(obj.get("height", 18))
@@ -1297,20 +1162,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         for dx, dy in [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)]:
             self.dotpad.set_dot(x + dx, y + dy)
 
-    def draw_recipe(self, obj):
-        self.icons.draw(obj)
-
-    def draw_ingredient(self, obj):
-        self.icons.draw(obj)
-
-    def draw_cooking_start(self, obj):
-        self.icons.draw(obj)
-
-    def cooking_resume_point(self):
-        if not self.cooking_resume_marker or not self.cooking_path_samples:
-            return None
-        return self.cooking_path_samples[min(self.cooking_progress_index, len(self.cooking_path_samples) - 1)]
-
     def defer_visual_completion(self, kind, visible_until):
         deadline = max(visible_until.values(), default=0)
         if time.monotonic() >= deadline:
@@ -1328,40 +1179,11 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
             deadline, kind = self.pending_visual_completion
             if time.monotonic() >= deadline:
                 self.pending_visual_completion = None
-                if kind == "care":
-                    return self.finish_care_minigame()
-                return self.complete_cooking_step()
+                finish = self.registry.visual_completions.get(kind)
+                if finish:
+                    return finish()
+                return self.finish_care_minigame()
         return self.response()
-
-    def update_cooking_marker(self):
-        if (self.current_page == "cooking" and not self.paused and self.cooking_dragging
-                and self.cooking_last_progress_at is not None
-                and time.monotonic() - self.cooking_last_progress_at >= self.resume_marker_delay_seconds
-                and not self.cooking_resume_marker):
-            self.cooking_resume_marker = True
-            self.render()
-
-    def draw_cooking_path(self):
-        samples = self.cooking_path_samples
-        if not samples:
-            return
-        progress = max(0, min(self.cooking_progress_index, len(samples)))
-        visible_progress = next((i for i in range(progress)
-                                 if self.cooking_visible_until.get(i, 0) > time.monotonic()), progress)
-        remaining = samples[visible_progress:]
-        if not remaining:
-            return
-        for start, end in zip(remaining, remaining[1:]):
-            self.dotpad.draw_line(
-                round(start[0]), round(start[1]),
-                round(end[0]), round(end[1])
-            )
-        if visible_progress == 0:
-            sx, sy = samples[0]
-            self.draw_filled_square(sx, sy)
-        resume = self.cooking_resume_point()
-        if resume is not None:
-            self.draw_filled_square(*resume)
 
     def point_to_segment_distance(self, px, py, x1, y1, x2, y2):
         dx, dy = x2 - x1, y2 - y1
@@ -1418,12 +1240,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
             return "Plot details. Plant, water, or fertilize."
         elif loc == "seed_select":
             return "Seeds. Choose seeds to plant."
-        elif loc == "recipe_select":
-            return "Recipes. Choose a recipe to cook."
-        elif loc == "ingredient_select":
-            return "Ingredients. Select all ingredients to start cooking."
-        elif loc == "cooking":
-            return "Cooking. Start at the filled square and follow the line."
         return f"{self.get_page_name(loc)}."
 
     def get_object_tts(self, obj, detail=False):
@@ -1476,28 +1292,41 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
             "watering_can": "hover_water_tool", "fertilizer": "hover_fertilizer",
             "seed": "hover_seed", "resource": "hover_resource",
             "harvest_crop": "hover_harvest_crop", "harvest_field": "hover_plot", "arrow": "hover_navigation",
-            "recipe": "hover_recipe", "ingredient": "hover_ingredient", "cooking_start": "hover_cooking",
             "plot_detail_field": "hover_plot", "growth_gauge": "hover_plot", "care_button": "hover_tool", "care_field": "hover_plot",
             "care_target": "hover_tool"
         }
         return mapping.get(obj.get("type"), "hover_object")
 
-    def move_minigame(self, x, y):
+    def minigame_input(self, x, y, step):
+        """Pointer input on a tracing minigame page. Blocked while paused, at night, asleep or while a
+        step finishes; otherwise step(px, py, x, y) gets the previous and the current point."""
         if self.paused or self.day_ended or self.sleep_until is not None or self.pending_visual_completion:
             self.last_pointer=(x,y)
             return self.response()
         px,py=self.last_pointer
         self.last_pointer=(x,y)
         if px is None or py is None: px,py=x,y
-        if self.current_page=='cooking':
-            if not self.cooking_dragging:
-                if not self.cooking_path_samples:return self.response()
-                index=min(self.cooking_progress_index,len(self.cooking_path_samples)-1)
-                sx,sy=self.cooking_path_samples[index]
-                tolerance=float(self.get_cooking_gesture().get('tolerance',4.5))*1.35
-                if math.hypot(x-sx,y-sy)>tolerance:return self.response()
-                return self.start_cooking_trace(x,y)
-            return self.advance_cooking_trace(px,py,x,y)
+        return step(px, py, x, y)
+
+    def minigame_release(self, x, y):
+        self.pointer_pressed=False
+        return self.response()
+
+    def release_pointer(self):
+        """Drop the pointer and any held drag (menus, save, pause, release command)."""
+        self.pointer_pressed = self.care_dragging = self.harvest_dragging = False
+        self.registry.run("release_drag")
+        self.drag_tool = None
+
+    def leave_activities(self):
+        self.clear_care()
+        self.clear_harvest()
+        self.registry.run("leave_activity")
+
+    def move_minigame(self, x, y):
+        return self.minigame_input(x, y, self.collect_step)
+
+    def collect_step(self, px, py, x, y):
         care=self.current_page in ('water_minigame','fertilizer_minigame')
         if care:
             self.care_dragging=True
@@ -1528,7 +1357,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         result = self.page_pointer("move", x, y)
         if result is not None:
             return result
-        if self.current_page in ('water_minigame','fertilizer_minigame','harvest','cooking'):
+        if self.current_page in ('water_minigame','fertilizer_minigame','harvest'):
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
             return self.response()
@@ -1563,7 +1392,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         result = self.page_pointer("down", x, y)
         if result is not None:
             return result
-        if self.current_page in ('water_minigame','fertilizer_minigame','harvest','cooking'):
+        if self.current_page in ('water_minigame','fertilizer_minigame','harvest'):
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
             return self.response()
@@ -1605,9 +1434,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
                 return self.response(sfx="harvest_collect", sound_events=[{"kind": "correct", "count": len(self.harvest_collected_ids) - before}])
             return self.response(tts="Harvest. Move over crops.", sfx="tool_pickup")
 
-        if self.current_page == "cooking":
-            return self.start_cooking_trace(x, y)
-
         obj = self.find_object(x, y)
         if obj is None:
             return self.response()
@@ -1633,7 +1459,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         result = self.page_pointer("drag", x, y)
         if result is not None:
             return result
-        if self.current_page in ('water_minigame','fertilizer_minigame','harvest','cooking'):
+        if self.current_page in ('water_minigame','fertilizer_minigame','harvest'):
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
             return self.response()
@@ -1665,11 +1491,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
                 return self.response(sfx="harvest_collect", sound_events=[{"kind": "correct", "count": len(self.harvest_collected_ids) - before}])
             return self.response()
 
-        if self.current_page == "cooking" and self.cooking_dragging:
-            if previous_x is None or previous_y is None:
-                previous_x, previous_y = x, y
-            return self.advance_cooking_trace(previous_x, previous_y, x, y)
-
         if self.drag_tool is None:
             return self.pointer_move(x, y)
 
@@ -1690,7 +1511,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         result = self.page_pointer("up", x, y)
         if result is not None:
             return result
-        if self.current_page in ('water_minigame','fertilizer_minigame','harvest','cooking'):
+        if self.current_page in ('water_minigame','fertilizer_minigame','harvest'):
             self.pointer_pressed=False
             return self.response()
         if self.sleep_until is not None:
@@ -1700,9 +1521,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         self.last_hover_state = (None, False)
         
         if self.paused:
-            self.pointer_pressed = False
-            self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
-            self.drag_tool = None
+            self.release_pointer()
             return self.response()
             
         final = self.pointer_drag(x, y) if self.pointer_pressed else None
@@ -1719,9 +1538,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         elif self.current_page == "harvest" and self.harvest_dragging:
             self.harvest_dragging = False
             result = self.finish_harvest_minigame()
-        elif self.current_page == "cooking" and self.cooking_dragging:
-            self.cooking_dragging = False
-            result = self.fail_or_continue_cooking()
         else:
             self.drag_tool = None
             self.drag_target_ids.clear()
@@ -1756,8 +1572,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
             return self.travel_to(action.split(":", 1)[1])
         if action == "return_scene":
             return self.return_to_scene()
-        if action == "open_recipes":
-            return self.open_recipes()
         if action.startswith("open_plot_detail:"):
             return self.open_plot_detail(action.split(":", 1)[1])
         if action.startswith("start_care:"):
@@ -1770,14 +1584,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
             return self.plant_seed(plot_id, seed_id)
         if action.startswith("start_harvest:"):
             return self.start_harvest_minigame(action.split(":", 1)[1])
-        if action.startswith("select_recipe:"):
-            return self.select_recipe(action.split(":", 1)[1])
-        if action.startswith("toggle_ingredient:"):
-            return self.toggle_ingredient(action.split(":", 1)[1])
-        if action == "start_cooking":
-            return self.open_cooking_minigame()
-        if action.startswith("use_food:"):
-            return self.use_food(action.split(":", 1)[1])
         if action.startswith("inspect:"):
             return self.response(tts=self.get_object_tts(obj))
         if action == "rest":
@@ -1799,9 +1605,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         self.current_location = location
         self.current_page = location
         self.seed_select_plot_id = None
-        self.clear_care()
-        self.clear_harvest()
-        self.clear_cooking()
+        self.leave_activities()
         self.clear_hover()
         if changed:
             result = self.consume_time("travel")
@@ -1834,9 +1638,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         self.seed_select_plot_id = None
         self.drag_tool = None
         self.drag_target_ids.clear()
-        self.clear_care()
-        self.clear_harvest()
-        self.clear_cooking()
+        self.leave_activities()
         self.clear_hover()
         self.render()
         return self.response(tts=f"{self.get_page_name(self.current_location)}.", sfx="open_page")
@@ -2168,138 +1970,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         self.render()
         return self.response(tts=text, sfx="harvest")
 
-    def open_recipes(self):
-        if self.day_ended:
-            return self.night_only_response()
-        craftable = [rid for rid,cfg in self.config.get("recipes", {}).items() if not cfg.get("hidden_recipe") and self.can_craft_recipe(rid)]
-        self.selected_recipe_id = None
-        self.selected_ingredients.clear()
-        self.current_page = "recipe_select"
-        self.clear_hover()
-        self.render()
-        if not craftable:
-            return self.response(tts="No recipes available. Gather ingredients.", sfx="open_page")
-        names = ", ".join(self.get_recipe_label(rid) for rid in craftable)
-        return self.response(tts="Recipes.", sfx="open_page")
-
-    def select_recipe(self, recipe_id):
-        if self.get_recipe_config(recipe_id).get("hidden_recipe") or not self.can_craft_recipe(recipe_id):
-            return self.response(tts="Not enough ingredients.", sfx="error")
-        self.selected_recipe_id = recipe_id
-        self.selected_ingredients.clear()
-        self.current_page = "ingredient_select"
-        self.clear_hover()
-        self.render()
-        return self.response(tts="Ingredients.", sfx="open_page")
-
-    def toggle_ingredient(self, seed_id):
-        if self.current_page != "ingredient_select":
-            return self.response()
-        recipe = self.get_recipe_config(self.selected_recipe_id)
-        if seed_id.startswith("fish:"): return self.toggle_fish(seed_id)
-        if seed_id not in recipe.get("ingredients", {}):
-            return self.response(tts="Ingredient not required.", sfx="error")
-        if seed_id in self.selected_ingredients:
-            self.selected_ingredients.remove(seed_id)
-            text = f"{self.get_seed_label(seed_id)} deselected."
-        else:
-            self.selected_ingredients.add(seed_id)
-            label = self.get_seed_label(seed_id)
-            text = f"{label} selected."
-        self.clear_hover()
-        self.render()
-        required = set(recipe.get("ingredients", {}).keys())
-        if required and required.issubset(self.selected_ingredients) and (not recipe.get("seafood") or self.selected_fish()):
-            self.pointer_pressed = False
-            return self.open_cooking_minigame()
-        return self.response(tts=text, sfx="ingredient_select")
-
-    def get_cooking_steps(self):
-        recipe = self.get_recipe_config(self.selected_recipe_id)
-        steps = recipe.get("gesture_steps")
-        steps = steps if steps else [recipe.get("gesture", {})]
-        registry = self.config.get('cooking_methods', {}).get('gestures', {})
-        return [copy.deepcopy(registry[step['method']]) if 'method' in step else step for step in steps]
-
-    def get_scaled_cooking_gesture(self):
-        steps = self.get_cooking_steps()
-        gesture = steps[min(self.cooking_stage_index, len(steps) - 1)]
-        path = gesture.get("path", [])
-        if gesture.get("kind") != "stir" or len(path) < 2:
-            return gesture
-        xs, ys = [p[0] for p in path], [p[1] for p in path]
-        span_x, span_y = max(xs) - min(xs), max(ys) - min(ys)
-        if span_x <= 0 or span_y <= 0:
-            return gesture
-        width, height = self.config["dotpad"]["width"], self.config["dotpad"]["height"]
-        scale = min(self.stir_scale, (width - 10) / span_x, (height - 10) / span_y)
-        cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
-        return {**gesture, "path": [
-            [round((x - cx) * scale + (width - 1) / 2),
-             round((y - cy) * scale + (height - 1) / 2)] for x, y in path
-        ]}
-
-    def get_cooking_gesture(self):
-        gesture = dict(self.get_scaled_cooking_gesture())
-        path = [list(p) for p in gesture.get("path", [])]
-        if not path: return gesture
-        if not gesture.get("closed") and len(path) > 2 and math.dist(path[0], path[-1]) < 8:
-            while len(path) > 2 and math.dist(path[0], path[-1]) < 8:
-                path.pop()
-        gesture["path"] = path
-        return gesture
-
-    def get_cooking_kind(self):
-        return "stir" if self.get_cooking_gesture().get("kind") in ("stir", "grill", "fry") else "cut"
-
-    def get_cooking_stage_label(self):
-        return self.get_cooking_gesture().get("label") or ("Stir" if self.get_cooking_kind() == "stir" else "Chop")
-
-    def cooking_step_text(self):
-        label = self.get_cooking_stage_label()
-        return f"Step {self.cooking_stage_index + 1}. {label}. Start at the filled square. Follow the line."
-
-    def complete_cooking_step(self):
-        self.cooking_dragging = False
-        if self.defer_visual_completion("cooking", self.cooking_visible_until):
-            return self.response(sfx="cooking_wait")
-        if self.cooking_stage_index + 1 >= len(self.get_cooking_steps()):
-            return self.finish_cooking_success()
-        self.last_pointer = (None, None)
-        self.cooking_stage_index += 1
-        self.cooking_last_progress_at = None
-        self.cooking_resume_marker = False
-        self.cooking_progress_index = 0
-        self.cooking_visible_until = {}
-        self.cooking_path_samples = self.build_path_samples(self.get_cooking_gesture().get("path", []))
-        self.clear_hover()
-        self.render()
-        return self.response(tts= self.cooking_step_text(), sfx="cooking_step")
-
-    def open_cooking_minigame(self):
-        recipe = self.get_recipe_config(self.selected_recipe_id)
-        if not recipe:
-            return self.response(tts="Choose a recipe first.", sfx="error")
-        required = set(recipe.get("ingredients", {}).keys())
-        if recipe.get("seafood") and not self.seafood_ready(recipe, selected=True):
-            return self.response(tts="Choose one fish first.")
-        if not required.issubset(self.selected_ingredients):
-            return self.response(tts="Select all ingredients first.", sfx="error")
-        if not self.can_craft_recipe(self.selected_recipe_id):
-            return self.response(tts="Not enough ingredients.", sfx="error")
-        self.last_pointer = (None, None)
-        self.current_page = "cooking"
-        self.cooking_dragging = False
-        self.cooking_progress_index = 0
-        self.cooking_stage_index = 0
-        self.cooking_last_progress_at = None
-        self.cooking_resume_marker = False
-        self.cooking_visible_until = {}
-        self.cooking_path_samples = self.build_path_samples(self.get_cooking_gesture().get("path", []))
-        self.clear_hover()
-        self.render()
-        return self.response(tts=f"{self.get_recipe_label(self.selected_recipe_id)}. {self.cooking_step_text()}.", sfx="cooking_start")
-
     def build_path_samples(self, path, spacing=1.5):
         if len(path) < 2:
             return [tuple(path[0])] if path else []
@@ -2314,108 +1984,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
                 samples.append((x1 + (x2 - x1) * t, y1 + (y2 - y1) * t))
         return samples
 
-    def start_cooking_trace(self, x, y):
-        if not self.cooking_path_samples:
-            return self.response(tts="Cooking path unavailable.", sfx="error")
-        recipe = self.get_recipe_config(self.selected_recipe_id)
-        tolerance = float(self.get_cooking_gesture().get("tolerance", 4.5))
-        resume_index = min(self.cooking_progress_index, len(self.cooking_path_samples) - 1)
-        sx, sy = self.cooking_path_samples[resume_index]
-        if math.hypot(x - sx, y - sy) > tolerance * 1.35:
-            self.cooking_dragging = False
-            return self.response(tts="Move to the filled square to continue.", sfx="error")
-        self.cooking_dragging = True
-        if self.cooking_progress_index == 0:
-            self.cooking_visible_until[0] = time.monotonic() + self.disappear_delay_seconds
-        self.cooking_progress_index = max(1, self.cooking_progress_index)
-        self.cooking_last_progress_at = time.monotonic()
-        self.cooking_resume_marker = False
-        self.render()
-        return self.response(sfx="tool_pickup", sound_events=[{"kind": "work_start", "sound": "cook" if self.get_cooking_kind() == "stir" else "cut"}])
-
-    def advance_cooking_trace(self, x1, y1, x2, y2):
-        if not self.cooking_path_samples:
-            return self.response()
-        recipe = self.get_recipe_config(self.selected_recipe_id)
-        tolerance = float(self.get_cooking_gesture().get("tolerance", 4.5))
-        if math.hypot(x2 - x1, y2 - y1) < 0.05:
-            return self.response()
-        before = self.cooking_progress_index
-        advanced = False
-        while self.cooking_progress_index < len(self.cooking_path_samples):
-            px, py = self.cooking_path_samples[self.cooking_progress_index]
-            if self.point_to_segment_distance(px, py, x1, y1, x2, y2) <= tolerance:
-                self.cooking_visible_until[self.cooking_progress_index] = time.monotonic() + self.disappear_delay_seconds
-                self.cooking_progress_index += 1
-                advanced = True
-            else:
-                break
-        if self.cooking_progress_index >= len(self.cooking_path_samples):
-            gained = self.cooking_progress_index - before
-            result = self.complete_cooking_step()
-            result["sound_events"] = [{"kind": "correct", "activity": "cooking", "count": gained}]
-            return result
-        if advanced:
-            self.cooking_last_progress_at = time.monotonic()
-            self.cooking_resume_marker = False
-            self.render()
-            return self.response(sfx="cooking_trace", sound_events=[{"kind": "correct", "activity": "cooking", "count": self.cooking_progress_index - before}])
-        return self.response()
-
-    def fail_or_continue_cooking(self):
-        total = len(self.cooking_path_samples)
-        progress = self.cooking_progress_index
-        percent = int(round((progress / total) * 100)) if total else 0
-        self.cooking_resume_marker = progress > 0
-        self.render()
-        return self.response(tts=f"Progress {percent} percent.")
-
-    def finish_cooking_success(self):
-        recipe_id = self.selected_recipe_id
-        recipe = self.get_recipe_config(recipe_id)
-        if recipe.get("seafood"): return self.finish_seafood(recipe)
-        if not recipe or not self.can_craft_recipe(recipe_id):
-            self.clear_cooking()
-            self.current_page = "home"
-            self.current_location = "home"
-            self.render()
-            return self.response(tts="Not enough ingredients.", sfx="error")
-        for seed_id, count in recipe.get("ingredients", {}).items():
-            self.resources["crops"][seed_id] -= int(count)
-        food_count = self.loot_amount(1)
-        self.resources["foods"][recipe_id] = int(self.resources["foods"].get(recipe_id, 0)) + food_count
-        label = self.get_recipe_label(recipe_id)
-        self.current_location = "home"
-        self.current_page = "home"
-        self.clear_cooking()
-        self.clear_hover()
-        result = self.consume_time("cook")
-        text = f"{label} {food_count} made." + (" Bonus." if food_count>1 else "")
-        self.registry.run("activity", "cooking", label, food_count)
-        if result["night"]:
-            return self.night_response(text)
-        self.render()
-        return self.response(tts=text, sfx="cooking_success")
-
-    def use_food(self, recipe_id):
-        count = int(self.resources["foods"].get(recipe_id, 0))
-        recipe = self.get_recipe_config(recipe_id)
-        if count <= 0 or not recipe:
-            return self.response(tts="No food available.", sfx="error")
-        self.resources["foods"][recipe_id] = count - 1
-        self.active_buff = {
-            "kind": recipe.get("buff_kind", "harvest_multiplier"),
-            "source": recipe_id,
-            "multiplier": float(recipe.get("buff_multiplier", 1.0)),
-            "remaining_ticks": float(recipe.get("buff_ticks", 0)),
-            "remaining_sales": int(recipe.get("sale_uses", 0)),
-            "rare_weight_multiplier": float(recipe.get("rare_weight_multiplier", 1)),
-            "double_chance": float(recipe.get("double_chance", 0))
-        }
-        self.clear_hover()
-        self.render()
-        return self.response(tts=f"{self.get_recipe_label(recipe_id)} used. {self.buff_text()}", sfx="eat_food")
-
     def handle_command(self, command):
         command = str(command).lower().strip()
         command = {"f1":"minimap", "f2":"resources", "f3":"load", "f3_long":"save",
@@ -2427,8 +1995,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         if command == "resources": return self.toggle_menu("inventory")
         if command in ("left", "right"): return self.navigate_key(command)
         if command == "release":
-            self.pointer_pressed = self.care_dragging = self.harvest_dragging = self.cooking_dragging = False
-            self.drag_tool = None
+            self.release_pointer()
             return self.response()
         if command in ("click", "pause"):
             x, y = self.last_pointer
@@ -2468,8 +2035,8 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
         return {"kind": kind, "targets": targets, "completed": completed, "total": total}
 
     def get_state(self):
-        self.update_cooking_marker()
-        if self.current_page in ("water_minigame", "fertilizer_minigame", "cooking"):
+        self.registry.run("before_state")
+        if self.current_page in ("water_minigame", "fertilizer_minigame") or self.registry.page_hook(self.current_page, "live"):
             self.render()
         plots = {plot_id: dict(state) for plot_id, state in self.farm_plots.items()}
         objects = self.get_objects()
@@ -2530,20 +2097,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState):
                 "total_targets": len(self.harvest_targets),
                 "collected_targets": len(self.harvest_collected_ids),
                 "dragging": self.harvest_dragging
-            },
-            "cooking": {
-                "resume_point": self.cooking_resume_point(),
-                "stage_index": self.cooking_stage_index,
-                "stage_count": len(self.get_cooking_steps()),
-                "gesture_kind": self.get_cooking_kind(),
-                "stage_label": self.get_cooking_stage_label(),
-                "start_point": list(self.cooking_path_samples[0]) if self.cooking_path_samples else None,
-                "recipe_id": self.selected_recipe_id,
-                "recipe_name": self.get_recipe_label(self.selected_recipe_id) if self.selected_recipe_id else None,
-                "selected_ingredients": list(self.selected_ingredients),
-                "progress": self.cooking_progress_index,
-                "total": len(self.cooking_path_samples),
-                "dragging": self.cooking_dragging
             },
             "dots": self.dotpad.to_list(),
             "width": self.dotpad.width,
