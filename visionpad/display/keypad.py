@@ -5,7 +5,7 @@ import time
 
 class KeypadUI:
     def toggle_menu(self, page):
-        self.stop_flower_contact()
+        self.registry.run("before_navigation")
         if self.current_page == 'load_game':
             result = self.close_load_game()
             if page == 'load_game': return result

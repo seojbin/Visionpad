@@ -44,7 +44,7 @@ def spectator_snapshot(engine, objects):
                      visible=t['id'] not in collected or deadlines.get(t['id'], 0) > now)
                 for t in items]
 
-    return {
+    snapshot = {
         'schema': 1, 'objects': public_objects, 'plots': plots,
         'routes': [{k: o[k] for k in ('x1', 'y1', 'x2', 'y2')}
                    for o in objects if o.get('type') == 'route'],
@@ -56,3 +56,8 @@ def spectator_snapshot(engine, objects):
                       visible=i >= engine.cooking_progress_index or engine.cooking_visible_until.get(i, 0) > now)
                  for i, p in enumerate(engine.cooking_path_samples)],
     }
+    for key, provider in engine.registry.spectator_providers.items():
+        if key in snapshot:
+            raise ValueError(f"Spectator key {key!r} is provided by both core and a feature")
+        snapshot[key] = provider(objects)
+    return snapshot

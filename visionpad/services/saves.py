@@ -35,8 +35,7 @@ class SaveMixin:
     def snapshot(self):
         state = {k: copy.deepcopy(v) for k, v in vars(self).items()
                  if k not in self._static_fields and k not in {"_static_fields", "_load_return", "_save_slots"}}
-        state["flower_contact_at"] = None
-        state["flower_watering"] = False
+        state.update(self.registry.save_transient)
         state["random_state"] = random.getstate()
         now = time.monotonic()
         for key in ("sleep_until", "cooking_last_progress_at"):
@@ -93,10 +92,9 @@ class SaveMixin:
             state['current_page'] = state['current_location'] = 'town'
         if state.get('current_page')=='rowan_submit': state['rowan_submit_open']=True
         if state.get('current_page')=='shop_calendar': state['current_page']='shop_choice'
-        for key in ("flower_seeds", "houseplant", "flower_watering", "flower_contact_at"):
+        for key in self.registry.save_defaults:
             state.setdefault(key, copy.deepcopy(getattr(fresh,key)))
-        state["flower_contact_at"] = None
-        state["flower_watering"] = False
+        state.update(self.registry.save_transient)
         expected = set(fresh.snapshot())
         if set(state) != expected: raise ValueError("Incompatible save")
         if any(type(state[k]) is not type(v) and not (type(v) in (int, float) and type(state[k]) in (int, float))

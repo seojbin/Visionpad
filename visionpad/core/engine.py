@@ -4,11 +4,13 @@ import random
 import time
 
 from pathlib import Path
+from visionpad.core.registry import Registry
+from visionpad.core.state import SharedState
 from visionpad.display.dotpad import DotPad
 from visionpad.display.icons import IconGrid, IconLayout, IconRenderer
 from visionpad.display.keypad import KeypadUI
+from visionpad.features import load_features
 from visionpad.features.fishing.mixin import FishingMixin
-from visionpad.features.flowers.mixin import FlowerMixin
 from visionpad.features.npc.mixin import NpcMixin
 from visionpad.features.seafood.mixin import SeafoodMixin
 from visionpad.features.village.mixin import VillageMixin
@@ -17,7 +19,7 @@ from visionpad.services.saves import SaveMixin
 from visionpad.spectator.state import spectator_snapshot
 
 
-class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, SaveMixin):
+class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
 
     def __init__(self, config, save_dir=None):
         config = self.prepare_display_config(config)
@@ -54,6 +56,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.icon_layout = IconLayout(IconGrid())
         self.icons = IconRenderer(self)
         self.shop_page_count = 1  # Derived UI cache; excluded from save snapshots.
+        self.registry = Registry.build(self, load_features())
         self._static_fields = set(vars(self))
         self.reset()
 
@@ -107,7 +110,8 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         if self.current_page == "shop_choice":
             objects = list(objects) + [self.back_arrow("shop_choice_back", "Back to village", "return_scene")]
         objects = self.icon_layout.arrange(self.current_page, objects,
-                                           self.dotpad.width, self.dotpad.height)
+                                           self.dotpad.width, self.dotpad.height,
+                                           types=self.icons.types, layout_order=self.registry.icon_layout_order)
         if self.current_page == 'plot_detail':
             for obj in objects:
                 if obj['type'] == 'growth_gauge':
@@ -211,7 +215,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.regenerate_mine()
         self.reset_fishing()
         self.reset_npcs()
-        self.reset_flowers()
+        self.registry.run("reset")
 
         self.render()
 
@@ -281,7 +285,8 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return " "
 
     def get_page_name(self, page_id):
-        if page_id == "flower_detail": return "Flower pot"
+        registered = self.registry.page_name(page_id)
+        if registered: return registered
         if page_id == "load_game": return "Load game"
         if page_id == "npc_dialogue": return "Conversation"
         return self.config.get("pages", {}).get(page_id, page_id)
@@ -401,7 +406,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return self.response(tts="Sleeping.", sound_events=[{"kind": "one_shot", "sound": "sleep"}])
 
     def finish_sleep(self):
-        self.advance_flowers()
+        self.registry.run("end_of_day")
         self.sleep_until = None
         matured = []
         for state in self.farm_plots.values():
@@ -421,6 +426,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.new_fishing_target()
         self.fishing_last_catch = None
         self.regenerate_mine()
+        self.registry.run("start_of_day")
         self.time_used_cells = 0
         self.day_ended = False
         self.current_location = "home"
@@ -520,7 +526,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         pages = {
             "load_game": self.get_load_objects,
             "home": self.get_home_objects,
-            "flower_detail": self.get_flower_objects,
             "farm": self.get_farm_objects,
             "town": self.get_town_objects,
             "mine": self.get_mine_objects,
@@ -544,7 +549,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             "rowan_dialogue": self.get_rowan_objects,
             "rowan_submit": self.get_rowan_objects
         }
-        getter = pages.get(self.current_page)
+        getter = self.registry.page_hook(self.current_page, "objects") or pages.get(self.current_page)
         objects = self.compact_objects(getter()) if getter else []
         for obj in objects:
             if obj.get("type") == "arrow":
@@ -588,19 +593,8 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             objects.append(copied)
 
         if not self.day_ended:
-            objects.append(self.flower_object())
+            objects.extend(self.registry.collect("home.objects"))
         return objects + self.home_spatial_objects()
-
-    def flower_scene_bounds(self):
-        stage = self.houseplant.get('stage', 'empty')
-        bounds = {
-            'empty':    (12, 36, 7, 3, 9, 4),
-            'sprout':   (12, 34, 7, 6, 9, 7),
-            'withered': (12, 34, 9, 6, 11, 7),
-            'stem':     (12, 33, 9, 9, 11, 10),
-            'flower':   (12, 31, 11, 12, 13, 12)
-        }
-        return bounds.get(stage, bounds['empty'])
 
     def home_spatial_objects(self):
         bed_item = dict(id='home_scene_bed', type='home_hitbox', skip_grid=True,
@@ -609,7 +603,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         if self.day_ended:
             return [bed_item]
         craftable = sum(1 for rid in self.config.get("recipes", {}) if self.can_craft_recipe(rid))
-        fx, fy, fw, fh, fhw, fhh = self.flower_scene_bounds()
         return [
             bed_item,
             dict(id='home_scene_chest', type='home_hitbox', skip_grid=True,
@@ -618,9 +611,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             dict(id='home_scene_stove', type='home_hitbox', skip_grid=True,
                  x=46, y=19, width=11, height=8, hit_width=12, hit_height=9,
                  label='Kitchen', tts=f'Kitchen. Available recipes: {craftable}.', action='open_recipes'),
-            dict(id='home_scene_flower', type='home_hitbox', skip_grid=True,
-                 x=fx, y=fy, width=fw, height=fh, hit_width=fhw, hit_height=fhh,
-                 label='Flower pot', tts=self.flower_description(), action='flower:open'),
+            *self.registry.collect("home.scene_objects"),
             dict(id='home_road_farm', type='home_hitbox', skip_grid=True,
                  x=2, y=26, width=5, height=7, hit_width=7, hit_height=9,
                  label='Farm', tts='Farm. Go west.', action='travel:farm'),
@@ -661,16 +652,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             '100',
         ))
 
-        def draw_solid_pattern(cx, cy, rows):
-            w, h = len(rows[0]), len(rows)
-            for r_idx, row in enumerate(rows):
-                for c_idx, ch in enumerate(row):
-                    px = cx + c_idx - w // 2
-                    py = cy + r_idx - h // 2
-                    if ch == '1':
-                        pad.set_dot(px, py, 1)
-                    elif ch == '0':
-                        pad.set_dot(px, py, 0)
+        draw_solid_pattern = self.draw_solid_pattern
 
         draw_solid_pattern(13, 19, (
             '111111111',
@@ -708,56 +690,21 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             '11011100011',
             '11111111111',
         ))
-        stage = self.houseplant.get('stage', 'empty')
-        pot_cx = 12
+        self.registry.draw_slot("home.scene")
 
-        for x in range(pot_cx - 3, pot_cx + 4):
-            pad.set_dot(x, 35, 1)
-        for x in range(pot_cx - 2, pot_cx + 3):
-            pad.set_dot(x, 36, 1)
-            pad.set_dot(x, 37, 1)
-        pad.set_dot(pot_cx, 36, 0)
+    def draw_solid_pattern(self, cx, cy, rows):
+        """Centered pattern: '1' raises a dot, '0' clears it, any other character leaves it."""
+        pad = self.dotpad
+        w, h = len(rows[0]), len(rows)
+        for r_idx, row in enumerate(rows):
+            for c_idx, ch in enumerate(row):
+                px = cx + c_idx - w // 2
+                py = cy + r_idx - h // 2
+                if ch == '1':
+                    pad.set_dot(px, py, 1)
+                elif ch == '0':
+                    pad.set_dot(px, py, 0)
 
-        if stage == 'sprout':
-            pad.set_dot(pot_cx, 34, 1)
-            pad.set_dot(pot_cx, 33, 1)
-            pad.set_dot(pot_cx - 1, 32, 1)
-            pad.set_dot(pot_cx - 2, 32, 1)
-            pad.set_dot(pot_cx + 1, 32, 1)
-            pad.set_dot(pot_cx + 2, 32, 1)
-
-        elif stage == 'withered':
-            pad.set_dot(pot_cx, 34, 1)
-            pad.set_dot(pot_cx + 1, 33, 1)
-            pad.set_dot(pot_cx + 2, 33, 1)
-            pad.set_dot(pot_cx + 3, 34, 1)
-            pad.set_dot(pot_cx - 1, 33, 1)
-            pad.set_dot(pot_cx - 2, 34, 1)
-
-        elif stage == 'stem':
-            for px, py in [
-                (pot_cx, 34), (pot_cx, 33), (pot_cx - 1, 32),
-                (pot_cx, 31), (pot_cx + 1, 30), (pot_cx, 29),
-                (pot_cx - 2, 32), (pot_cx - 3, 32), (pot_cx - 3, 31),
-                (pot_cx + 2, 30), (pot_cx + 3, 30), (pot_cx + 3, 29),
-            ]:
-                pad.set_dot(px, py, 1)
-
-        elif stage == 'flower':
-            for px, py in [
-                (pot_cx, 34), (pot_cx, 33), (pot_cx - 1, 32),
-                (pot_cx, 31), (pot_cx + 1, 30), (pot_cx, 29),
-                (pot_cx - 2, 32), (pot_cx - 3, 32), (pot_cx - 3, 31), (pot_cx - 2, 31),
-                (pot_cx + 2, 30), (pot_cx + 3, 30), (pot_cx + 3, 29), (pot_cx + 2, 29),
-            ]:
-                pad.set_dot(px, py, 1)
-
-            draw_solid_pattern(pot_cx, 27, (
-                '.11111.',
-                '1100011',
-                '.11111.',
-            ))
-            
     def get_farm_objects(self):
         farm = self.config.get("farm", {})
         objects = []
@@ -1094,7 +1041,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         entries.append({"id":"fishing_rod", "label":"Fishing rod", "count":self.resources.get("fishing_rod",0), "kind":"tool", "action":""})
         for key, fish in self.fishing_config()['fish'].items():
             entries.append({"id":key, "label":fish['label'], "count":self.resources['fish'].get(key,0), "kind":"fish", "action":""})
-        entries.append(dict(id='seed_morning_glory', label='Morning glory seeds', count=self.flower_seeds, kind='seed', seed_id='morning_glory', action=''))
+        entries.extend(self.registry.collect("inventory.items"))
         entries = [entry for entry in entries if entry['kind']=='coin' or entry['count']>0]
         page_size = min(12, max(2, self.inventory_items_per_page))
         gold = next(e for e in entries if e['kind']=='coin')
@@ -1469,7 +1416,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         entries += [("mineral", key, self.MINERAL_LABELS[key], self.resources[key], self.get_mineral_price(key, buying=True))
                     for key in ("stone", "copper", "iron")]
         entries.append(("fishing_rod", "fishing_rod", "Fishing rod", self.resources.get("fishing_rod",0), self.get_rod_price()))
-        entries.append(("flower_seed", "morning_glory", "Morning glory seeds", self.flower_seeds, int(self.flower_config().get("seed_price",150))))
+        entries.extend(self.registry.collect("shop.buy_items"))
         return self.build_shop_objects(entries, "buy")
 
     def get_shop_sell_objects(self):
@@ -1520,8 +1467,9 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             if self.icons.draw(obj):
                 continue
             obj_type = obj.get("type")
-            if obj_type == "flower_pot":
-                self.draw_flower_pot(obj)
+            renderer = self.registry.renderers.get(obj_type)
+            if renderer:
+                renderer(obj)
             elif obj_type == "rowan":
                 self.draw_rowan(obj)
             elif obj_type in ("calendar_day", "calendar_button"):
@@ -1601,6 +1549,9 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             self.draw_lake()
         if self.current_page == "cooking":
             self.draw_cooking_path()
+        scene = self.registry.page_hook(self.current_page, "scene")
+        if scene:
+            scene()
         self.draw_time_bar()
 
     def draw_triangle(self, x, y, direction, size=2):
@@ -1906,6 +1857,10 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         if detail:
             return obj.get("tts") or label
 
+        describe = self.registry.tts.get(kind)
+        if describe:
+            return describe(obj)
+
         # A map location, transition, building or navigation control has only
         # a name in standard hover, regardless of its verbose TTS.
         if kind in ("node", "route", "arrow", "home_hitbox", "shop_hitbox"):
@@ -1951,6 +1906,8 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
     def get_hover_sfx(self, obj):
         if obj.get("hover_sfx"):
             return obj["hover_sfx"]
+        if obj.get("type") in self.registry.hover_sounds:
+            return self.registry.hover_sounds[obj["type"]]
         mapping = {
             "bed": "hover_bed", "chest": "hover_chest", "stove": "hover_stove",
             "plot": "hover_plot", "node": "hover_node", "route": "hover_route",
@@ -2001,9 +1958,15 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         if gained:result.setdefault('sound_events',[]).append({'kind':'correct','count':gained})
         return result
 
+    def page_pointer(self, kind, x, y):
+        """Raw pointer input for a feature-owned page; None lets the core handler continue."""
+        handler = self.registry.pointer(self.current_page, kind)
+        return handler(x, y) if handler else None
+
     def pointer_move(self, x, y):
-        if self.current_page == "flower_detail" and self.flower_watering:
-            return self.water_flower_at(x,y)
+        result = self.page_pointer("move", x, y)
+        if result is not None:
+            return result
         if self.current_page in ('water_minigame','fertilizer_minigame','harvest','cooking'):
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
@@ -2036,23 +1999,31 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return self.response()
 
     def pointer_down(self, x, y):
+        result = self.page_pointer("down", x, y)
+        if result is not None:
+            return result
         if self.current_page in ('water_minigame','fertilizer_minigame','harvest','cooking'):
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
             return self.response()
         if self.pending_visual_completion:
             return self.response()
-            
+
         self.location_detail_spoken = False
         self.last_hover_state = (None, True)
-        
-        if self.current_page in ("mine", "fishing") and self.pointer_pressed:
+
+        single_press = self.current_page in ("mine", "fishing") or self.registry.page_hook(self.current_page, "single_press")
+        if single_press and self.pointer_pressed:
             return self.response()
-            
+
         self.pointer_pressed = True
         self.last_pointer = (x, y)
         if self.paused:
             return self.response()
+
+        press = self.registry.page_hook(self.current_page, "press")
+        if press:
+            return press(x, y)
 
         if self.current_page == "fishing":
             return self.cast_fishing(x, y)
@@ -2101,8 +2072,9 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return self.perform_action(action, obj)
 
     def pointer_drag(self, x, y):
-        if self.current_page == "flower_detail" and self.flower_watering:
-            return self.water_flower_at(x,y)
+        result = self.page_pointer("drag", x, y)
+        if result is not None:
+            return result
         if self.current_page in ('water_minigame','fertilizer_minigame','harvest','cooking'):
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
@@ -2157,6 +2129,9 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return self.response()
 
     def pointer_up(self, x, y):
+        result = self.page_pointer("up", x, y)
+        if result is not None:
+            return result
         if self.current_page in ('water_minigame','fertilizer_minigame','harvest','cooking'):
             self.pointer_pressed=False
             return self.response()
@@ -2207,7 +2182,10 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return result
 
     def _perform_action(self, action, obj):
-        if action.startswith("flower:"): return self.flower_action(action.split(":",1)[1])
+        owned = self.registry.action_for(action, before_night_guard=True)
+        if owned:
+            handler, arg = owned
+            return handler(arg, obj)
         if action == 'talk_rowan': return self.talk_rowan()
         if action == 'repeat_rowan':
             result = self.response(tts='Rowan. '+self.rowan_dialogue, speech_profile='shopkeeper', priority='dialogue')
@@ -2223,6 +2201,10 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         if action.startswith("load_slot:"): return self.load_game(action.split(":", 1)[1])
         if self.day_ended and action != "rest":
             return self.night_only_response()
+        owned = self.registry.action_for(action, before_night_guard=False)
+        if owned:
+            handler, arg = owned
+            return handler(arg, obj)
         if action.startswith("mine_hit:"):
             return self.hit_mine_rock(action.split(":", 1)[1])
         if action.startswith("shop_page:"):
@@ -2293,7 +2275,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return self.response(tts="Night. Select the bed.", sfx="error")
 
     def travel_to(self, location):
-        self.stop_flower_contact()
+        self.registry.run("before_navigation")
         if self.day_ended:
             return self.night_only_response()
         if location not in ("home", "farm", "town", "mine", "fishing"):
@@ -2376,7 +2358,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return super().navigate_key(direction)
 
     def return_to_scene(self):
-        self.stop_flower_contact()
+        self.registry.run("before_navigation")
         self.pointer_pressed = False
         self.current_page = "home" if self.day_ended else self.current_location
         self.seed_select_plot_id = None
@@ -2736,7 +2718,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         base_yield = self.get_harvest_base_yield(seed_id)
         buff_multiplier = self.buff_multiplier_for("harvest_multiplier")
         buff_applied = buff_multiplier > 1.0
-        yield_count = self.loot_amount(max(1, int(math.ceil(base_yield * buff_multiplier)))) + self.flower_harvest_bonus()
+        yield_count = self.loot_amount(max(1, int(math.ceil(base_yield * buff_multiplier)))) + self.registry.total("harvest.bonus")
         self.resources["crops"][seed_id] = int(self.resources["crops"].get(seed_id, 0)) + yield_count
 
         chance = self.get_effective_seed_return_chance(seed_id)
@@ -3045,7 +3027,10 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         return self.response(tts=text, sfx="open_page")
 
     def buy_shop_item(self, kind, item_id):
-        if kind == "flower_seed" and item_id == "morning_glory": return self.buy_flower_seed()
+        buyer = self.registry.shop_buyers.get(kind)
+        if buyer:
+            result = buyer(item_id)
+            if result is not None: return result
         if kind == "fishing_rod" and item_id == "fishing_rod":
             return self.buy_fishing_rod()
         if kind in ("pickaxe", "mineral"):
@@ -3160,6 +3145,10 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
                 targets = [{"id": obj["id"], "x": obj["x"], "y": obj["y"]}
                            for obj in self.get_mine_objects() if obj["type"] == "mine_rock"]
                 total = len(targets)
+            else:
+                guidance = self.registry.page_hook(self.current_page, "guidance")
+                if guidance:
+                    kind, targets, completed, total = guidance()
         return {"kind": kind, "targets": targets, "completed": completed, "total": total}
 
     def get_state(self):
@@ -3168,7 +3157,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             self.render()
         plots = {plot_id: dict(state) for plot_id, state in self.farm_plots.items()}
         objects = self.get_objects()
-        return {
+        return self.ordered_state({
             "spectator": spectator_snapshot(self, objects),
             "location_description": self.get_location_detail(),
             "inspect_objects": [
@@ -3187,7 +3176,6 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             "rowan_submission": self.current_page=="rowan_submit" and self.rowan_submit_open,
             "calendar": {"weekday":self.calendar_days()[self.weekday_index()]['name'], "offer":self.calendar_text()},
             "fishing": self.fishing_public_state(),
-            "flowers": self.flower_public_state(),
             "audio_guidance": self.audio_guidance(),
             "objects": [{"id": o["id"], "label": o.get("label", ""),
                          "type": o.get("type"), "x": o.get("x"), "y": o.get("y"),
@@ -3258,7 +3246,27 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
             "pointer": {"x": self.last_pointer[0], "y": self.last_pointer[1], "pressed": self.pointer_pressed},
             "hover_object": self.hover_object_id,
             "controls": {"F1": "Map", "F2": "Inventory", "F3": "Load / hold to save", "F4": "Pause"}
-        }
+        })
+
+    # Key order of /api/state before features registered their own keys; new keys follow it.
+    STATE_KEY_ORDER = (
+        "spectator", "location_description", "inspect_objects", "dialogue", "rowan_submission", "calendar",
+        "fishing", "flowers", "audio_guidance", "objects", "action_costs", "sleeping", "client_settings",
+        "navigation", "page", "page_name", "current_location", "current_location_name", "day", "time",
+        "day_ended", "paused", "resources", "active_buff", "buff_text", "research_levels",
+        "unlocked_plot_count", "farm_plots", "seed_select_plot_id", "drag_tool", "plot_detail_id", "care",
+        "harvest", "inventory", "cooking", "dots", "width", "height", "lower_panel", "time_dots",
+        "time_width", "time_height", "pointer", "hover_object", "controls",
+    )
+
+    def ordered_state(self, state):
+        for key, provider in self.registry.state_providers.items():
+            if key in state:
+                raise ValueError(f"State key {key!r} is provided by both core and a feature")
+            state[key] = provider()
+        ordered = {key: state.pop(key) for key in self.STATE_KEY_ORDER if key in state}
+        ordered.update(state)
+        return ordered
 
     MINERAL_LABELS = {"stone": "Stone", "copper": "Copper", "iron": "Iron", "diamond": "Diamond"}
 
@@ -3389,7 +3397,7 @@ class GameEngine(FlowerMixin, NpcMixin, VillageMixin, SeafoodMixin, FishingMixin
         self.shop_page = max(0, min(self.shop_page, pages - 1))
         objects = []
         for i, (kind, item_id, label, count, price) in enumerate(entries[self.shop_page * page_size:(self.shop_page + 1) * page_size]):
-            price = price if kind == "flower_seed" else self.market_price(price, kind, mode)
+            price = price if kind in self.registry.fixed_price_kinds else self.market_price(price, kind, mode)
             x, y = (9, 23, 37, 51)[i % 4], (5, 15, 25)[i // 4]
             text = f"{label}, {price} gold. stock {count} " if mode == "buy" else f"{label}, stock {count}. Sell {price} gold"
             if kind == "pickaxe" and count:

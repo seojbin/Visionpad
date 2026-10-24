@@ -46,7 +46,7 @@ class IconRenderer:
     TYPES = frozenset(('bed','chest','stove','shop_npc','rowan','calendar_day',
         'calendar_button','save_slot','seed','resource','research','care_button',
         'recipe','ingredient','cooking_start','shop_choice','shop_item','watering_can',
-        'fertilizer','flower_pot','nav_up','nav_down'))
+        'fertilizer','nav_up','nav_down'))
 
     PATTERNS = {
         'seed': ('01110','11111','01110'),
@@ -74,62 +74,29 @@ class IconRenderer:
         'nav_down': ('0011100','1111111','0111110','0011100','0001000'),
     }
 
-    FLOWER_STAGE_PATTERNS = {
-        'empty': (
-            '0000000',
-            '0000000',
-            '0000000',
-            '0111110',
-            '0011100',
-        ),
-        'sprout': (
-            '0000000',
-            '0010100',
-            '0001000',
-            '0111110',
-            '0011100',
-        ),
-        'stem': (
-            '0001000',
-            '0111000',
-            '0001110',
-            '0111110',
-            '0011100',
-        ),
-        'flower': (
-            '0111110',
-            '1111111',
-            '0111110',
-            '0111110',
-            '0011100',
-        ),
-        'withered': (
-            '0000000',
-            '0011000',
-            '0001100',
-            '0111110',
-            '0011100',
-        ),
-    }
-
     ALIASES = dict.fromkeys(('stone','copper','iron','diamond'), 'mineral') | dict.fromkeys(('pickaxe','fertilizer','fishing_rod'), 'tool')
 
     def __init__(self, engine):
         self.engine = engine
         self.dotpad = engine.dotpad
 
-    @classmethod
-    def category(cls, kind):
-        return 'seed' if kind == 'flower_seed' else cls.ALIASES.get(kind, kind or 'material')
+    @property
+    def types(self):
+        """Object types drawn as icons: the built-in set plus feature-registered icons."""
+        return self.TYPES | self.engine.registry.icon_patterns.keys()
+
+    def category(self, kind):
+        aliased = self.engine.registry.icon_aliases.get(kind)
+        return aliased if aliased else self.ALIASES.get(kind, kind or 'material')
 
     def spec(self, obj):
         kind = obj.get('type')
         symbol = kind
         frame = 'rectangle'
         pattern = ()
-        if kind == 'flower_pot':
-            stage = self.engine.houseplant.get('stage', 'empty')
-            pattern = self.FLOWER_STAGE_PATTERNS.get(stage, self.FLOWER_STAGE_PATTERNS['empty'])
+        feature_pattern = self.engine.registry.icon_patterns.get(kind)
+        if feature_pattern:
+            pattern = feature_pattern(obj)
         elif kind == 'resource': symbol = self.category(obj.get('resource_kind'))
         elif kind == 'shop_item': symbol = self.category(obj.get('shop_kind'))
         elif kind == 'recipe': symbol = 'food'
@@ -174,8 +141,9 @@ class IconRenderer:
             self.pattern(obj['x'], obj['y'], self.PATTERNS.get(symbol, self.PATTERNS['material']))
 
     def draw(self, obj):
-        if obj.get('type') not in self.TYPES: return False
-        if obj.get('type') == 'flower_pot' and obj.get('width', 12) > 12:
+        if obj.get('type') not in self.types: return False
+        skip = self.engine.registry.icon_skips.get(obj.get('type'))
+        if skip and skip(obj):
             return False
         spec = self.spec(obj)
         self.frame(obj, spec.frame)
@@ -195,16 +163,17 @@ class IconLayout:
     def __init__(self, grid=None):
         self.grid = grid or IconGrid()
 
-    def arrange(self, page, objects, width, height):
+    def arrange(self, page, objects, width, height, types=IconRenderer.TYPES, layout_order=None):
         objects = [dict(o) for o in objects]
         if page not in self.PAGES and page != 'plot_detail': return objects
-        chosen = [o for o in objects if o.get('type') in IconRenderer.TYPES
+        chosen = [o for o in objects if o.get('type') in types
                   and not o.get('skip_grid')
                   and (page != 'plot_detail' or o.get('type') == 'care_button')]
         if page in ('home', 'town'):
             order = {
-                'bed': 0, 'chest': 1, 'stove': 2, 'flower_pot': 3,
-                'shop_npc': 0, 'rowan': 1, 'nav_up': 2, 'nav_down': 3
+                'bed': 0, 'chest': 1, 'stove': 2,
+                'shop_npc': 0, 'rowan': 1, 'nav_up': 2, 'nav_down': 3,
+                **(layout_order or {})
             }
             chosen.sort(key=lambda o: order.get(o['type'], 9))
         placed = self.grid.place(chosen, width, height)
