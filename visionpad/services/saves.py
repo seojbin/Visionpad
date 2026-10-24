@@ -85,13 +85,7 @@ class SaveMixin:
         finally:
             random.setstate(previous_rng)
         # Migrate pre-fishing saves without replacing existing progress.
-        for key in ('fishing_target', 'fishing_last_catch', 'fishing_attempts', 'rod_casts', 'rod_catches', 'rowan_stage', 'rowan_greeted', 'rowan_dialogue', 'rowan_submit_open'):
-            state.setdefault(key, copy.deepcopy(getattr(fresh, key)))
-        for key in ('npc_visits', 'dialogue'):
-            state.setdefault(key, copy.deepcopy(getattr(fresh, key)))
-        # Historical saves cannot prove whether a harvest/catch was the first ever.
-        state.setdefault('activity_history_complete', False)
-        for key in ('activity_counts', 'activity_serial', 'recent_activity', 'npc_reactions'):
+        for key in ('fishing_target', 'fishing_last_catch', 'fishing_attempts', 'rod_casts', 'rod_catches'):
             state.setdefault(key, copy.deepcopy(getattr(fresh, key)))
         state['resources'].setdefault('fishing_rod', 0)
         state['resources'].setdefault('fish', {})
@@ -107,14 +101,8 @@ class SaveMixin:
                 if key in recipe: buff[field] = recipe[key]
             if 'sale_uses' in recipe: buff['remaining_sales'] = min(buff.get('remaining_sales',0),recipe['sale_uses'])
             buff['remaining_ticks'] = min(buff.get('remaining_ticks',0),recipe.get('buff_ticks',0))
-        if state.get('current_page') == 'npc_dialogue':
-            state['dialogue'] = None
-            state['current_page'] = state['current_location'] = 'town'
-        if state.get('current_page') == 'rowan_dialogue':
-            state['rowan_submit_open'] = False
-            state['current_page'] = state['current_location'] = 'town'
-        if state.get('current_page')=='rowan_submit': state['rowan_submit_open']=True
-        if state.get('current_page')=='shop_calendar': state['current_page']='shop_choice'
+        for migrate in self.registry.save_migrations:
+            migrate(state)
         for key in self.registry.save_defaults:
             state.setdefault(key, copy.deepcopy(getattr(fresh,key)))
         state.update(self.registry.save_transient)

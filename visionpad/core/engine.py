@@ -11,15 +11,13 @@ from visionpad.display.icons import IconGrid, IconLayout, IconRenderer
 from visionpad.display.keypad import KeypadUI
 from visionpad.features import load_features
 from visionpad.features.fishing.mixin import FishingMixin
-from visionpad.features.npc.mixin import NpcMixin
 from visionpad.features.seafood.mixin import SeafoodMixin
-from visionpad.features.village.mixin import VillageMixin
 from visionpad.paths import SAVES_DIR
 from visionpad.services.saves import SaveMixin
 from visionpad.spectator.state import spectator_snapshot
 
 
-class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
+class GameEngine(SeafoodMixin, FishingMixin, KeypadUI, SaveMixin, SharedState):
 
     def __init__(self, config, save_dir=None):
         config = self.prepare_display_config(config)
@@ -130,7 +128,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         return objects
         
     def reset(self):
-        self.reset_village()
         self._menu_stack = []
         self._load_return = None
         self._save_slots = []
@@ -216,7 +213,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.time_used_cells = 0
         self.regenerate_mine()
         self.reset_fishing()
-        self.reset_npcs()
         self.registry.run("reset")
 
         self.render()
@@ -290,7 +286,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         registered = self.registry.page_name(page_id)
         if registered: return registered
         if page_id == "load_game": return "Load game"
-        if page_id == "npc_dialogue": return "Conversation"
         return self.config.get("pages", {}).get(page_id, page_id)
 
     def get_seed_config(self, seed_id):
@@ -529,10 +524,8 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             "load_game": self.get_load_objects,
             "home": self.get_home_objects,
             "farm": self.get_farm_objects,
-            "town": self.get_town_objects,
             "mine": self.get_mine_objects,
             "fishing": self.get_fishing_objects,
-            "npc_dialogue": self.get_dialogue_objects,
             "seed_select": self.get_seed_select_objects,
             "plot_detail": self.get_plot_detail_objects,
             "water_minigame": self.get_care_minigame_objects,
@@ -544,9 +537,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             "shop_choice": self.get_shop_choice_objects,
             "shop_buy": self.get_shop_buy_objects,
             "shop_sell": self.get_shop_sell_objects,
-            "shop_calendar": self.get_calendar_objects,
-            "rowan_dialogue": self.get_rowan_objects,
-            "rowan_submit": self.get_rowan_objects
         }
         getter = self.registry.page_hook(self.current_page, "objects") or pages.get(self.current_page)
         objects = self.compact_objects(getter()) if getter else []
@@ -968,10 +958,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             })
         return objects
 
-    def get_town_objects(self):
-        base = [dict(obj) for obj in self.config.get("town", {}).get("objects", [])]
-        return base + [self.rowan_object()] + self.town_nav_objects() + self.town_spatial_objects()
-
     def get_mine_objects(self):
         objects = []
         for rock in self.mine_rocks:
@@ -1310,10 +1296,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             renderer = self.registry.renderers.get(obj_type)
             if renderer:
                 renderer(obj)
-            elif obj_type == "rowan":
-                self.draw_rowan(obj)
-            elif obj_type in ("calendar_day", "calendar_button"):
-                self.draw_calendar(obj)
             elif obj_type == "save_slot":
                 self.dotpad.draw_box(obj["x"], obj["y"], obj["width"], obj["height"])
                 self.dotpad.draw_box(obj["x"], obj["y"], 4, 4)
@@ -1361,10 +1343,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
                 self.draw_cooking_start(obj)
             elif obj_type == "shop_npc":
                 self.draw_shop_npc(obj)
-            elif obj_type == "npc_marker":
-                self.draw_shop_npc({**obj, "type": "shop_npc"})
-            elif obj_type == "npc_topic":
-                self.dotpad.draw_box(obj["x"], obj["y"], obj["width"], obj["height"])
             elif obj_type == "shop_choice":
                 self.draw_shop_choice(obj)
             elif obj_type == "shop_item":
@@ -1372,8 +1350,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
 
         if self.current_page == "home":
             self.draw_home_scene()
-        elif self.current_page == "town":
-            self.draw_town_scene()
         elif self.current_page == "shop_choice":
             self.draw_shop_choice_scene()
         elif self.current_page == "plot_detail":
@@ -2004,17 +1980,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         if owned:
             handler, arg = owned
             return handler(arg, obj)
-        if action == 'talk_rowan': return self.talk_rowan()
-        if action == 'repeat_rowan':
-            result = self.response(tts='Rowan. '+self.rowan_dialogue, speech_profile='shopkeeper', priority='dialogue')
-            result['speech_channel'] = 'quest'
-            return result
-        if action.startswith('rowan_submit:'): return self.submit_rowan_crop(action.split(':',1)[1])
-        if action == 'open_calendar': return self.open_calendar()
-        if action.startswith('calendar_day:'): return self.response(tts=self.calendar_text(int(action.split(':')[1])))
-        if action.startswith("npc:"):
-            parts = action.split(":")
-            return self.npc_action(parts[1], parts[2]) if len(parts) == 3 else self.response()
         if action == "close_load": return self.close_load_game()
         if action.startswith("load_slot:"): return self.load_game(action.split(":", 1)[1])
         if self.day_ended and action != "rest":
@@ -2086,8 +2051,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         if location not in ("home", "farm", "town", "mine", "fishing"):
             return self.response(tts="Location unavailable.")
         self._menu_stack.clear()
-        self.rowan_dialogue = ""
-        self.rowan_submit_open = False
+        self.registry.run("close_dialogue")
         changed = location != self.current_location
         self.current_location = location
         self.current_page = location
@@ -2108,9 +2072,10 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         if location == "mine":
             text = "Mine." if self.resources["pickaxe"] else "Mine. Buy a pickaxe"
             return self.response(tts=text, sfx="travel")
-        if location == 'town' and not self.rowan_greeted:
-            self.rowan_greeted=True
-            return self.response(tts='Village. Rowan would like to meet you.',sfx='travel')
+        arrival = self.registry.page_hook(location, "arrival")
+        text = arrival() if arrival else None
+        if text:
+            return self.response(tts=text, sfx="travel")
         return self.response(tts=f"{name}", sfx="travel")
 
     def navigate_key(self, direction):
@@ -2452,7 +2417,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.clear_hover()
 
         text = f"Harvested. {seed_label} {yield_count}."
-        self.record_activity("harvest", seed_label, yield_count)
+        self.registry.run("activity", "harvest", seed_label, yield_count)
         if buff_applied:
             text += ". Harvest boost applied."
         if got_seed:
@@ -2689,7 +2654,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.clear_hover()
         result = self.consume_time("cook")
         text = f"{label} {food_count} made." + (" Bonus." if food_count>1 else "")
-        self.record_activity("cooking", label, food_count)
+        self.registry.run("activity", "cooking", label, food_count)
         if result["night"]:
             return self.night_response(text)
         self.render()
@@ -2715,8 +2680,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         return self.response(tts=f"{self.get_recipe_label(recipe_id)} used. {self.buff_text()}", sfx="eat_food")
 
     def open_shop(self):
-        self.rowan_dialogue = ""
-        self.rowan_submit_open = False
+        self.registry.run("close_dialogue")
         if self.current_location != "town":
             self.current_location = "town"
         self.current_page = "shop_choice"
@@ -2889,9 +2853,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
                  "hit_radius": o.get("hit_radius")}
                 for o in objects
             ],
-            "dialogue": self.current_dialogue(),
-            "rowan_submission": self.current_page=="rowan_submit" and self.rowan_submit_open,
-            "calendar": {"weekday":self.calendar_days()[self.weekday_index()]['name'], "offer":self.calendar_text()},
             "fishing": self.fishing_public_state(),
             "audio_guidance": self.audio_guidance(),
             "objects": [{"id": o["id"], "label": o.get("label", ""),
@@ -3041,7 +3002,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
                     self.dotpad.set_dot(left + col, top + row)
 
     def item_destroyed_event(self, item_id, reward_sound=None, loot_tts=None):
-        self.record_activity("tool_broken", "Fishing rod" if item_id == "fishing_rod" else "Pickaxe")
+        self.registry.run("activity", "tool_broken", "Fishing rod" if item_id == "fishing_rod" else "Pickaxe")
         event = {"kind": "item_destroyed", "item_id": item_id}
         if reward_sound is not None:
             event.update(reward_sound=reward_sound, tts=loot_tts or "")
@@ -3075,7 +3036,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             amount = self.loot_amount(2 if doubled else 1)
             doubled = amount > 1
             self.resources[mineral] += amount
-            self.record_activity("mining", self.MINERAL_LABELS[mineral], amount)
+            self.registry.run("activity", "mining", self.MINERAL_LABELS[mineral], amount)
             self.mine_rocks.remove(rock)
             text = f"{self.MINERAL_LABELS[mineral]} {amount} collected." + (". Bonus." if doubled else "")
         else:

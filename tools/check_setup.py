@@ -39,7 +39,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
 
     required = ("visionpad/app/main.py", "visionpad/app/runtime.py", "visionpad/core/engine.py",
                 "visionpad/services/speech.py", "visionpad/services/speech_queue.py", "visionpad/services/saves.py",
-                "visionpad/features/npc/mixin.py", "visionpad/display/keypad.py", "visionpad/features/flowers/feature.py",
+                "visionpad/features/npc/feature.py", "visionpad/display/keypad.py", "visionpad/features/flowers/feature.py",
                 "visionpad/features/fishing/mixin.py", "visionpad/features/seafood/mixin.py", "visionpad/display/dotpad.py",
                 "visionpad/spectator/state.py", "config/game.json", "config/npc.json", "requirements.txt",
                 "web/game.html", "web/game-audio.js", "web/game-speech.js", "web/game-keys.js",

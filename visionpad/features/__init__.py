@@ -11,6 +11,8 @@ ENABLED = (
     "research",
     "minimap",
     "inventory",
+    "npc",
+    "village",
 )
 
 

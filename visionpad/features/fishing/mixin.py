@@ -73,7 +73,7 @@ class FishingMixin:
         self.fishing_attempts += 1
         events = []
         if grade == 'miss':
-            self.record_activity('fishing_miss')
+            self.registry.run('activity', 'fishing_miss')
             self.fishing_last_catch = {'id': None, 'label': 'No catch', 'attempt': self.fishing_attempts}
             text = 'No catch. Try another spot.'
         else:
@@ -82,7 +82,7 @@ class FishingMixin:
             label = cfg['fish'][fish_id]['label']
             amount = self.loot_amount(1)
             self.resources['fish'][fish_id] = self.resources['fish'].get(fish_id, 0)+amount
-            self.record_activity('fishing', label, amount)
+            self.registry.run('activity', 'fishing', label, amount)
             self.fishing_last_catch = {'id': fish_id, 'label': label, 'attempt': self.fishing_attempts}
             text = f'{label} {amount} caught.' + (' Bonus.' if amount>1 else '')
             events.append({'kind':'one_shot_group','sounds':['splash','shine'] if grade=='high' else ['splash']})

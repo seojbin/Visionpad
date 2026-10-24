@@ -42,6 +42,8 @@ EVENTS = {
     "end_of_day": "Start of the morning transition, before crops grow and the day number changes.",
     "start_of_day": "After the day number changes, before the morning page is rendered.",
     "before_navigation": "First step of travel, return-to-scene and F1/F2/F3 menu changes.",
+    "close_dialogue": "A scene change closes open conversations: travel (after its checks) and opening the shop.",
+    "activity": "A real result happened. Handlers get (kind, item='', count=1), e.g. ('harvest', 'Tomato', 3).",
 }
 
 # Slots exposed by pages that are still part of the core engine. A feature that
@@ -71,13 +73,14 @@ class Feature:
 class Page:
     def __init__(self, feature, name=None, objects=None, scene=None, guidance=None,
                  press=None, single_press=False, icon_grid=False,
-                 menu_text=None, on_menu_open=None, navigate=None, **pointer):
+                 menu_text=None, on_menu_open=None, navigate=None, arrival=None, **pointer):
         unknown = set(pointer) - {"pointer_" + kind for kind in POINTER_KINDS}
         if unknown:
             raise TypeError(f"Unknown page hook(s): {', '.join(sorted(unknown))}")
         self.feature, self.name, self.objects, self.scene, self.guidance = feature, name, objects, scene, guidance
         self.press, self.single_press, self.icon_grid = press, single_press, icon_grid
         self.menu_text, self.on_menu_open, self.navigate = menu_text, on_menu_open, navigate
+        self.arrival = arrival
         self.pointer = {kind: pointer.get("pointer_" + kind) for kind in POINTER_KINDS}
 
 
@@ -105,6 +108,7 @@ class Registry:
         self.icon_aliases = {}
         self.save_transient = {}
         self.save_defaults = []
+        self.save_migrations = []
         self._current = None
         self._sequence = 0
 
@@ -142,7 +146,7 @@ class Registry:
 
     def page(self, page_id, *, name=None, objects=None, scene=None, guidance=None,
              press=None, single_press=False, icon_grid=False,
-             menu_text=None, on_menu_open=None, navigate=None, **pointer):
+             menu_text=None, on_menu_open=None, navigate=None, arrival=None, **pointer):
         """Own a page.
         objects() -> list of tactile objects; name -> spoken page name; scene() draws after the objects;
         guidance() -> (kind, targets, completed, total) for audio_guidance.
@@ -152,9 +156,10 @@ class Registry:
         selection. single_press ignores a new press while the pointer is still held.
         icon_grid places the page's icon objects on the shared twelve-slot grid.
         For pages opened as F-key menus: on_menu_open() runs as the menu opens and menu_text() -> the
-        spoken text. navigate(direction) handles Left/Right on the page (return None for the default)."""
+        spoken text. navigate(direction) handles Left/Right on the page (return None for the default).
+        For travel locations: arrival() -> text spoken on arrival, or None for the location name."""
         page = Page(self._current, name, objects, scene, guidance, press, single_press, icon_grid,
-                    menu_text, on_menu_open, navigate, **pointer)
+                    menu_text, on_menu_open, navigate, arrival, **pointer)
         self._claim(self.pages, page_id, page, "Page")
 
     def action(self, key, handler, *, before_night_guard=False):
@@ -225,12 +230,15 @@ class Registry:
     def icon_alias(self, kind, symbol):
         self._claim(self.icon_aliases, kind, symbol, "Icon alias")
 
-    def save_fields(self, *, transient=None, defaults=()):
+    def save_fields(self, *, transient=None, defaults=(), migrate=None):
         """transient: attribute -> value written into every save and after every load.
-        defaults: attributes that older saves may lack; filled from a fresh engine on load."""
+        defaults: attributes that older saves may lack; filled from a fresh engine on load.
+        migrate(state): rewrites an older save's state dict in place before defaults are filled."""
         for key, value in (transient or {}).items():
             self._claim(self.save_transient, key, value, "Transient save field")
         self.save_defaults.extend(defaults)
+        if migrate:
+            self.save_migrations.append(migrate)
 
     def _next(self):
         self._sequence += 1
@@ -238,11 +246,11 @@ class Registry:
 
     # ---- dispatch (called from core) ----
 
-    def run(self, event, *, until=None, since=None):
-        """Run handlers in order; until/since restrict to orders below / at or above a boundary."""
+    def run(self, event, *args, until=None, since=None):
+        """Run handlers in order with args; until/since restrict to orders below / at or above a boundary."""
         for order, _, handler in sorted(self.events[event], key=lambda entry: entry[:2]):
             if (until is None or order < until) and (since is None or order >= since):
-                handler()
+                handler(*args)
 
     def _providers(self, slot):
         if slot not in self.slot_docs:

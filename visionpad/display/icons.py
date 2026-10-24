@@ -43,10 +43,10 @@ class IconSpec:
 
 class IconRenderer:
     """One thin frame plus one filled semantic symbol; optional selection/progress overlays."""
-    TYPES = frozenset(('bed','chest','stove','shop_npc','rowan','calendar_day',
-        'calendar_button','save_slot','seed','resource','care_button',
+    TYPES = frozenset(('bed','chest','stove','shop_npc',
+        'save_slot','seed','resource','care_button',
         'recipe','ingredient','cooking_start','shop_choice','shop_item','watering_can',
-        'fertilizer','nav_up','nav_down'))
+        'fertilizer'))
 
     PATTERNS = {
         'seed': ('01110','11111','01110'),
@@ -105,7 +105,6 @@ class IconRenderer:
         elif kind == 'watering_can': symbol = 'water'
         elif kind == 'fertilizer': symbol = 'tool'
         elif kind == 'shop_choice': symbol = obj.get('choice')
-        elif kind in ('calendar_day','calendar_button'): symbol = 'calendar'
         elif kind == 'save_slot': symbol = 'save'
         elif kind == 'cooking_start': symbol = 'start'
         if symbol == 'food': frame = 'double_rectangle'
@@ -153,9 +152,9 @@ class IconRenderer:
 
 class IconLayout:
     """Page policy over the same twelve virtual slots."""
-    PAGES = frozenset(('home','town','seed_select',
+    PAGES = frozenset(('home','seed_select',
         'recipe_select','ingredient_select','shop_choice','shop_buy','shop_sell',
-        'load_game','shop_calendar','rowan_dialogue','rowan_submit'))
+        'load_game'))
 
     def __init__(self, grid=None):
         self.grid = grid or IconGrid()
@@ -169,7 +168,7 @@ class IconLayout:
         if page in ('home', 'town'):
             order = {
                 'bed': 0, 'chest': 1, 'stove': 2,
-                'shop_npc': 0, 'rowan': 1, 'nav_up': 2, 'nav_down': 3,
+                'shop_npc': 0,
                 **(layout_order or {})
             }
             chosen.sort(key=lambda o: order.get(o['type'], 9))
