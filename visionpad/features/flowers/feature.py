@@ -7,6 +7,7 @@ last_pointer.
 import random
 import time
 
+from visionpad.core import order
 from visionpad.core.registry import Feature
 
 
@@ -53,6 +54,7 @@ class Flowers(Feature):
     name = "flowers"
 
     def register(self, reg):
+        reg.owns("flower_seeds", "houseplant", "flower_watering", "flower_contact_at")
         reg.page("flower_detail", name="Flower pot", objects=self.page_objects,
                  pointer_move=self.pointer, pointer_drag=self.pointer)
         reg.action("flower:", self.action, before_night_guard=True)
@@ -60,18 +62,18 @@ class Flowers(Feature):
         reg.icon("flower_pot", pattern=self.icon_pattern, skip=lambda obj: obj.get('width', 12) > 12, layout_order=3)
         reg.icon_alias("flower_seed", "seed")
         reg.state("flowers", self.public_state)
-        reg.on("reset", self.reset)
-        reg.on("end_of_day", self.advance)
-        reg.on("before_navigation", self.stop_contact)
+        reg.on("reset", self.reset, order=order.Reset.FLOWERS)
+        reg.on("end_of_day", self.advance, order=order.EndOfDay.FLOWERS)
+        reg.on("before_navigation", self.stop_contact, order=order.BeforeNavigation.FLOWERS)
         reg.save_fields(transient={"flower_contact_at": None, "flower_watering": False},
                         defaults=("flower_seeds", "houseplant", "flower_watering", "flower_contact_at"))
-        reg.contribute("home.objects", lambda: [self.pot_object()])
-        reg.contribute("home.scene_objects", self.home_scene_objects)
-        reg.contribute("home.scene", self.draw_home_pot)
-        reg.contribute("inventory.items", self.inventory_items)
-        reg.contribute("shop.buy_items", self.shop_buy_items)
+        reg.contribute("home.objects", lambda: [self.pot_object()], order=order.HomeObjects.FLOWERS)
+        reg.contribute("home.scene_objects", self.home_scene_objects, order=order.HomeSceneObjects.FLOWERS)
+        reg.contribute("home.scene", self.draw_home_pot, order=order.HomeScene.FLOWERS)
+        reg.contribute("inventory.items", self.inventory_items, order=order.InventoryItems.FLOWERS)
+        reg.contribute("shop.buy_items", self.shop_buy_items, order=order.ShopBuyItems.FLOWERS)
         reg.shop_item("flower_seed", self.buy_seed, market_price=False)
-        reg.contribute("harvest.bonus", self.harvest_bonus)
+        reg.contribute("harvest.bonus", self.harvest_bonus, order=order.HarvestBonus.FLOWERS)
 
     def config(self):
         return self.engine.config.get('flowers', {})

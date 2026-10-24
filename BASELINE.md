@@ -189,3 +189,26 @@ All 11 non-ok results are known and must stay exactly as listed (do not fix duri
 | test_speech.cjs | replay retains the quest voice and protection channel | ok |  |
 | test_hardware.mjs | test_hardware.mjs | FAIL | file fails to load: `web/vendor/DotPadSDK-3.0.3.js` missing; also imports `BluetoothPad`/`cellsToHex` not exported by `web/hardware.mjs` (F3) |
 | test_tracking_input.mjs | test_tracking_input.mjs | FAIL | file fails to load: `TrackingGestureInput` not exported by `web/hardware.mjs` (F4) |
+
+## Python results addendum: registry tests (Phase 2b)
+
+Added with the approved registry changes. These 16 tests are new; every result above is unchanged. Python total becomes 86 (77 ok, 6 FAIL, 3 ERROR).
+
+| Module | Class | Test | Result | Note |
+|---|---|---|---|---|
+| tests.python.core.test_registry | ConflictTests | test_core_slots_cannot_be_redeclared | ok |  |
+| tests.python.core.test_registry | ConflictTests | test_feature_names_must_be_unique_and_present | ok |  |
+| tests.python.core.test_registry | ConflictTests | test_two_features_cannot_claim_the_same_hook | ok |  |
+| tests.python.core.test_registry | OrderingTests | test_actions_dispatch_by_prefix_or_exact_key_in_their_guard_phase | ok |  |
+| tests.python.core.test_registry | OrderingTests | test_events_run_by_order_then_registration | ok |  |
+| tests.python.core.test_registry | OrderingTests | test_reset_splits_at_the_core_boundary | ok |  |
+| tests.python.core.test_registry | OrderingTests | test_slot_contributions_follow_their_order | ok |  |
+| tests.python.core.test_registry | OwnershipTests | test_enabled_features_own_existing_saved_attributes | ok |  |
+| tests.python.core.test_registry | OwnershipTests | test_owned_attributes_must_exist_after_reset | ok |  |
+| tests.python.core.test_registry | OwnershipTests | test_two_features_cannot_own_one_attribute | ok |  |
+| tests.python.core.test_registry | SlotTests | test_a_declared_slot_without_contributions_is_empty | ok |  |
+| tests.python.core.test_registry | SlotTests | test_a_slot_declared_by_a_later_feature_accepts_earlier_contributions | ok |  |
+| tests.python.core.test_registry | UnknownNameTests | test_collecting_an_undeclared_slot_fails | ok |  |
+| tests.python.core.test_registry | UnknownNameTests | test_unknown_event_is_rejected_at_registration | ok |  |
+| tests.python.core.test_registry | UnknownNameTests | test_unknown_page_hook_is_rejected | ok |  |
+| tests.python.core.test_registry | UnknownNameTests | test_unknown_slot_is_rejected_after_all_features_register | ok |  |

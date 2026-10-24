@@ -13,8 +13,13 @@ Registering
 
 Ordering
     Lifecycle events and slot contributions run by `(order, registration index)`.
-    `order` defaults to 100. Use it only to reproduce an order that the game
-    already depends on (random draws, object order on a page).
+    Orders are named constants from `visionpad.core.order`, one table per event
+    or slot; the default is `order.DEFAULT`.
+
+Ownership
+    `reg.owns(*names)` declares the engine attributes a feature owns. Two
+    features owning one attribute is an error, and every owned attribute must
+    exist after `engine.reset()`.
 
 Hotspots (AUDIT.md section 3.4) and the call that replaces each one:
     1 page table, 2 page names, 5 pointer handlers, 8 guidance, 3 page scene  -> page()
@@ -26,10 +31,10 @@ Hotspots (AUDIT.md section 3.4) and the call that replaces each one:
     12 save format                                                            -> save_fields()
     13 icon policy                                                            -> icon(), icon_alias()
     14 shop catalogue                                                         -> shop_item() + contribute("shop.buy_items")
-    shared page contents (home, inventory, harvest yield)                     -> contribute()
+    shared page contents (home, inventory, harvest yield)                     -> slot(), contribute()
+    attribute ownership                                                       -> owns()
 """
-
-DEFAULT_ORDER = 100
+from visionpad.core import order as run_order
 
 EVENTS = {
     "reset": "End of engine.reset(), after core state. Set the feature's engine attributes.",
@@ -38,7 +43,9 @@ EVENTS = {
     "before_navigation": "First step of travel, return-to-scene and F1/F2/F3 menu changes.",
 }
 
-SLOTS = {
+# Slots exposed by pages that are still part of the core engine. A feature that
+# owns a page declares that page's slots with reg.slot() instead.
+CORE_SLOTS = {
     "home.objects": "Extra tactile objects on the home page (daytime only). Provider returns a list of objects.",
     "home.scene_objects": "Home scene hitboxes, inserted after the kitchen and before the roads (daytime only).",
     "home.scene": "Drawing on the home scene after the furniture (daytime only). Provider draws, returns None.",
@@ -83,7 +90,10 @@ class Registry:
         self.state_providers = {}
         self.spectator_providers = {}
         self.events = {name: [] for name in EVENTS}
-        self.slots = {name: [] for name in SLOTS}
+        self.slot_docs = dict(CORE_SLOTS)
+        self.slot_owners = dict.fromkeys(CORE_SLOTS, "core")
+        self.slots = {}
+        self.owners = {}
         self.shop_buyers = {}
         self.fixed_price_kinds = set()
         self.icon_patterns = {}
@@ -106,7 +116,16 @@ class Registry:
             registry._current = feature.name
             feature.register(registry)
         registry._current = None
+        undeclared = sorted(set(registry.slots) - set(registry.slot_docs))
+        if undeclared:
+            raise ValueError(f"Unknown slot(s) {', '.join(undeclared)}; known: {', '.join(registry.slot_docs)}")
         return registry
+
+    def check_owned(self, engine):
+        """Every owned attribute must exist on the engine once reset() has run."""
+        missing = sorted(name for name in self.owners if not hasattr(engine, name))
+        if missing:
+            raise ValueError(f"Owned attribute(s) missing after reset: {', '.join(missing)}")
 
     # ---- registration (called from Feature.register) ----
 
@@ -152,15 +171,26 @@ class Registry:
         """provider(objects) -> value for the companion snapshot."""
         self._claim(self.spectator_providers, key, provider, "Spectator key")
 
-    def on(self, event, handler, order=DEFAULT_ORDER):
+    def on(self, event, handler, order=run_order.DEFAULT):
         if event not in EVENTS:
             raise ValueError(f"Unknown event {event!r}; known: {', '.join(EVENTS)}")
         self.events[event].append((order, self._next(), handler))
 
-    def contribute(self, slot, provider, order=DEFAULT_ORDER):
-        if slot not in SLOTS:
-            raise ValueError(f"Unknown slot {slot!r}; known: {', '.join(SLOTS)}")
-        self.slots[slot].append((order, self._next(), provider))
+    def slot(self, name, description):
+        """Declare a slot on a page this feature owns; other features contribute() to it."""
+        if name in self.slot_docs:
+            raise ValueError(f"Slot {name!r} is already declared by {self.slot_owners[name]}")
+        self.slot_docs[name], self.slot_owners[name] = description, self._current
+
+    def contribute(self, slot, provider, order=run_order.DEFAULT):
+        """Add to a slot. The slot may be declared by a feature registered later; build() checks it."""
+        self.slots.setdefault(slot, []).append((order, self._next(), provider))
+
+    def owns(self, *names):
+        for name in names:
+            if name in self.owners:
+                raise ValueError(f"Attribute {name!r} is owned by both {self.owners[name]} and {self._current}")
+            self.owners[name] = self._current
 
     def shop_item(self, kind, buy, *, market_price=True):
         """buy(item_id) -> response, or None when this feature does not sell that item."""
@@ -193,21 +223,28 @@ class Registry:
 
     # ---- dispatch (called from core) ----
 
-    def run(self, event):
-        for _, _, handler in sorted(self.events[event], key=lambda entry: entry[:2]):
-            handler()
+    def run(self, event, *, until=None, since=None):
+        """Run handlers in order; until/since restrict to orders below / at or above a boundary."""
+        for order, _, handler in sorted(self.events[event], key=lambda entry: entry[:2]):
+            if (until is None or order < until) and (since is None or order >= since):
+                handler()
+
+    def _providers(self, slot):
+        if slot not in self.slot_docs:
+            raise ValueError(f"Unknown slot {slot!r}")
+        return [provider for _, _, provider in sorted(self.slots.get(slot, []), key=lambda entry: entry[:2])]
 
     def collect(self, slot):
         items = []
-        for _, _, provider in sorted(self.slots[slot], key=lambda entry: entry[:2]):
+        for provider in self._providers(slot):
             items.extend(provider())
         return items
 
     def total(self, slot):
-        return sum(provider() for _, _, provider in sorted(self.slots[slot], key=lambda entry: entry[:2]))
+        return sum(provider() for provider in self._providers(slot))
 
     def draw_slot(self, slot):
-        for _, _, provider in sorted(self.slots[slot], key=lambda entry: entry[:2]):
+        for provider in self._providers(slot):
             provider()
 
     def page_hook(self, page_id, hook):

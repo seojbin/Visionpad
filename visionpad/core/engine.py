@@ -4,6 +4,7 @@ import random
 import time
 
 from pathlib import Path
+from visionpad.core.order import Reset
 from visionpad.core.registry import Registry
 from visionpad.core.state import SharedState
 from visionpad.display.dotpad import DotPad
@@ -59,6 +60,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.registry = Registry.build(self, load_features())
         self._static_fields = set(vars(self))
         self.reset()
+        self.registry.check_owned(self)
 
     @staticmethod
     def prepare_display_config(config):
@@ -121,6 +123,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         return objects
         
     def reset(self):
+        self.registry.run("reset", until=Reset.CORE)
         self.reset_village()
         self._menu_stack = []
         self._load_return = None
@@ -215,7 +218,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         self.regenerate_mine()
         self.reset_fishing()
         self.reset_npcs()
-        self.registry.run("reset")
+        self.registry.run("reset", since=Reset.CORE)
 
         self.render()
 
