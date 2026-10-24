@@ -70,12 +70,14 @@ class Feature:
 
 class Page:
     def __init__(self, feature, name=None, objects=None, scene=None, guidance=None,
-                 press=None, single_press=False, icon_grid=False, **pointer):
+                 press=None, single_press=False, icon_grid=False,
+                 menu_text=None, on_menu_open=None, navigate=None, **pointer):
         unknown = set(pointer) - {"pointer_" + kind for kind in POINTER_KINDS}
         if unknown:
             raise TypeError(f"Unknown page hook(s): {', '.join(sorted(unknown))}")
         self.feature, self.name, self.objects, self.scene, self.guidance = feature, name, objects, scene, guidance
         self.press, self.single_press, self.icon_grid = press, single_press, icon_grid
+        self.menu_text, self.on_menu_open, self.navigate = menu_text, on_menu_open, navigate
         self.pointer = {kind: pointer.get("pointer_" + kind) for kind in POINTER_KINDS}
 
 
@@ -135,7 +137,8 @@ class Registry:
         table[key] = value
 
     def page(self, page_id, *, name=None, objects=None, scene=None, guidance=None,
-             press=None, single_press=False, icon_grid=False, **pointer):
+             press=None, single_press=False, icon_grid=False,
+             menu_text=None, on_menu_open=None, navigate=None, **pointer):
         """Own a page.
         objects() -> list of tactile objects; name -> spoken page name; scene() draws after the objects;
         guidance() -> (kind, targets, completed, total) for audio_guidance.
@@ -143,8 +146,11 @@ class Registry:
         pause or busy checks) and return a response, or None to continue with the core handler.
         press(x, y) runs inside pointer_down after the core checks and bookkeeping, in place of object
         selection. single_press ignores a new press while the pointer is still held.
-        icon_grid places the page's icon objects on the shared twelve-slot grid."""
-        page = Page(self._current, name, objects, scene, guidance, press, single_press, icon_grid, **pointer)
+        icon_grid places the page's icon objects on the shared twelve-slot grid.
+        For pages opened as F-key menus: on_menu_open() runs as the menu opens and menu_text() -> the
+        spoken text. navigate(direction) handles Left/Right on the page (return None for the default)."""
+        page = Page(self._current, name, objects, scene, guidance, press, single_press, icon_grid,
+                    menu_text, on_menu_open, navigate, **pointer)
         self._claim(self.pages, page_id, page, "Page")
 
     def action(self, key, handler, *, before_night_guard=False):

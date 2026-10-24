@@ -528,7 +528,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             "mine": self.get_mine_objects,
             "fishing": self.get_fishing_objects,
             "npc_dialogue": self.get_dialogue_objects,
-            "minimap": self.get_minimap_objects,
             "seed_select": self.get_seed_select_objects,
             "inventory": self.get_inventory_objects,
             "plot_detail": self.get_plot_detail_objects,
@@ -1119,33 +1118,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             o.update(x=round(tx(o["x"])), y=round(ty(o["y"])), hit_width=w, hit_height=h)
         return copied
 
-    def get_minimap_objects(self):
-        cfg = self.config.get("minimap", {})
-        locations = [dict(o) for o in cfg.get("locations", [])]
-        if not locations: return []
-        tx = self.compress_axis([(o["x"]-3,o["x"]+3) for o in locations])
-        ty = self.compress_axis([(o["y"]-3,o["y"]+3) for o in locations])
-        objects = []
-        for route in cfg.get("routes", []):
-            obj = dict(route)
-            obj.update(type="route", x1=round(tx(route["x1"])), x2=round(tx(route["x2"])),
-                       y1=round(ty(route["y1"])), y2=round(ty(route["y2"])),
-                       label="Path", tts="Path", hit_radius=1)
-            objects.append(obj)
-        current = next((o for o in locations if o.get("location")==self.current_location), None)
-        for source in locations:
-            obj = dict(source)
-            location = obj["location"]
-            label = self.get_page_name(location)
-            here = location == self.current_location
-            direction = self.get_relative_direction(current, source) if current and not here else ""
-            obj.update(type="node", x=round(tx(source["x"])), y=round(ty(source["y"])),
-                       width=7, height=7, hit_width=7, hit_height=7, current=here,
-                       label=label, tts=label+(". You are here." if here else (f". {direction}." if direction else ".")),
-                       action=f"travel:{location}")
-            objects.append(obj)
-        return objects
-
     def get_harvest_objects(self):
         if self.harvest_plot_id is None:
             return []
@@ -1421,10 +1393,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
                 self.draw_stove(obj)
             elif obj_type == "plot":
                 self.draw_plot(obj)
-            elif obj_type == "node":
-                self.draw_node(obj)
-            elif obj_type == "route":
-                self.dotpad.draw_line(obj["x1"], obj["y1"], obj["x2"], obj["y2"])
             elif obj_type == "watering_can":
                 self.draw_watering_can(obj)
             elif obj_type == "fertilizer":
@@ -1544,12 +1512,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
         left, top = round(x)-size//2, round(y)-size//2
         for yy in range(top, top+size):
             for xx in range(left, left+size): self.dotpad.set_dot(xx, yy)
-
-    def draw_node(self, obj):
-        if obj.get("current"):
-            self.draw_filled_square(obj["x"], obj["y"], 7)
-        else:
-            self.dotpad.draw_box(obj["x"], obj["y"], 7, 7)
 
     def draw_icon_pattern(self, x, y, rows):
         if not rows:
@@ -1788,7 +1750,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
 
         # A map location, transition, building or navigation control has only
         # a name in standard hover, regardless of its verbose TTS.
-        if kind in ("node", "route", "arrow", "home_hitbox", "shop_hitbox"):
+        if kind in ("arrow", "home_hitbox", "shop_hitbox"):
             return label
 
         if kind in ("plot", "plot_detail_field"):
@@ -1828,7 +1790,7 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             return self.registry.hover_sounds[obj["type"]]
         mapping = {
             "bed": "hover_bed", "chest": "hover_chest", "stove": "hover_stove",
-            "plot": "hover_plot", "node": "hover_node", "route": "hover_route",
+            "plot": "hover_plot",
             "watering_can": "hover_water_tool", "fertilizer": "hover_fertilizer",
             "seed": "hover_seed", "resource": "hover_resource",
             "harvest_crop": "hover_harvest_crop", "harvest_field": "hover_plot", "arrow": "hover_navigation",
@@ -2222,18 +2184,6 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             return self.response(tts='Village. Rowan would like to meet you.',sfx='travel')
         return self.response(tts=f"{name}", sfx="travel")
 
-    def open_minimap(self):
-        if self.day_ended:
-            return self.night_only_response()
-        self.current_page = "minimap"
-        self.seed_select_plot_id = None
-        self.clear_care()
-        self.clear_harvest()
-        self.clear_cooking()
-        self.clear_hover()
-        self.render()
-        return self.response(tts="Map.", sfx="open_page")
-
     def open_inventory(self):
         if self.day_ended:
             return self.night_only_response()
@@ -2255,12 +2205,15 @@ class GameEngine(NpcMixin, VillageMixin, SeafoodMixin, FishingMixin, KeypadUI, S
             if not 0 <= self.inventory_page+delta < self.inventory_page_count:
                 return self.response(tts='First page.' if delta<0 else 'Last page.')
             return self._perform_action(f'inventory_page:{delta}', {})
-        if self.current_page in ('minimap', 'load_game'):
+        if self.current_page == 'load_game':
             if self.paused: return self.response(tts='Resume first.')
             if self.sleep_until is not None: return self.response(tts='Sleeping. Please wait.')
-            if self.current_page == 'load_game': return self.close_load_game()
-            self._menu_stack.clear()
-            return self.return_to_scene()
+            return self.close_load_game()
+        navigate = self.registry.page_hook(self.current_page, "navigate")
+        if navigate:
+            result = navigate(direction)
+            if result is not None:
+                return result
         return super().navigate_key(direction)
 
     def return_to_scene(self):

@@ -23,9 +23,12 @@ class KeypadUI:
         self.drag_tool = None
         self.current_page = page
         if page == 'inventory': self.inventory_page = 0
+        on_open = self.registry.page_hook(page, 'on_menu_open')
+        if on_open: on_open()
         self.clear_hover()
         self.render()
-        return self.response(tts='Map. Select a place.' if page == 'minimap' else f'Inventory. {self.resources["coin"]} gold.', sfx='open_page')
+        menu_text = self.registry.page_hook(page, 'menu_text')
+        return self.response(tts=menu_text() if menu_text else f'Inventory. {self.resources["coin"]} gold.', sfx='open_page')
 
     def key_arrows(self, direction):
         all_arrows = [o for o in self.get_layout_objects() if o.get('type') == 'arrow']

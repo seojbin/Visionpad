@@ -9,6 +9,7 @@ from importlib import import_module
 ENABLED = (
     "flowers",
     "research",
+    "minimap",
 )
 
 

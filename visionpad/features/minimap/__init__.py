@@ -1,1 +1,2 @@
-"""minimap feature. Code still lives in visionpad/core/engine.py until it is extracted."""
+"""Minimap: the F1 map of locations and paths."""
+from visionpad.features.minimap.feature import Minimap as Feature
