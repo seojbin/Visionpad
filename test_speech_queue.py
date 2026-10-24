@@ -92,7 +92,12 @@ class QueueTests(unittest.IsolatedAsyncioTestCase):
         good = self.queue.submit("good")
         with self.assertRaises(ValueError):
             await bad.future
-        self.assertEqual((await good.future)["text"], "good")
+        # A stuck worker must fail this test instead of hanging the whole suite.
+        try:
+            result = await asyncio.wait_for(good.future, 5)
+        except TimeoutError:
+            self.fail("The next request did not finish within 5 seconds")
+        self.assertEqual(result["text"], "good")
 
     async def test_queue_capacity_is_bounded(self):
         await self.blocked()

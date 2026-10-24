@@ -41,7 +41,7 @@ class DemoSpeechTests(unittest.TestCase):
         self.assertEqual(len(keys), len(set(keys)))
         self.assertTrue(all(key[1] for key in keys))
         self.assertFalse(any(line["text"].startswith("Save 1. Day") for line in self.lines))
-        npc = json.loads((ROOT / "npc_config.json").read_text())["shopkeeper"]
+        npc = json.loads((ROOT / "npc_config.json").read_text(encoding="utf-8"))["shopkeeper"]
         text = {line["text"] for line in self.lines if line["profile"] == "shopkeeper"}
         expected = [npc[key] for key in ("greeting", "return_greeting", "goodbye")]
         expected += list(npc["farming"].values()) + list(npc["fishing"].values())

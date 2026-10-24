@@ -13,7 +13,7 @@ class ActionSoundTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.engine = GameEngine(json.loads((ROOT / 'game_config.json').read_text()), save_dir=self.temp.name)
+        self.engine = GameEngine(json.loads((ROOT / 'game_config.json').read_text(encoding='utf-8')), save_dir=self.temp.name)
 
     def test_travel_and_shop_entry_emit_the_matching_recording_once(self):
         response = self.engine.handle_command('right')

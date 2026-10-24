@@ -14,7 +14,7 @@ class TeamIntegrationTests(unittest.TestCase):
     def setUp(self):
         saved = tempfile.TemporaryDirectory()
         self.addCleanup(saved.cleanup)
-        self.engine = GameEngine(json.loads((ROOT / 'game_config.json').read_text()), save_dir=saved.name)
+        self.engine = GameEngine(json.loads((ROOT / 'game_config.json').read_text(encoding='utf-8')), save_dir=saved.name)
         self.engine.travel_to('town')
 
     def test_village_has_one_rowan_and_quest_replay_does_not_repeat_gifts(self):

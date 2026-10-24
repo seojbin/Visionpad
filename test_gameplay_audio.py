@@ -16,7 +16,7 @@ class GameplayAudioTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.engine = GameEngine(json.loads((ROOT/'game_config.json').read_text()), save_dir=self.temp.name)
+        self.engine = GameEngine(json.loads((ROOT/'game_config.json').read_text(encoding='utf-8')), save_dir=self.temp.name)
 
     def harvest(self):
         e = self.engine
