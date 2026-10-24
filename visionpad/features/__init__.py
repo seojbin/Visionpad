@@ -18,6 +18,7 @@ ENABLED = (
     "seafood",
     "shop",
     "cooking",
+    "harvest",
 )
 
 

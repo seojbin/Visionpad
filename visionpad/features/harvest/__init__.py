@@ -1,1 +1,2 @@
-"""harvest feature. Code still lives in visionpad/core/engine.py until it is extracted."""
+"""Harvest: the crop-collecting minigame, yield and seed recovery."""
+from visionpad.features.harvest.feature import Harvest as Feature

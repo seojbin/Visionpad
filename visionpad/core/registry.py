@@ -55,7 +55,6 @@ CORE_SLOTS = {
     "home.objects": "Extra tactile objects on the home page (daytime only). Provider returns a list of objects.",
     "home.scene_objects": "Home scene hitboxes, inserted after the kitchen and before the roads (daytime only).",
     "home.scene": "Drawing on the home scene after the furniture (daytime only). Provider draws, returns None.",
-    "harvest.bonus": "Integer added to every harvest yield. Provider returns a number.",
 }
 
 POINTER_KINDS = ("move", "down", "drag", "up")

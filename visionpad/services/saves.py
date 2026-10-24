@@ -75,7 +75,7 @@ class SaveMixin:
             deadline, kind = state["pending_visual_completion"]
             state["pending_visual_completion"] = (deadline-now, kind)
         # A physical held gesture cannot safely survive a restart.
-        for key in ("pointer_pressed", "care_dragging", "harvest_dragging"):
+        for key in ("pointer_pressed", "care_dragging"):
             state[key] = False
         state["drag_tool"] = None
         state["hover_object_id"] = None

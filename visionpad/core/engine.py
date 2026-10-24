@@ -174,11 +174,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         self.care_collected_ids = set()
         self.care_visible_until = {}
 
-        self.harvest_plot_id = None
-        self.harvest_targets = []
-        self.harvest_dragging = False
-        self.harvest_collected_ids = set()
-
         self.active_buff = {
             "kind": None,
             "source": None,
@@ -223,12 +218,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         self.care_visible_until = {}
         if not keep_detail:
             self.detail_plot_id = None
-
-    def clear_harvest(self):
-        self.harvest_plot_id = None
-        self.harvest_targets = []
-        self.harvest_dragging = False
-        self.harvest_collected_ids.clear()
 
     def has_final_consonant(self, text):
         if not text:
@@ -431,7 +420,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             "plot_detail": self.get_plot_detail_objects,
             "water_minigame": self.get_care_minigame_objects,
             "fertilizer_minigame": self.get_care_minigame_objects,
-            "harvest": self.get_harvest_objects,
         }
         getter = self.registry.page_hook(self.current_page, "objects") or pages.get(self.current_page)
         objects = self.compact_objects(getter()) if getter else []
@@ -920,33 +908,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             o.update(x=round(tx(o["x"])), y=round(ty(o["y"])), hit_width=w, hit_height=h)
         return copied
 
-    def get_harvest_objects(self):
-        if self.harvest_plot_id is None:
-            return []
-        state = self.farm_plots.get(self.harvest_plot_id)
-        if state is None or state["seed_id"] is None:
-            return []
-        seed_label = self.get_seed_label(state["seed_id"])
-        field = self.config.get("harvest_minigame", {}).get("field", {})
-        objects = [{
-            "id": "harvest_field", "type": "harvest_field",
-            "x": int(field.get("x", 30)), "y": int(field.get("y", 20)),
-            "width": int(field.get("width", 46)), "height": int(field.get("height", 30)),
-            "hit_width": int(field.get("width", 46)), "hit_height": int(field.get("height", 30)),
-            "label": " Plot",
-            "tts": f"Move over crops.",
-            "action": ""
-        }]
-        for target in self.harvest_targets:
-            if target["id"] in self.harvest_collected_ids:
-                continue
-            objects.append({
-                "id": target["id"], "type": "harvest_crop", "x": target["x"], "y": target["y"],
-                "width": 5, "height": 5, "hit_width": 7, "hit_height": 7,
-                "label": f"Harvest {seed_label}", "tts": f"Harvest {seed_label}. Move.", "action": ""
-            })
-        return objects
-
     def back_arrow(self, object_id, label, action):
         return {
             "id": object_id, "type": "arrow", "x": 6, "y": 35,
@@ -1012,10 +973,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
                 self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 46), obj.get("height", 30))
             elif obj_type == "care_target":
                 self.draw_care_target(obj)
-            elif obj_type == "harvest_field":
-                self.dotpad.draw_box(obj["x"], obj["y"], obj.get("width", 46), obj.get("height", 30))
-            elif obj_type == "harvest_crop":
-                self.draw_harvest_crop(obj)
 
         if self.current_page == "home":
             self.draw_home_scene()
@@ -1157,11 +1114,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             self.dotpad.set_dot(x - 1, y + 1)
             self.dotpad.set_dot(x + 1, y + 1)
 
-    def draw_harvest_crop(self, obj):
-        x, y = int(obj["x"]), int(obj["y"])
-        for dx, dy in [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)]:
-            self.dotpad.set_dot(x + dx, y + dy)
-
     def defer_visual_completion(self, kind, visible_until):
         deadline = max(visible_until.values(), default=0)
         if time.monotonic() >= deadline:
@@ -1291,7 +1243,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             "plot": "hover_plot",
             "watering_can": "hover_water_tool", "fertilizer": "hover_fertilizer",
             "seed": "hover_seed", "resource": "hover_resource",
-            "harvest_crop": "hover_harvest_crop", "harvest_field": "hover_plot", "arrow": "hover_navigation",
+            "arrow": "hover_navigation",
             "plot_detail_field": "hover_plot", "growth_gauge": "hover_plot", "care_button": "hover_tool", "care_field": "hover_plot",
             "care_target": "hover_tool"
         }
@@ -1314,37 +1266,28 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
 
     def release_pointer(self):
         """Drop the pointer and any held drag (menus, save, pause, release command)."""
-        self.pointer_pressed = self.care_dragging = self.harvest_dragging = False
+        self.pointer_pressed = self.care_dragging = False
         self.registry.run("release_drag")
         self.drag_tool = None
 
     def leave_activities(self):
         self.clear_care()
-        self.clear_harvest()
         self.registry.run("leave_activity")
 
     def move_minigame(self, x, y):
         return self.minigame_input(x, y, self.collect_step)
 
     def collect_step(self, px, py, x, y):
-        care=self.current_page in ('water_minigame','fertilizer_minigame')
-        if care:
-            self.care_dragging=True
-            before=len(self.care_collected_ids)
-            self.collect_care_segment(px,py,x,y)
-            gained=len(self.care_collected_ids)-before
-            complete=bool(self.care_targets) and len(self.care_collected_ids) == len(self.care_targets)
-        else:
-            self.harvest_dragging=True
-            before=len(self.harvest_collected_ids)
-            self.collect_harvest_segment(px,py,x,y)
-            gained=len(self.harvest_collected_ids)-before
-            complete=bool(self.harvest_targets) and len(self.harvest_collected_ids)==len(self.harvest_targets)
+        self.care_dragging=True
+        before=len(self.care_collected_ids)
+        self.collect_care_segment(px,py,x,y)
+        gained=len(self.care_collected_ids)-before
+        complete=bool(self.care_targets) and len(self.care_collected_ids) == len(self.care_targets)
         if complete:
-            result=self.finish_care_minigame() if care else self.finish_harvest_minigame()
+            result=self.finish_care_minigame()
         else:
             if gained:self.render()
-            result=self.response(sfx=('care_spray' if care else 'harvest_collect') if gained else None)
+            result=self.response(sfx='care_spray' if gained else None)
         if gained:result.setdefault('sound_events',[]).append({'kind':'correct','count':gained})
         return result
 
@@ -1357,7 +1300,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         result = self.page_pointer("move", x, y)
         if result is not None:
             return result
-        if self.current_page in ('water_minigame','fertilizer_minigame','harvest'):
+        if self.current_page in ('water_minigame','fertilizer_minigame'):
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
             return self.response()
@@ -1392,7 +1335,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         result = self.page_pointer("down", x, y)
         if result is not None:
             return result
-        if self.current_page in ('water_minigame','fertilizer_minigame','harvest'):
+        if self.current_page in ('water_minigame','fertilizer_minigame'):
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
             return self.response()
@@ -1425,15 +1368,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             mode_label = "Water " if self.care_mode == "water" else " fertilizer "
             return self.response(tts=f"{mode_label}. Move over targets.", sfx="tool_pickup")
 
-        if self.current_page == "harvest":
-            self.harvest_dragging = True
-            before = len(self.harvest_collected_ids)
-            collected = self.collect_harvest_point(x, y)
-            if collected:
-                self.render()
-                return self.response(sfx="harvest_collect", sound_events=[{"kind": "correct", "count": len(self.harvest_collected_ids) - before}])
-            return self.response(tts="Harvest. Move over crops.", sfx="tool_pickup")
-
         obj = self.find_object(x, y)
         if obj is None:
             return self.response()
@@ -1459,7 +1393,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         result = self.page_pointer("drag", x, y)
         if result is not None:
             return result
-        if self.current_page in ('water_minigame','fertilizer_minigame','harvest'):
+        if self.current_page in ('water_minigame','fertilizer_minigame'):
             return self.move_minigame(x,y)
         if self.sleep_until is not None:
             return self.response()
@@ -1479,16 +1413,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
             if collected:
                 self.render()
                 return self.response(sfx="care_spray", sound_events=[{"kind": "correct", "count": len(self.care_collected_ids) - before}])
-            return self.response()
-
-        if self.current_page == "harvest" and self.harvest_dragging:
-            if previous_x is None or previous_y is None:
-                previous_x, previous_y = x, y
-            before = len(self.harvest_collected_ids)
-            collected = self.collect_harvest_segment(previous_x, previous_y, x, y)
-            if collected:
-                self.render()
-                return self.response(sfx="harvest_collect", sound_events=[{"kind": "correct", "count": len(self.harvest_collected_ids) - before}])
             return self.response()
 
         if self.drag_tool is None:
@@ -1511,7 +1435,7 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         result = self.page_pointer("up", x, y)
         if result is not None:
             return result
-        if self.current_page in ('water_minigame','fertilizer_minigame','harvest'):
+        if self.current_page in ('water_minigame','fertilizer_minigame'):
             self.pointer_pressed=False
             return self.response()
         if self.sleep_until is not None:
@@ -1535,9 +1459,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         if self.current_page in ("water_minigame", "fertilizer_minigame") and self.care_dragging:
             self.care_dragging = False
             result = self.finish_care_minigame()
-        elif self.current_page == "harvest" and self.harvest_dragging:
-            self.harvest_dragging = False
-            result = self.finish_harvest_minigame()
         else:
             self.drag_tool = None
             self.drag_target_ids.clear()
@@ -1582,8 +1503,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         if action.startswith("plant:"):
             _, plot_id, seed_id = action.split(":", 2)
             return self.plant_seed(plot_id, seed_id)
-        if action.startswith("start_harvest:"):
-            return self.start_harvest_minigame(action.split(":", 1)[1])
         if action.startswith("inspect:"):
             return self.response(tts=self.get_object_tts(obj))
         if action == "rest":
@@ -1885,91 +1804,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         chance = chances[min(level - 1, len(chances) - 1)] if level > 0 else self.get_seed_config(seed_id).get("seed_return_chance", 0.0)
         return min(1.0, max(0.0, float(chance)))
 
-    def start_harvest_minigame(self, plot_id):
-        state = self.farm_plots.get(plot_id)
-        if state is None or not state["mature"]:
-            return self.response(tts="Crop not ready.", sfx="error")
-        cfg = self.config.get("harvest_minigame", {})
-        positions = [tuple(v) for v in cfg.get("target_positions", [])]
-        target_count = min(int(cfg.get("target_count", 6)), len(positions))
-        selected = random.sample(positions, target_count)
-        self.harvest_plot_id = plot_id
-        self.harvest_targets = [{"id": f"harvest_target_{i}", "x": x, "y": y} for i, (x, y) in enumerate(selected)]
-        self.harvest_collected_ids.clear()
-        self.harvest_dragging = False
-        self.last_pointer = (None, None)
-        self.current_page = "harvest"
-        self.clear_hover()
-        self.render()
-        return self.response(tts=f"{self.get_seed_label(state['seed_id'])} harvest. Collect all crops.", sfx="harvest_start")
-
-    def collect_harvest_point(self, x, y):
-        collected = False
-        for target in self.harvest_targets:
-            if target["id"] not in self.harvest_collected_ids and abs(x - target["x"]) <= 3.5 and abs(y - target["y"]) <= 3.5:
-                self.harvest_collected_ids.add(target["id"])
-                collected = True
-        return collected
-
-    def collect_harvest_segment(self, x1, y1, x2, y2):
-        collected = False
-        for target in self.harvest_targets:
-            if target["id"] in self.harvest_collected_ids:
-                continue
-            if self.point_to_segment_distance(target["x"], target["y"], x1, y1, x2, y2) <= 3.5:
-                self.harvest_collected_ids.add(target["id"])
-                collected = True
-        return collected
-
-    def finish_harvest_minigame(self):
-        if self.harvest_plot_id is None or not self.harvest_targets:
-            self.clear_harvest()
-            return self.return_to_scene()
-        collected = len(self.harvest_collected_ids)
-        total = len(self.harvest_targets)
-        if collected < total:
-            self.render()
-            return self.response(tts=f"Harvest {collected}/{total}. Collect remaining crops.")
-
-        plot_id = self.harvest_plot_id
-        state = self.farm_plots[plot_id]
-        seed_id = state["seed_id"]
-        seed_config = self.get_seed_config(seed_id)
-        seed_label = self.get_seed_label(seed_id)
-        base_yield = self.get_harvest_base_yield(seed_id)
-        buff_multiplier = self.buff_multiplier_for("harvest_multiplier")
-        buff_applied = buff_multiplier > 1.0
-        yield_count = self.loot_amount(max(1, int(math.ceil(base_yield * buff_multiplier)))) + self.registry.total("harvest.bonus")
-        self.resources["crops"][seed_id] = int(self.resources["crops"].get(seed_id, 0)) + yield_count
-
-        chance = self.get_effective_seed_return_chance(seed_id)
-        got_seed = random.random() < chance
-        seed_count = self.loot_amount(1) if got_seed else 0
-        if got_seed:
-            self.resources["seeds"][seed_id] = int(self.resources["seeds"].get(seed_id, 0)) + seed_count
-
-        self.farm_plots[plot_id] = self.new_plot_state()
-        self.current_location = "farm"
-        self.current_page = "farm"
-        self.detail_plot_id = None
-        self.clear_harvest()
-        self.clear_hover()
-
-        text = f"Harvested. {seed_label} {yield_count}."
-        self.registry.run("activity", "harvest", seed_label, yield_count)
-        if buff_applied:
-            text += ". Harvest boost applied."
-        if got_seed:
-            text += f". {seed_count} seeds recovered."
-        else:
-            text += ". No seed recovered."
-
-        result = self.consume_time("harvest")
-        if result["night"]:
-            return self.night_response(text)
-        self.render()
-        return self.response(tts=text, sfx="harvest")
-
     def build_path_samples(self, path, spacing=1.5):
         if len(path) < 2:
             return [tuple(path[0])] if path else []
@@ -2024,10 +1858,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
                 kind = "water" if self.care_mode == "water" else "soil"
                 targets = [dict(target) for target in self.care_targets if target["id"] not in self.care_collected_ids]
                 completed, total = len(self.care_collected_ids), len(self.care_targets)
-            elif self.current_page == "harvest":
-                kind = "crop"
-                targets = [dict(target) for target in self.harvest_targets if target["id"] not in self.harvest_collected_ids]
-                completed, total = len(self.harvest_collected_ids), len(self.harvest_targets)
             else:
                 guidance = self.registry.page_hook(self.current_page, "guidance")
                 if guidance:
@@ -2092,12 +1922,6 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
                 "collected_targets": len(self.care_collected_ids),
                 "dragging": self.care_dragging
             },
-            "harvest": {
-                "plot_id": self.harvest_plot_id,
-                "total_targets": len(self.harvest_targets),
-                "collected_targets": len(self.harvest_collected_ids),
-                "dragging": self.harvest_dragging
-            },
             "dots": self.dotpad.to_list(),
             "width": self.dotpad.width,
             "height": self.dotpad.height,
@@ -2138,6 +1962,3 @@ class GameEngine(KeypadUI, SaveMixin, SharedState, FoodEffects):
         if reward_sound is not None:
             event.update(reward_sound=reward_sound, tts=loot_tts or "")
         return event
-
-    def get_harvest_base_yield(self, seed_id):
-        return int(self.get_seed_config(seed_id).get("yield", 1))

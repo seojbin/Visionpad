@@ -53,7 +53,6 @@ def spectator_snapshot(engine, objects):
         'routes': [{k: o[k] for k in ('x1', 'y1', 'x2', 'y2')}
                    for o in objects if o.get('type') == 'route'],
         'care_targets': targets(engine.care_targets, engine.care_collected_ids, engine.care_visible_until),
-        'harvest_targets': targets(engine.harvest_targets, engine.harvest_collected_ids, {}),
     }
     for key, provider in engine.registry.spectator_providers.items():
         if key in snapshot:
