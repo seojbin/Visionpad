@@ -79,6 +79,32 @@ class SetupChecks(unittest.TestCase):
         failed = {check["name"] for check in self.report()["checks"] if not check["ok"]}
         self.assertEqual(failed, {"Game sounds", "Game files"})
 
+    def test_missing_new_game_modules_and_demo_helpers_are_reported(self):
+        for name in ("engine/display/icons.py", "game/village/feature.py",
+                     "engine/tools/audio_flow.py", "engine/tools/speech_inventory.py"):
+            with self.subTest(file=name):
+                path = self.root / name
+                path.unlink()
+                check = next(item for item in self.report()["checks"] if item["name"] == "Game files")
+                self.assertFalse(check["ok"])
+                self.assertIn(name, check["detail"])
+                path.touch()
+
+    def test_voice_settings_with_korean_and_utf8_bom_ignore_cp949_defaults(self):
+        config = self.root / "engine/config/speech.json"
+        values = json.loads(config.read_text(encoding="utf-8"))
+        values["profiles"]["system"]["label"] = "시스템 안내"
+        config.write_text(json.dumps(values, ensure_ascii=False), encoding="utf-8-sig")
+        settings = self.model.with_suffix(".onnx.json")
+        settings.write_text(json.dumps({"audio": {"sample_rate": 22050}, "phoneme_id_map": {"가": [1]}}, ensure_ascii=False), encoding="utf-8-sig")
+        read_text = Path.read_text
+
+        def windows_read(path, encoding=None, **kwargs):
+            return read_text(path, encoding=encoding or "cp949", **kwargs)
+
+        with patch.object(Path, "read_text", windows_read):
+            self.assertTrue(self.report()["ready"])
+
     def test_older_python_is_reported_before_starting_any_server(self):
         report = check_setup(self.root, get_version=VERSIONS.__getitem__, python_version=(3, 10, 9))
         self.assertFalse(report["ready"])
@@ -93,8 +119,17 @@ class StartupTests(unittest.TestCase):
         schema["paths"] = {}
         with patch("engine.launcher.launch_game.urlopen", return_value=io.BytesIO(json.dumps(schema).encode())):
             self.assertEqual(launch_game.server_status("http://127.0.0.1:8000"), "other")
-        with patch("engine.launcher.launch_game.urlopen", side_effect=URLError(ConnectionRefusedError())):
+        with patch("engine.launcher.launch_game.urlopen", side_effect=URLError(ConnectionRefusedError())), \
+                patch("engine.launcher.launch_game.port_is_available", return_value=True):
             self.assertEqual(launch_game.server_status("http://127.0.0.1:8000"), "free")
+
+    def test_windows_timeout_does_not_hide_a_free_port(self):
+        with patch("engine.launcher.launch_game.urlopen", side_effect=URLError(TimeoutError())), \
+                patch("engine.launcher.launch_game.port_is_available", return_value=True):
+            self.assertEqual(launch_game.server_status("http://127.0.0.1:8000"), "free")
+        with patch("engine.launcher.launch_game.urlopen", side_effect=URLError(TimeoutError())), \
+                patch("engine.launcher.launch_game.port_is_available", side_effect=OSError("busy")):
+            self.assertEqual(launch_game.server_status("http://127.0.0.1:8000"), "other")
 
     def test_existing_server_is_reused_without_launching_or_stopping_a_process(self):
         with patch("engine.launcher.launch_game.server_status", return_value="game"), patch("engine.launcher.launch_game.subprocess.Popen") as start:
