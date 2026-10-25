@@ -8,6 +8,9 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from engine.services.speech import valid_model_file  # noqa: E402 (Piper itself is imported only for synthesis)
+
 DEPENDENCIES = {"fastapi": ((0, 110), (1,)), "uvicorn": ((0, 29), (1,)),
                 "piper-tts": ((1, 8, 0), (1, 8, 1)), "onnxruntime": (None, None)}
 ASSETS = ("water", "soil", "cut", "cook", "crop", "correct", "sleep", "door", "coin",
@@ -73,16 +76,12 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
                 raise ValueError("Invalid voice model entry")
             model = root / ".audio/voices" / (entry["model"] + ".onnx")
             model_config = model.with_suffix(".onnx.json")
-            good = model.is_file() and model.stat().st_size > 0
-            reason = "Model missing or empty: " + str(model) if not good else ""
-            try:
-                values = json.loads(model_config.read_text(encoding="utf-8-sig"))
-                good = good and values["audio"]["sample_rate"] > 0 and bool(values["phoneme_id_map"])
-            except (OSError, ValueError, KeyError, TypeError) as error:
-                good = False
-                reason = f"Voice config {model_config}: {type(error).__name__}: {error}"
-            add("Voice: " + profile, good, entry["model"] if good else reason or "Invalid voice configuration: " + str(model_config),
-                "Run install-mac.command or install-windows.bat. If a damaged download remains, rename that model and its .onnx.json file before retrying setup.")
+            # Pinned size and SHA-256 from speech.json "downloads"; without them, presence and a valid config.
+            expected = config.get("downloads", {}).get(entry["model"], {}).get("files", {})
+            broken = [str(path) for path, extension in ((model, ".onnx"), (model_config, ".onnx.json"))
+                      if not valid_model_file(path, expected.get(extension))]
+            add("Voice: " + profile, not broken, entry["model"] if not broken else "Missing or damaged: " + ", ".join(broken),
+                "Run install-mac.command or install-windows.bat again. Missing and damaged voice files are downloaded automatically.")
     except (OSError, ValueError, KeyError, TypeError, AssertionError):
         add("Voice configuration", False, "engine/config/speech.json is missing or invalid", "Restore engine/config/speech.json.")
 
@@ -112,7 +111,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
                         "Generated valid WAV in temporary storage")
                 except Exception as error:
                     add("Voice synthesis: " + profile, False, str(error),
-                        "Check Python and audio package support. For an interrupted model download, rename its model/config pair in .audio/voices and run setup again.")
+                        "Run install-mac.command or install-windows.bat again and check the reported package or voice error.")
 
     return {"ready": all(check["ok"] for check in checks), "platform": platform.platform(),
             "python": sys.executable, "voice_synthesis_requested": synthesize, "checks": checks,
