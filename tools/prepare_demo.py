@@ -12,8 +12,8 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from visionpad.config import load_config
-from visionpad.services.speech import spoken_text
+from engine.config import load_config
+from engine.services.speech import spoken_text
 from tools.audio_flow import run_flow
 from tools.speech_inventory import collect
 
@@ -36,7 +36,7 @@ def demo_lines():
 
     config = load_config("speech")
     for sample in config["samples"]:
-        add(sample["text"], "system", "config/speech.json:" + sample["id"])
+        add(sample["text"], "system", "engine/config/speech.json:" + sample["id"])
 
     npcs = load_config("npc")
     for npc_id, npc in npcs.items():
@@ -44,11 +44,11 @@ def demo_lines():
         topics.update({f"farming.{key}": text for key, text in npc["farming"].items()})
         topics.update({f"fishing.{key}": text for key, text in npc["fishing"].items()})
         for topic, text in topics.items():
-            add(f'{npc["name"]}. {text}', npc["voice_profile"], f"config/npc.json:{npc_id}.{topic}")
+            add(f'{npc["name"]}. {text}', npc["voice_profile"], f"engine/config/npc.json:{npc_id}.{topic}")
 
     # Exercise the team's tutorial in temporary progress, so gifts/rewards only
     # shape the sample lines and never touch a running player's game.
-    from visionpad.core.engine import GameEngine
+    from engine.core.engine import GameEngine
     with tempfile.TemporaryDirectory(prefix="visionpad-demo-quest-") as saved:
         engine = GameEngine(load_config("game"), save_dir=saved)
         engine.travel_to("town")
@@ -74,8 +74,8 @@ def demo_lines():
             quest_line(engine.open_calendar())
 
     # Only literal test-button calls are read; JavaScript is never evaluated.
-    # The page script lives in web/core/game.js and web/features/*/client.js.
-    pages = [ROOT / "web/game.html", ROOT / "web/core/game.js", *sorted((ROOT / "web/features").glob("*/client.js"))]
+    # The page script lives in engine/web/core/game.js and game/*/client.js.
+    pages = [ROOT / "engine/web/game.html", ROOT / "engine/web/core/game.js", *sorted((ROOT / "game").glob("*/client.js"))]
     for path in pages:
         page = path.read_text(encoding="utf-8-sig")
         for match in re.finditer(r'\b(?:announce|speak)\(("(?:\\.|[^"\\])*")([^;\n]*)', page):

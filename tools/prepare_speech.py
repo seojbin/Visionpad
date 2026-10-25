@@ -10,7 +10,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from visionpad.services.speech import SpeechService
+from engine.services.speech import SpeechService
 
 def fallback_download(model, dest_dir):
     """Piper 자체 다운로드 실패 시 HuggingFace에서 직접 파일을 받아옵니다."""

@@ -6,9 +6,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from visionpad.config import load_config
-from visionpad.core.engine import GameEngine
-from visionpad.paths import ROOT
+from engine.config import load_config
+from engine.core.engine import GameEngine
+from engine.paths import ROOT
 
 MEMORY = ('activity_counts', 'activity_serial', 'recent_activity', 'npc_reactions', 'activity_history_complete')
 
@@ -70,7 +70,7 @@ class GameplayAudioTests(unittest.TestCase):
         e = self.engine
         e.travel_to('fishing')
         e.resources['fishing_rod'] = 1
-        with patch('visionpad.features.fishing.feature.random.choices', return_value=['low']):
+        with patch('game.fishing.feature.random.choices', return_value=['low']):
             e.cast_fishing(*e.fishing_target)
         self.assertEqual(e.activity_counts['fishing'], 1)
         text = self.talk()['tts']

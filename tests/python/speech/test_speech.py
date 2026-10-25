@@ -6,10 +6,10 @@ import tempfile
 import unittest
 import wave
 
-from visionpad.config import load_config
-from visionpad.core.engine import GameEngine
-from visionpad.paths import ROOT
-from visionpad.services.speech import SpeechService, SpeechUnavailable, spoken_text
+from engine.config import load_config
+from engine.core.engine import GameEngine
+from engine.paths import ROOT
+from engine.services.speech import SpeechService, SpeechUnavailable, spoken_text
 
 
 

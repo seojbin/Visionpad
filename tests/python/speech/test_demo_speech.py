@@ -5,8 +5,8 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from visionpad.config import load_config
-from visionpad.services.speech import spoken_text
+from engine.config import load_config
+from engine.services.speech import spoken_text
 from tools.prepare_demo import demo_lines, prepare, ServerSpeech
 
 

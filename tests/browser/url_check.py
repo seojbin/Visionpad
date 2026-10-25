@@ -3,7 +3,7 @@
     python tests/browser/url_check.py --record   # write tests/browser/recorded-urls.txt from the web tree
     python tests/browser/url_check.py            # start a server, check recorded + currently referenced URLs
 
-URLs come from a static scan of web/ (HTML, JS, JSON, CSS): quoted asset paths, /static/ and /api/
+URLs come from a static scan of engine/web/ (HTML, JS, JSON, CSS): quoted asset paths, /static/ and /api/
 references, the GameAudio sound list and the texture paths in the companion's asset registry.
 The Dot Pad SDK (gitignored, downloaded by hand) is reported but not required.
 """
@@ -20,7 +20,8 @@ from pathlib import Path
 from posixpath import dirname, join, normpath
 
 ROOT = Path(__file__).resolve().parents[2]
-WEB = ROOT / "web"
+WEB = ROOT / "engine" / "web"
+GAME = ROOT / "game"
 RECORDED = Path(__file__).with_name("recorded-urls.txt")
 OPTIONAL = re.compile(r"/vendor/DotPadSDK-")
 QUOTED = re.compile(r"""['"`]([^'"`\s<>]*?\.(?:json|js|mjs|css|png|mp3|html)(?:\?[^'"`\s<>]*)?)['"`]""")
@@ -28,8 +29,17 @@ API_GET = ("/api/state", "/api/speech/voices", "/openapi.json")
 
 
 def served_url(path):
-    """URL of a file under web/ (game.html is also served at '/')."""
+    """URL of a file under engine/web/, or of a feature's browser file in game/ (game.html is also served at '/')."""
+    if path.is_relative_to(GAME):
+        return "/static/features/" + path.relative_to(GAME).as_posix()
     return "/static/" + path.relative_to(WEB).as_posix()
+
+
+def web_files():
+    """engine/web/ plus each feature's client.js, audio/ and assets/: the files the server publishes."""
+    features = [path for folder in sorted(GAME.iterdir()) if folder.is_dir()
+                for path in [folder / "client.js", *sorted(folder.glob("audio/*")), *sorted(folder.glob("assets/*"))]]
+    return sorted(WEB.rglob("*")) + features
 
 
 def resolve(base_dir, ref):
@@ -45,7 +55,7 @@ def resolve(base_dir, ref):
 
 def scan():
     urls = {"/"} | set(API_GET)
-    for path in sorted(WEB.rglob("*")):
+    for path in web_files():
         if path.suffix not in (".html", ".js", ".mjs", ".json", ".css") or not path.is_file():
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
@@ -80,7 +90,7 @@ def fetch(base, url):
 
 def check(urls):
     port = free_port()
-    server = subprocess.Popen([sys.executable, "-m", "uvicorn", "visionpad.app.main:app", "--host", "127.0.0.1",
+    server = subprocess.Popen([sys.executable, "-m", "uvicorn", "engine.server.main:app", "--host", "127.0.0.1",
                                "--port", str(port), "--log-level", "warning"], cwd=ROOT)
     base = f"http://127.0.0.1:{port}"
     try:

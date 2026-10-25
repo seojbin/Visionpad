@@ -21,7 +21,7 @@ class Pad:
   pts={'left':[(-size,0),(size,-size),(size,size)],'right':[(size,0),(-size,-size),(-size,size)],'up':[(0,-size),(-size,size),(size,size)],'down':[(0,size),(-size,-size),(size,-size)]}[direction]
   for a,b in zip(pts,pts[1:]+pts[:1]):self.draw_line(x+a[0],y+a[1],x+b[0],y+b[1])
  def __getattr__(self,name):return lambda *a,**kw:None
-prior=sys.modules.get('visionpad.display.dotpad');sys.modules['visionpad.display.dotpad']=types.SimpleNamespace(DotPad=Pad)
-spec=importlib.util.spec_from_file_location('display_engine',ROOT/'visionpad/core/engine.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
-if prior is None:del sys.modules['visionpad.display.dotpad']
-else:sys.modules['visionpad.display.dotpad']=prior
+prior=sys.modules.get('engine.display.dotpad');sys.modules['engine.display.dotpad']=types.SimpleNamespace(DotPad=Pad)
+spec=importlib.util.spec_from_file_location('display_engine',ROOT/'engine/core/engine.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+if prior is None:del sys.modules['engine.display.dotpad']
+else:sys.modules['engine.display.dotpad']=prior

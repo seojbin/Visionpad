@@ -3,10 +3,10 @@ import unittest
 from unittest.mock import patch
 
 from fastapi import HTTPException
-from visionpad.app import runtime
-from visionpad.app.routes import speech as speech_routes
-from visionpad.services.speech import SpeechUnavailable
-from visionpad.services.speech_queue import SpeechQueue
+from engine.server import runtime
+from engine.server.routes import speech as speech_routes
+from engine.services.speech import SpeechUnavailable
+from engine.services.speech_queue import SpeechQueue
 
 
 class FakeRequest:

@@ -4,9 +4,9 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from visionpad.config import load_config
-from visionpad.core.engine import GameEngine
-from visionpad.paths import ROOT
+from engine.config import load_config
+from engine.core.engine import GameEngine
+from engine.paths import ROOT
 
 
 
@@ -74,7 +74,7 @@ class ActionSoundTests(unittest.TestCase):
         self.assertEqual(engine.cast_fishing(30,20)['sfx'], 'error')
         engine.resources['fishing_rod'] = 1
         self.assertEqual(engine.cast_fishing(0,0)['sfx'], 'error')
-        with patch('visionpad.features.fishing.feature.random.choices',return_value=['miss']):
+        with patch('game.fishing.feature.random.choices',return_value=['miss']):
             result = engine.cast_fishing(30,20)
         self.assertEqual(result['sfx'], 'fishing_miss')
         self.assertEqual(result['sound_events'], [])

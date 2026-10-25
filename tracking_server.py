@@ -7,7 +7,7 @@ import cv2
 import websockets
 
 from tracking import VisionPadTracker
-from visionpad.config import config_path
+from engine.config import config_path
 
 
 BASE_DIR = Path(__file__).resolve().parent

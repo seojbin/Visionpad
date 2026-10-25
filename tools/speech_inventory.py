@@ -8,8 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def collect():
     entries = []
-    for path in sorted(ROOT.glob("visionpad/**/*.py")):
-        if path.relative_to(ROOT).as_posix() == "visionpad/services/speech.py":
+    for path in sorted([*ROOT.glob("engine/**/*.py"), *ROOT.glob("game/**/*.py")]):
+        if path.relative_to(ROOT).as_posix() == "engine/services/speech.py":
             continue
         source = path.read_text(encoding="utf-8")
         tree = ast.parse(source)

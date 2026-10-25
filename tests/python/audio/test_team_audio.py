@@ -5,9 +5,9 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from visionpad.config import load_config
-from visionpad.core.engine import GameEngine
-from visionpad.paths import ROOT
+from engine.config import load_config
+from engine.core.engine import GameEngine
+from engine.paths import ROOT
 
 
 

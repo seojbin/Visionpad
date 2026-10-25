@@ -5,10 +5,10 @@ import shutil
 import tempfile
 import unittest
 
-from visionpad.config import load_config
-from visionpad.core.engine import GameEngine
-from visionpad.paths import ROOT
-from visionpad.services.saves import decode
+from engine.config import load_config
+from engine.core.engine import GameEngine
+from engine.paths import ROOT
+from engine.services.saves import decode
 
 FIXTURE = ROOT / "tests" / "fixtures" / "saves" / "v1_day1_farm_started.json"
 

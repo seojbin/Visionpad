@@ -4,14 +4,14 @@ import {createRequire} from 'node:module';
 // F3 (known failure): needs the gitignored Dot Pad SDK, and hardware.mjs does not export BluetoothPad or cellsToHex.
 let BluetoothPad,forwardKey,packCells,cellsToHex,DataCodes,DotPadKey,loadError;
 try{
- ({BluetoothPad,forwardKey,packCells,cellsToHex}=await import('../../../web/core/pad/hardware.mjs'));
- ({DataCodes,DotPadKey}=await import('../../../web/core/pad/vendor/DotPadSDK-3.0.3.js'));
+ ({BluetoothPad,forwardKey,packCells,cellsToHex}=await import('../../../engine/web/core/pad/hardware.mjs'));
+ ({DataCodes,DotPadKey}=await import('../../../engine/web/core/pad/vendor/DotPadSDK-3.0.3.js'));
  if(!BluetoothPad||!cellsToHex)throw new SyntaxError('hardware.mjs does not export BluetoothPad and cellsToHex');
 }catch(error){loadError=error}
 if(loadError)test('test_hardware.mjs',{todo:'F3: Dot Pad SDK missing and BluetoothPad/cellsToHex not exported by hardware.mjs'},()=>{throw loadError});
 else{
 const require=createRequire(import.meta.url);
-const {GameKeys}=require('../../../web/core/game-keys.js');
+const {GameKeys}=require('../../../engine/web/core/game-keys.js');
 Object.defineProperty(globalThis,'navigator',{value:{bluetooth:{}},configurable:true});
 
 // Stand-ins for the SDK objects: callbacks are captured so tests can play pad events.

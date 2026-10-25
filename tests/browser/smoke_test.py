@@ -34,7 +34,7 @@ LOCATIONS = [("farm", "Farm"), ("town", "Village"), ("mine", "Mine"), ("fishing"
 
 def main():
     port = free_port()
-    server = subprocess.Popen([sys.executable, "-m", "uvicorn", "visionpad.app.main:app", "--host", "127.0.0.1",
+    server = subprocess.Popen([sys.executable, "-m", "uvicorn", "engine.server.main:app", "--host", "127.0.0.1",
                                "--port", str(port), "--log-level", "warning"], cwd=ROOT)
     base = f"http://127.0.0.1:{port}"
     problems = []

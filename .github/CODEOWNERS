@@ -6,28 +6,28 @@
 *                                   @REPLACE-lead
 
 # Core engine, shared services and app (explicit approval, AGENTS.md)
-/visionpad/                         @REPLACE-core-owner
-/visionpad/core/                    @REPLACE-core-owner
-/visionpad/display/                 @REPLACE-core-owner
-/visionpad/spectator/               @REPLACE-core-owner
-/visionpad/services/                @REPLACE-core-owner
-/visionpad/app/                     @REPLACE-core-owner
-/visionpad/features/__init__.py     @REPLACE-core-owner
-# config/game.json is one file, so feature config sections are reviewed by the core owner too.
+/engine/                         @REPLACE-core-owner
+/engine/core/                    @REPLACE-core-owner
+/engine/display/                 @REPLACE-core-owner
+/engine/spectator/               @REPLACE-core-owner
+/engine/services/                @REPLACE-core-owner
+/engine/server/                     @REPLACE-core-owner
+/game/__init__.py     @REPLACE-core-owner
+# engine/config/game.json is one file, so feature config sections are reviewed by the core owner too.
 /config/                            @REPLACE-core-owner
 
 # Save format: engine attribute names, key order and fixtures
-/visionpad/services/saves.py        @REPLACE-core-owner @REPLACE-lead
+/engine/services/saves.py        @REPLACE-core-owner @REPLACE-lead
 /tests/fixtures/saves/              @REPLACE-core-owner @REPLACE-lead
 
 # Shared client, companion window and assets
-/web/                               @REPLACE-web-owner
-/web/core/                          @REPLACE-web-owner
-/web/core/pad/                      @REPLACE-hardware-owner
-/web/game.html                      @REPLACE-web-owner
-/web/spectator/                     @REPLACE-web-owner
-/web/spectator/display.js           @REPLACE-web-owner @REPLACE-lead
-/web/audio/                         @REPLACE-audio-owner
+/engine/web/                               @REPLACE-web-owner
+/engine/web/core/                          @REPLACE-web-owner
+/engine/web/core/pad/                      @REPLACE-hardware-owner
+/engine/web/game.html                      @REPLACE-web-owner
+/engine/web/spectator/                     @REPLACE-web-owner
+/engine/web/spectator/display.js           @REPLACE-web-owner @REPLACE-lead
+/engine/web/audio/                         @REPLACE-audio-owner
 *.mp3                               @REPLACE-audio-owner
 *.png                               @REPLACE-web-owner
 
@@ -56,83 +56,83 @@
 
 # Features: one owner per feature (server code, client page texts, feature tests).
 # Feature sounds and textures need the feature owner and the asset owner (AGENTS.md: assets need approval).
-/visionpad/features/cooking/        @REPLACE-cooking-owner
-/web/features/cooking/              @REPLACE-cooking-owner
+/game/cooking/        @REPLACE-cooking-owner
+/game/cooking/              @REPLACE-cooking-owner
 /tests/python/cooking/              @REPLACE-cooking-owner
 /tests/js/cooking/                  @REPLACE-cooking-owner
-/web/features/cooking/audio/        @REPLACE-cooking-owner @REPLACE-audio-owner
+/game/cooking/audio/        @REPLACE-cooking-owner @REPLACE-audio-owner
 
-/visionpad/features/farming/        @REPLACE-farming-owner
-/web/features/farming/              @REPLACE-farming-owner
+/game/farming/        @REPLACE-farming-owner
+/game/farming/              @REPLACE-farming-owner
 /tests/python/farming/              @REPLACE-farming-owner
 /tests/js/farming/                  @REPLACE-farming-owner
-/web/features/farming/audio/        @REPLACE-farming-owner @REPLACE-audio-owner
+/game/farming/audio/        @REPLACE-farming-owner @REPLACE-audio-owner
 
-/visionpad/features/fishing/        @REPLACE-fishing-owner
-/web/features/fishing/              @REPLACE-fishing-owner
+/game/fishing/        @REPLACE-fishing-owner
+/game/fishing/              @REPLACE-fishing-owner
 /tests/python/fishing/              @REPLACE-fishing-owner
 /tests/js/fishing/                  @REPLACE-fishing-owner
-/web/features/fishing/audio/        @REPLACE-fishing-owner @REPLACE-audio-owner
-/web/features/fishing/assets/       @REPLACE-fishing-owner @REPLACE-web-owner
+/game/fishing/audio/        @REPLACE-fishing-owner @REPLACE-audio-owner
+/game/fishing/assets/       @REPLACE-fishing-owner @REPLACE-web-owner
 
-/visionpad/features/flowers/        @REPLACE-flowers-owner
-/web/features/flowers/              @REPLACE-flowers-owner
+/game/flowers/        @REPLACE-flowers-owner
+/game/flowers/              @REPLACE-flowers-owner
 /tests/python/flowers/              @REPLACE-flowers-owner
 /tests/js/flowers/                  @REPLACE-flowers-owner
-/web/features/flowers/assets/       @REPLACE-flowers-owner @REPLACE-web-owner
+/game/flowers/assets/       @REPLACE-flowers-owner @REPLACE-web-owner
 
-/visionpad/features/harvest/        @REPLACE-harvest-owner
-/web/features/harvest/              @REPLACE-harvest-owner
+/game/harvest/        @REPLACE-harvest-owner
+/game/harvest/              @REPLACE-harvest-owner
 /tests/python/harvest/              @REPLACE-harvest-owner
 /tests/js/harvest/                  @REPLACE-harvest-owner
-/web/features/harvest/audio/        @REPLACE-harvest-owner @REPLACE-audio-owner
+/game/harvest/audio/        @REPLACE-harvest-owner @REPLACE-audio-owner
 
-/visionpad/features/home/           @REPLACE-home-owner
-/web/features/home/                 @REPLACE-home-owner
+/game/home/           @REPLACE-home-owner
+/game/home/                 @REPLACE-home-owner
 /tests/python/home/                 @REPLACE-home-owner
 /tests/js/home/                     @REPLACE-home-owner
 
-/visionpad/features/inventory/      @REPLACE-inventory-owner
-/web/features/inventory/            @REPLACE-inventory-owner
+/game/inventory/      @REPLACE-inventory-owner
+/game/inventory/            @REPLACE-inventory-owner
 /tests/python/inventory/            @REPLACE-inventory-owner
 /tests/js/inventory/                @REPLACE-inventory-owner
 
-/visionpad/features/minimap/        @REPLACE-minimap-owner
-/web/features/minimap/              @REPLACE-minimap-owner
+/game/minimap/        @REPLACE-minimap-owner
+/game/minimap/              @REPLACE-minimap-owner
 /tests/python/minimap/              @REPLACE-minimap-owner
 /tests/js/minimap/                  @REPLACE-minimap-owner
 
-/visionpad/features/mining/         @REPLACE-mining-owner
-/web/features/mining/               @REPLACE-mining-owner
+/game/mining/         @REPLACE-mining-owner
+/game/mining/               @REPLACE-mining-owner
 /tests/python/mining/               @REPLACE-mining-owner
 /tests/js/mining/                   @REPLACE-mining-owner
-/web/features/mining/audio/         @REPLACE-mining-owner @REPLACE-audio-owner
+/game/mining/audio/         @REPLACE-mining-owner @REPLACE-audio-owner
 
-/visionpad/features/npc/            @REPLACE-npc-owner
-/web/features/npc/                  @REPLACE-npc-owner
+/game/npc/            @REPLACE-npc-owner
+/game/npc/                  @REPLACE-npc-owner
 /tests/python/npc/                  @REPLACE-npc-owner
 /tests/js/npc/                      @REPLACE-npc-owner
-/web/features/npc/assets/           @REPLACE-npc-owner @REPLACE-web-owner
+/game/npc/assets/           @REPLACE-npc-owner @REPLACE-web-owner
 
-/visionpad/features/research/       @REPLACE-research-owner
-/web/features/research/             @REPLACE-research-owner
+/game/research/       @REPLACE-research-owner
+/game/research/             @REPLACE-research-owner
 /tests/python/research/             @REPLACE-research-owner
 /tests/js/research/                 @REPLACE-research-owner
 
-/visionpad/features/seafood/        @REPLACE-seafood-owner
-/web/features/seafood/              @REPLACE-seafood-owner
+/game/seafood/        @REPLACE-seafood-owner
+/game/seafood/              @REPLACE-seafood-owner
 /tests/python/seafood/              @REPLACE-seafood-owner
 /tests/js/seafood/                  @REPLACE-seafood-owner
 
-/visionpad/features/shop/           @REPLACE-shop-owner
-/web/features/shop/                 @REPLACE-shop-owner
+/game/shop/           @REPLACE-shop-owner
+/game/shop/                 @REPLACE-shop-owner
 /tests/python/shop/                 @REPLACE-shop-owner
 /tests/js/shop/                     @REPLACE-shop-owner
 
-/visionpad/features/village/        @REPLACE-village-owner
-/web/features/village/              @REPLACE-village-owner
+/game/village/        @REPLACE-village-owner
+/game/village/              @REPLACE-village-owner
 /tests/python/village/              @REPLACE-village-owner
 /tests/js/village/                  @REPLACE-village-owner
 
-/web/features/*/audio/              @REPLACE-audio-owner
-/web/features/*/assets/             @REPLACE-web-owner
+/game/*/audio/              @REPLACE-audio-owner
+/game/*/assets/             @REPLACE-web-owner

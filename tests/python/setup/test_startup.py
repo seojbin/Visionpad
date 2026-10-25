@@ -23,12 +23,12 @@ class SetupChecks(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="visionpad setup test ")
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        for path in [*ROOT.glob("*.py"), *ROOT.glob("visionpad/**/*.py")]:
+        for path in [*ROOT.glob("*.py"), *ROOT.glob("engine/**/*.py"), *ROOT.glob("game/**/*.py")]:
             target = self.root / path.relative_to(ROOT)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.touch()
-        for name in ("web/game.html", "web/core/game-audio.js", "web/core/game-speech.js", "web/core/game-keys.js",
-                     "tools/prepare_demo.py", "tools/prepare_speech.py", "config/game.json", "config/npc.json", "requirements.txt"):
+        for name in ("engine/web/game.html", "engine/web/core/game-audio.js", "engine/web/core/game-speech.js", "engine/web/core/game-keys.js",
+                     "tools/prepare_demo.py", "tools/prepare_speech.py", "engine/config/game.json", "engine/config/npc.json", "requirements.txt"):
             target = self.root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.touch()
@@ -37,7 +37,7 @@ class SetupChecks(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(b"sound")
         config = {"profiles": {"system": {"model": "test-voice"}}, "samples": [{"text": "Hello."}]}
-        (self.root / "config/speech.json").write_text(json.dumps(config))
+        (self.root / "engine/config/speech.json").write_text(json.dumps(config))
         self.model = self.root / "models/piper/test-voice.onnx"
         self.model.parent.mkdir(parents=True)
         self.model.write_bytes(b"model")
@@ -66,7 +66,7 @@ class SetupChecks(unittest.TestCase):
 
     def test_missing_sound_and_game_module_are_both_reported(self):
         (self.root / sound_path("water")).unlink()
-        (self.root / "visionpad/core/engine.py").unlink()
+        (self.root / "engine/core/engine.py").unlink()
         failed = {check["name"] for check in self.report()["checks"] if not check["ok"]}
         self.assertEqual(failed, {"Game sounds", "Game files"})
 

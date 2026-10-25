@@ -4,7 +4,7 @@ import sys
 from threading import Event
 import unittest
 
-from visionpad.services.speech_queue import SpeechQueue, SpeechQueueFull, SpeechSuperseded
+from engine.services.speech_queue import SpeechQueue, SpeechQueueFull, SpeechSuperseded
 
 
 class SlowSpeech:

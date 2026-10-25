@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from visionpad.config import load_config
-from visionpad.core.engine import GameEngine
+from engine.config import load_config
+from engine.core.engine import GameEngine
 
 
 def fixture_config():
@@ -143,7 +143,7 @@ def run_flow():
                 flow.mark('mine')
                 flow.go('fishing')
                 for grade in ('high','miss'):
-                    with patch('visionpad.features.fishing.feature.random.choices',return_value=[grade]):
+                    with patch('game.fishing.feature.random.choices',return_value=[grade]):
                         target=list(engine.fishing_target)
                         flow.pointer('down',*target);flow.pointer('up',*target)
                     flow.mark('fish_'+grade)

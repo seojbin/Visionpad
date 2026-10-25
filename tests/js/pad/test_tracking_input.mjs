@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 // F4 (known failure): TrackingGestureInput was removed from hardware.mjs together with the thumb-press clicks.
-const {TrackingGestureInput}=await import('../../../web/core/pad/hardware.mjs');
+const {TrackingGestureInput}=await import('../../../engine/web/core/pad/hardware.mjs');
 if(!TrackingGestureInput)test('test_tracking_input.mjs',{todo:'F4: TrackingGestureInput is not exported by hardware.mjs'},()=>{throw new SyntaxError('hardware.mjs does not export TrackingGestureInput')});
 else{
 const events=[];const t=new TrackingGestureInput({move:(...p)=>events.push(['move',...p]),press:()=>events.push('press'),release:()=>events.push('release'),command:c=>events.push(c)});

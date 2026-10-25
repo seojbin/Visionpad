@@ -8,9 +8,9 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 import uvicorn
 from fastapi.responses import HTMLResponse
-from visionpad.app import runtime
-from visionpad.app.main import app
-from visionpad.core.engine import GameEngine
+from engine.server import runtime
+from engine.server.main import app
+from engine.core.engine import GameEngine
 from tools.audio_flow import fixture_config
 
 
@@ -47,7 +47,7 @@ def main():
         @app.middleware('http')
         async def label_test_progress(request,call_next):
             if request.url.path=='/':
-                text=(ROOT/'web/game.html').read_text(encoding="utf-8-sig")
+                text=(ROOT/'engine/web/game.html').read_text(encoding="utf-8-sig")
                 text=text.replace('>Tactile garden<','>INTEGRATION TEST · SEPARATE PROGRESS<')
                 text=text.replace('<title>Dotdew Valley · Tactile garden</title>',
                     '<title>Dotdew Valley · Separate audio test</title>')

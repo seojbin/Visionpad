@@ -4,13 +4,13 @@ import types
 import unittest
 from unittest.mock import patch
 
-from visionpad.config import load_config
-from visionpad.core import order
-from visionpad.core.engine import GameEngine
-from visionpad.core import registry as registry_module
-from visionpad.core.registry import Feature, Registry
-from visionpad.features import load_features
-from visionpad.services.saves import SAVE_KEY_ORDER
+from engine.config import load_config
+from engine.core import order
+from engine.core.engine import GameEngine
+from engine.core import registry as registry_module
+from engine.core.registry import Feature, Registry
+from game import load_features
+from engine.services.saves import SAVE_KEY_ORDER
 
 
 def feature(name, register):
@@ -138,7 +138,7 @@ class OwnershipTests(unittest.TestCase):
 def engine_with(*extra_features):
     """A real engine whose feature list has extra test features appended."""
     features = load_features() + list(extra_features)
-    with patch("visionpad.core.engine.load_features", return_value=features):
+    with patch("engine.core.engine.load_features", return_value=features):
         return GameEngine(load_config("game"), save_dir=tempfile.mkdtemp())
 
 
@@ -156,7 +156,7 @@ class SaveOrderTests(unittest.TestCase):
 
     def test_new_attributes_follow_the_listed_keys_alphabetically(self):
         features = load_features() + [self.Extra]
-        with patch("visionpad.core.engine.load_features", return_value=features):
+        with patch("engine.core.engine.load_features", return_value=features):
             engine = GameEngine(load_config("game"), save_dir=tempfile.mkdtemp())
             keys = list(engine.snapshot())
             listed = [key for key in SAVE_KEY_ORDER if key in keys]
@@ -165,7 +165,7 @@ class SaveOrderTests(unittest.TestCase):
 
     def test_new_attributes_survive_save_and_load(self):
         features = load_features() + [self.Extra]
-        with patch("visionpad.core.engine.load_features", return_value=features):
+        with patch("engine.core.engine.load_features", return_value=features):
             engine = GameEngine(load_config("game"), save_dir=tempfile.mkdtemp())
             engine.alpha_extra = 9
             engine.save_game()
