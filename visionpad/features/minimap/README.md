@@ -14,4 +14,4 @@ The F1 map: location nodes and the paths between them, compressed to fit the pad
 | Core helpers used | `compress_axis`, `get_relative_direction`, `draw_filled_square`, `return_to_scene` |
 | Config | `config/game.json` → `minimap.locations`, `minimap.routes`; page name `pages.minimap` |
 | Tests | No dedicated tests. Old-vs-new comparison script used during the split. |
-| Note | `open()` was unused before the split too (AUDIT.md §2.4); kept for parity. |
+| Note | `open()` was unused before the split too (docs/refactor/AUDIT.md §2.4); kept for parity. |

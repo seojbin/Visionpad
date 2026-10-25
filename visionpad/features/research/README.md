@@ -15,4 +15,4 @@ Upgrades bought from the research chest at home: seed recovery, farm expansion a
 | Events | `reset` (`Reset.RESEARCH`) |
 | State keys | `research_levels`, `unlocked_plot_count` in `/api/state` |
 | Config | `config/game.json` → `research.seed_return`, `research.field_expansion`, `research.mineral_luck`; `time.action_costs.research` |
-| Tests | No dedicated tests. Old-vs-new comparison script used during the split (see REFACTOR_REPORT.md). |
+| Tests | No dedicated tests. Old-vs-new comparison script used during the split (see docs/refactor/REFACTOR_REPORT.md). |
