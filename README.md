@@ -29,11 +29,11 @@ For the first setup, install Python 3.11 or newer and open **setup-mac.command**
 For manual setup, create a Python environment and install the dependencies from the project root.
 
 ```bash
-python -m venv venv
+python -m venv .venv
 # Windows
-venv\Scripts\activate
+.venv\Scripts\activate
 # macOS / Linux
-source venv/bin/activate
+source .venv/bin/activate
 
 python -m pip install -r requirements.txt
 python tools/prepare_speech.py --download
@@ -65,11 +65,11 @@ Speech uses Piper on the Python server with fixed English models, rather than th
 - Leaving the game window silences speech and game sounds, including delayed responses. Returning restores ambient music and lake guidance for the current screen, while keeping mute settings. Old speech and one-shot effects do not replay automatically; delayed text remains available in the caption and with **Replay**.
 - Changing scenes cancels old task, target, transaction, and deferred mining sounds. The sleep recording still continues into the next morning. Failed sound assets can retry on a later action or state update after a one-second cooldown; old effects are not replayed.
 
-Voice models and sample sentences are in `speech_config.json`; authored dialogue is in `npc_config.json`. Run `python tools/prepare_speech.py` to regenerate previews in `output/audio/`, or `python tools/speech_inventory.py` to refresh the source sentence inventory. See [the sound map and model sources](docs/audio/SOUND_MAP.md), [team handoff](docs/audio/TEAM_HANDOFF.md). The prototype models use the dataset license listed in their linked model cards (CC BY NC SA 4.0); Piper is GPL 3.0 or later.
+Voice models and sample sentences are in `config/speech.json`; authored dialogue is in `config/npc.json`. Run `python tools/prepare_speech.py` to regenerate previews in `output/audio/`, or `python tools/speech_inventory.py` to refresh the source sentence inventory. See [the sound map and model sources](docs/audio/SOUND_MAP.md), [team handoff](docs/audio/TEAM_HANDOFF.md). The prototype models use the dataset license listed in their linked model cards (CC BY NC SA 4.0); Piper is GPL 3.0 or later.
 
 Before a demo, keep the game server running and run `python tools/prepare_demo.py` in a second terminal. It prepares fixed guidance, Rowan tutorial and advice branches and representative action/object/reaction announcements through the speech API, without changing player progress. At the current revision it prepares 203 lines at speed 1.0; other rates, changing quantities and save timestamps may still need first-time generation. The report is `output/audio/demo-ready.json`. See [demo preparation and verification](docs/audio/DEMO_READY.md).
 
-Software checks for this update: `python -m unittest discover -s tests/python -t . -v` and `node --test "tests/js/**/test_*.cjs" "tests/js/**/test_*.mjs"`. Expected per-test results, including known failures, are listed in [BASELINE.md](docs/refactor/BASELINE.md). `python tools/audio_flow.py` records a farming, cooking, NPC/trading, mining, fishing, save/load sequence in temporary progress. For a separate browser check, run `python tools/audio_integration_lab.py` and open `http://127.0.0.1:8001/`; it starts a temporary watering scene and does not use the normal game's progress. See the [integration report](docs/audio/INTEGRATION_REPORT.md) for coverage and fixture differences.
+Software checks: run `python tools/run_tests.py` from the project environment. It runs the Python suite (`tests/python/`), every Node test file (`tests/js/`, Node.js 20+), the URL check and the browser smoke test (`tests/browser/`, needs `pip install -r requirements-dev.txt` and `python -m playwright install chromium`; skip them with `--no-browser`), then compares every result with [BASELINE.md](docs/refactor/BASELINE.md), where the known failures are listed. `python tools/run_tests.py --feature fishing` runs one feature's tests (the files named in its README) plus the registry and save guards. Rules for changing code, including who owns which folder, are in [AGENTS.md](AGENTS.md). `python tools/audio_flow.py` records a farming, cooking, NPC/trading, mining, fishing, save/load sequence in temporary progress. For a separate browser check, run `python tools/audio_integration_lab.py` and open `http://127.0.0.1:8001/`; it starts a temporary watering scene and does not use the normal game's progress. See the [integration report](docs/audio/INTEGRATION_REPORT.md) for coverage and fixture differences.
 
 The user accepted the first voices and gave a positive initial assessment of direction cues and effects balance, requesting slightly quieter speech. The 85% speech level implements that feedback. Detailed direction/listening results, pronunciation, another computer, and a physical Dot Pad still require further checks; follow the [listening checklist](docs/audio/LISTENING_CHECK.md).
 
@@ -160,26 +160,29 @@ The server owns game state and action checks. The browser sends input and receiv
 
 ### Game and server
 
-| File | Responsibility |
+Server code is the `visionpad/` package. Each activity is a feature folder that registers its pages, actions, drawings and state with the engine; its README lists what it owns and uses. The root `game_*.py`, `dotpad.py`, `speech_queue.py` and `spectator_state.py` modules are deprecated aliases kept for old imports.
+
+| Path | Responsibility |
 |---|---|
-| `game_app.py` | FastAPI server, game page, static files, input and state APIs |
-| `game_engine.py` | Locations and activities, game rules, resources, time, tactile rendering, and announcements |
-| `game_ui.py` | Keypad navigation, temporary menus, tactile frames, and category icons |
-| `game_saves.py` | State serialization, save files, loading, and slot management |
-| `game_npc.py`, `npc_config.json` | Rowan's conversation state, authored lines, and game-state advice |
-| `game_speech.py`, `speech_config.json` | Fixed voice models, pronunciation rules, and cached WAV generation |
-| `dotpad.py` | Dot matrices and drawing primitives |
-| `spectator_state.py` | Public object, plot, rock, path, and quantity data for the companion |
-| `game_config.json` | Rules, starting resources, activity settings, audio, and layout data |
+| `visionpad/app/` | FastAPI app (`main.py`), shared runtime, routes for the game page, input and state API, speech and static files (`uvicorn game_app:app` still works) |
+| `visionpad/core/` | `engine.py` (state, reset, page objects, responses), `registry.py` (feature hooks), `order.py` (run orders), `input.py`, `render.py`, `time.py`, `state.py`, `effects.py` (food effects) |
+| `visionpad/features/<name>/` | One folder per activity: cooking, farming, fishing, flowers, harvest, home, inventory, minimap, mining, npc, research, seafood, shop, village. Enabled in `visionpad/features/__init__.py` |
+| `visionpad/display/` | Dot matrices and drawing primitives (`dotpad.py`), icons (`icons.py`), keypad menus (`keypad.py`) |
+| `visionpad/services/` | State serialization and save slots (`saves.py`), fixed voice models and cached WAV generation (`speech.py`), speech queue (`speech_queue.py`) |
+| `visionpad/spectator/state.py` | Public object, plot, rock, path, and quantity data for the companion |
+| `config/game.json` | Rules, starting resources, activity settings, audio, and layout data |
+| `config/npc.json`, `config/speech.json`, `config/tracking.json` | Rowan's lines; voices and pronunciation; camera tracking |
 
 ### Browser, hardware, and audio
 
 | File | Responsibility |
 |---|---|
-| `web/game.html` | Pad simulator, pointer input, status, speech controls, and companion connection |
+| `web/game.html` | Page markup and styles; loads the scripts below |
+| `web/core/game.js` | Pad simulator, pointer input, status, speech controls, and companion connection |
+| `web/core/pages.js`, `web/features/<name>/client.js` | Per-feature page texts, status lines and timers (`DotdewPages`) |
 | `web/core/game-speech.js` | Speech playback, replay, cancellation, priority, and audio ducking callbacks |
 | `web/core/game-keys.js` | Function and arrow keys, F3 short/long press, repeat suppression, and cancellation |
-| `web/core/pad/hardware.mjs` | Web Serial pad output and physical buttons; WebSocket hand coordinates |
+| `web/core/pad/hardware.mjs`, `bluetooth-pad.mjs` | USB (Web Serial) and Bluetooth pad output and physical buttons; WebSocket hand coordinates. The Dot Pad SDK goes in `web/core/pad/vendor/` (see `web/core/pad/README.md`) |
 | `web/core/game-audio.js` | Separate music, action, reward, and one-shot sound channels |
 | `web/audio/` | Shared MP3 assets (feature sounds are in `web/features/<name>/audio/`) |
 | `game.bat`, `launch_game.py` | Windows startup and server/browser launch helpers |
@@ -194,15 +197,15 @@ The companion is a separate, read-only window under `web/spectator/`. It follows
 | `viewer.js` | Scene, card, object, and effect rendering source |
 | `model.mjs` | Convert game state into visual layout data |
 | `viewer.css` | Cards, quantities, colors, selection highlights, and time bar |
-| `display.js` | Runtime bundle loaded by the page |
-| `build_display.py` | Build `display.js` from the source files |
+| `display.js` | Runtime bundle loaded by the page (hand-edited; do not regenerate, see `web/spectator/README.md`) |
+| `build_display.py` (repository root) | Old bundle builder; its output no longer matches `display.js` |
 | `visual-assets.json` | Background, facility, item, and sprite-region registry |
 | `scene-objects.json` | Facility positions, sizes, and draw order |
-| `assets/` | Images including `scenes.png`, `scenes2.png`, `facilities.png`, `items.png`, and `extras.png` |
+| `assets/` | Shared images including `scenes.png`, `scenes2.png`, `facilities.png`, `items.png`, and `extras.png`; feature images are in `web/features/<name>/assets/` |
 
 Each plot and rock corresponds to a game object. Individual farm plots have fences. The shop places its catalog on the left and the merchant and counter on the right. Inventory and shop pages fit their items without scrolling.
 
-Backgrounds, facilities, and objects have separate asset entries so existing images can be reused. A page without a visual renderer falls back to the dot display. An unregistered item shows its name in a frame. Rebuild `display.js` after editing its source files.
+Backgrounds, facilities, and objects have separate asset entries so existing images can be reused. A page without a visual renderer falls back to the dot display. An unregistered item shows its name in a frame. `display.js` contains edits that are not in `viewer.js`/`model.mjs`, so rebuilding it would lose them (docs/refactor/FOLLOWUPS.md F5).
 
 ## Saving and loading
 
@@ -228,7 +231,7 @@ Recorded action sounds and short outcome cues now share `GameAudio`: target prog
 
 ## Configuration
 
-Edit `game_config.json` and restart the server. Values below reflect the current configuration.
+Edit `config/game.json` and restart the server. Values below reflect the current configuration.
 
 Time uses game ticks, `_ms` values use milliseconds, probabilities use 0–1, and coordinates use dot units. Engine-side limits are noted below the tables.
 
@@ -326,6 +329,8 @@ User testing will examine game comprehension and enjoyment, the workload of tact
 
 User testing has not yet been conducted. Physical pad refresh speed, tracking under different lighting and camera positions, occlusion, and speech quality remain part of the planned evaluation. The current design assumes usable hearing and hand control.
 
+The update notes below are kept as written when each update was made. File paths are updated to the current layout; test files they cite that no longer exist are listed in docs/refactor/FOLLOWUPS.md (F6).
+
 ## Fishing update
 
 Travel order: Farm ↔ Home ↔ Village ↔ Mine ↔ Fishing lake. Buy one fishing rod at the shop before entering the lake. Default price: 75 gold (1.25 times the pickaxe price). Five casts are safe; break chance increases by 10 percentage points per cast from cast six. Misses count. The breaking cast still grants its catch.
@@ -334,7 +339,7 @@ Move the mouse or tracked finger toward the looping water sound, then press insi
 
 Eight fish use the existing items2 atlas: Sardine, Carp, Mackerel, Bass, Catfish, Flounder, Salmon and Rainbow trout. Fish are stored in inventory and can be sold. Grilled fish, fish stew and fried fish are available. Rarity is not spoken or displayed. Coin marks a middle-distance cast; shine marks a near cast, regardless of its reward.
 
-Rules are in `game_fishing.py`, integrated by `game_engine.py`. `game_config.json` contains `fishing.rod_price_multiplier`, `near_radius` (4), `middle_radius` (10), `zone_weights`, and each fish's label, internal grade and sell price. Far/middle/near weights for miss/low/medium/high are 30/40/20/10, 10/30/40/20 and 10/20/30/40. Species within each grade are equally likely. `time.action_costs.fish` controls the cast cost.
+Rules are in `visionpad/features/fishing/`, registered with the engine (`visionpad/core/engine.py`). `config/game.json` contains `fishing.rod_price_multiplier`, `near_radius` (4), `middle_radius` (10), `zone_weights`, and each fish's label, internal grade and sell price. Far/middle/near weights for miss/low/medium/high are 30/40/20/10, 10/30/40/20 and 10/20/30/40. Species within each grade are equally likely. `time.action_costs.fish` controls the cast cost.
 
 `interaction.audio.fishing` controls max_gain (0.28), min_gain (0.025), distance_scale (22), position_scale (10), tts_multiplier (0.55) and bgm_multiplier (0.2). Pointer movement updates sound locally without waiting for a server response. The companion uses scene3's lake and items2's fish; the rod uses the existing name-only placeholder.
 
@@ -352,7 +357,7 @@ Choose one owned fish and the vegetable ingredient in the existing ingredient sc
 
 These figures are developer settings for low/medium/high fish. Only one food effect is active at a time. New food replaces the previous effect. Existing vegetable recipes and paths remain unchanged. Fish now sell for copper's price plus 0/3/6 gold, currently 21/24/27.
 
-`game_seafood.py` handles ingredient selection and shared effects. `cooking_methods.gestures` contains reusable fish preparation, grilling, stirring and frying paths. Fish recipe stages reference them by `method`. Egg preparation is reserved as a future third preparation method. No egg gameplay is added in this update.
+`visionpad/features/seafood/` handles ingredient selection; the shared food effects are in `visionpad/core/effects.py`. `cooking_methods.gestures` contains reusable fish preparation, grilling, stirring and frying paths. Fish recipe stages reference them by `method`. Egg preparation is reserved as a future third preparation method. No egg gameplay is added in this update.
 
 Configure rod durability with `fishing.rod_safe_casts` and `rod_break_increment`; pricing with `rod_price_multiplier`, `fish_price_base_mineral` and `fish_price_grade_bonus`. Food variants and remaining sale charges are saved. Older saves initialize rod usage at zero. Developer tests: `python -m unittest test_fishing test_seafood -v` and `node test_fishing_audio.cjs`.
 
@@ -407,7 +412,7 @@ Prices are rounded down after the daily modifier. An active sale-food effect the
 
 The first inventory page contains gold and usable food. Materials, seeds, crops, fish and tools start on subsequent pages. If more than eleven foods are owned, extra food pages appear before other items; nothing is discarded. Left and right change pages. F2 closes inventory, and F1 switches to the map.
 
-`game_village.py` contains Rowan's quest state, dialogue, crop submission and daily market calculations. `game_config.json` exposes `rowan.seed_gift_each`, `rowan.vegetable_reward_gold`, `weekly_market.discount_percent`, `weekly_market.bonus_percent`, and the seven `weekly_market.days` entries. Rowan's soup is defined in `recipes.rowan_soup`.
+`visionpad/features/village/` contains Rowan's quest state, dialogue, crop submission and daily market calculations. `config/game.json` exposes `rowan.seed_gift_each`, `rowan.vegetable_reward_gold`, `weekly_market.discount_percent`, `weekly_market.bonus_percent`, and the seven `weekly_market.days` entries. Rowan's soup is defined in `recipes.rowan_soup`.
 
 `web/features/npc/assets/rowan.png` is a transparent atlas containing the dialogue portrait, standing character and fishing rod. Crop rectangles and scene placement are registered in `visual-assets.json` and `scene-objects.json`; existing images are reused. The atlas was generated with the built-in image generator using a cozy pixel-art farmer with auburn hair, beard, straw hat, green shirt and brown overalls, plus a wooden fishing rod on a transparent background.
 
@@ -420,6 +425,6 @@ Talking to Rowan keeps the village page and its navigation. Only vegetable submi
 
 The portrait canvas uses its own 6:7 aspect ratio; the scene's 8:5 ratio applies only to the main canvas. The detailed fishing rod appears at the lake while a rod is owned. A raised pickaxe appears beside the focused mine rock only while a pickaxe is owned. These are read-only visual cues.
 
-`assets/items3.png` is a 3x3 transparent item atlas, registered in `visual-assets.json`. Row order: fishing rod / calendar / bird; coffee beans / coffee / scissors; animal feed / kitchen knife / bug net. The small rod is used in inventory and shop cards; the original detailed rod is registered as `fishing_rod_equipped`. The other seven future-content items are assets only, not new gameplay.
+`web/spectator/assets/items3.png` is a 3x3 transparent item atlas, registered in `visual-assets.json`. Row order: fishing rod / calendar / bird; coffee beans / coffee / scissors; animal feed / kitchen knife / bug net. The small rod is used in inventory and shop cards; the original detailed rod is registered as `fishing_rod_equipped`. The other seven future-content items are assets only, not new gameplay.
 
 Generated with the built-in image tool: nine isolated, chunky pixel-art farming inventory sprites, warm colors, transparent background, no text or frames, equal 3x3 cells. All existing assets are retained.

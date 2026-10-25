@@ -29,11 +29,11 @@ Dot Pad를 사용하는 농장·생활 시뮬레이션 게임. 집, 농장, 마�
 직접 설치하려면 프로젝트 루트에서 Python 가상환경을 준비하고 의존성을 설치한다.
 
 ```bash
-python -m venv venv
+python -m venv .venv
 # Windows
-venv\Scripts\activate
+.venv\Scripts\activate
 # macOS / Linux
-source venv/bin/activate
+source .venv/bin/activate
 
 python -m pip install -r requirements.txt
 python tools/prepare_speech.py --download
@@ -65,11 +65,11 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 - 게임 창을 떠나면 음성과 게임 소리를 멈추고 늦은 응답의 소리도 차단한다. 돌아오면 현재 화면의 배경음과 낚시 탐색음만 복구하며 음소거 설정은 유지한다. 이전 대사와 단발 효과음은 자동 재생하지 않는다. 늦게 도착한 문장은 자막과 **Replay**로 확인할 수 있다.
 - 장면을 이동하면 이전 작업·목표·거래 소리와 늦은 채굴 획득 안내를 취소한다. 수면 녹음은 기존처럼 다음 날까지 이어진다. 음원 로딩에 실패하면 1초 뒤 이후 행동이나 상태 갱신에서 다시 시도하며, 지나간 효과음을 뒤늦게 재생하지 않는다.
 
-목소리와 대표 문장은 `speech_config.json`, NPC 대사는 `npc_config.json`에서 관리한다. `python tools/prepare_speech.py`는 `output/audio/`의 비교 음원을, `python tools/speech_inventory.py`는 코드 내 문장 목록을 갱신한다. [사운드 목록과 모델 출처](docs/audio/SOUND_MAP.md), [팀 전달 안내](docs/audio/TEAM_HANDOFF.md)을 참고한다. 프로토타입 모델의 데이터셋 라이선스는 연결된 모델 카드에 기록된 CC BY NC SA 4.0이며 Piper는 GPL 3.0 이상이다.
+목소리와 대표 문장은 `config/speech.json`, NPC 대사는 `config/npc.json`에서 관리한다. `python tools/prepare_speech.py`는 `output/audio/`의 비교 음원을, `python tools/speech_inventory.py`는 코드 내 문장 목록을 갱신한다. [사운드 목록과 모델 출처](docs/audio/SOUND_MAP.md), [팀 전달 안내](docs/audio/TEAM_HANDOFF.md)을 참고한다. 프로토타입 모델의 데이터셋 라이선스는 연결된 모델 카드에 기록된 CC BY NC SA 4.0이며 Piper는 GPL 3.0 이상이다.
 
 시연 전에는 게임 서버를 실행한 상태에서 다른 터미널에 `python tools/prepare_demo.py`를 실행한다. 고정 안내, Rowan 튜토리얼·조언 대사와 대표 행동·대상·최근 반응 안내를 음성 API로 미리 준비하며 게임 진행은 바꾸지 않는다. 현재 기준 속도 1.0의 203문장이다. 다른 속도, 바뀌는 수량과 저장 시각 안내는 처음 생성할 수 있다. 결과는 `output/audio/demo-ready.json`에 저장한다. [시연 준비와 검증](docs/audio/DEMO_READY.md)을 참고한다.
 
-이번 변경의 소프트웨어 검증은 `python -m unittest discover -s tests/python -t . -v`, `node --test "tests/js/**/test_*.cjs" "tests/js/**/test_*.mjs"`로 실행한다. 알려진 실패를 포함한 테스트별 기대 결과는 [BASELINE.md](docs/refactor/BASELINE.md)에 있다. `python tools/audio_flow.py`는 임시 진행에서 농사·요리·NPC와 거래·채굴·낚시·저장과 로드를 기록한다. 별도 브라우저 검증은 `python tools/audio_integration_lab.py` 실행 후 `http://127.0.0.1:8001/`에 접속한다. 임시 물 주기 장면에서 시작하며 실제 사용자의 게임 진행은 사용하지 않는다. 범위와 테스트 조건은 [통합 검증 결과](docs/audio/INTEGRATION_REPORT.md)에 기록했다.
+소프트웨어 검증은 프로젝트 환경에서 `python tools/run_tests.py`로 실행한다. Python 테스트(`tests/python/`), 모든 Node 테스트 파일(`tests/js/`, Node.js 20 이상), URL 점검과 브라우저 스모크 테스트(`tests/browser/`, `pip install -r requirements-dev.txt`와 `python -m playwright install chromium` 필요, `--no-browser`로 생략)를 실행한 뒤 모든 결과를 [BASELINE.md](docs/refactor/BASELINE.md)와 비교한다. 알려진 실패도 이 파일에 있다. `python tools/run_tests.py --feature fishing`은 한 기능의 테스트(기능 README에 적힌 파일)와 registry·저장 호환 테스트만 실행한다. 폴더별 담당과 코드 변경 규칙은 [AGENTS.md](AGENTS.md)에 있다. `python tools/audio_flow.py`는 임시 진행에서 농사·요리·NPC와 거래·채굴·낚시·저장과 로드를 기록한다. 별도 브라우저 검증은 `python tools/audio_integration_lab.py` 실행 후 `http://127.0.0.1:8001/`에 접속한다. 임시 물 주기 장면에서 시작하며 실제 사용자의 게임 진행은 사용하지 않는다. 범위와 테스트 조건은 [통합 검증 결과](docs/audio/INTEGRATION_REPORT.md)에 기록했다.
 
 사용자는 첫 음성과 방향감·효과음 균형을 긍정적으로 평가하고 음성을 조금 낮춰 달라고 했다. 기본 음성 85%는 이 의견을 반영한 값이다. 세부 방향별 청취, 발음, 다른 컴퓨터와 실물 Dot Pad는 [청취 확인 순서](docs/audio/LISTENING_CHECK.md)에 따라 추가로 확인한다.
 
@@ -160,24 +160,29 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 
 ### 게임과 서버
 
-| 파일 | 역할 |
+서버 코드는 `visionpad/` 패키지에 있다. 활동마다 기능 폴더가 있고, 각 기능은 화면·행동·그리기·상태를 엔진에 등록한다. 기능 폴더의 README에 그 기능이 소유하고 사용하는 항목이 정리되어 있다. 루트의 `game_*.py`, `dotpad.py`, `speech_queue.py`, `spectator_state.py`는 예전 import를 위한 호환용 별칭이다.
+
+| 경로 | 역할 |
 |---|---|
-| `game_app.py` | FastAPI 서버, 게임 페이지와 정적 파일 제공, 입력·상태 API |
-| `game_engine.py` | 장소·활동 상태, 농사·요리·채굴·거래·연구 판정, 시간·자원 관리, 도트 화면과 안내 생성 |
-| `game_ui.py` | 키패드 이동, 임시 메뉴, 촉각 프레임·종류별 아이콘 처리 |
-| `game_saves.py` | 상태 직렬화, 저장·복원, 파일 단위 저장 슬롯 관리 |
-| `dotpad.py` | 도트 행렬과 선·사각형 등 기본 도형 처리 |
-| `spectator_state.py` | 시각화에 필요한 오브젝트·밭·돌·경로·수량 등 공개 데이터 구성 |
-| `game_config.json` | 게임 규칙, 초기 자원, 활동·오디오 설정과 배치 데이터 |
+| `visionpad/app/` | FastAPI 앱(`main.py`), 공용 런타임, 게임 페이지·입력·상태 API·음성·정적 파일 라우트 (`uvicorn game_app:app`도 그대로 동작) |
+| `visionpad/core/` | `engine.py`(상태, 초기화, 페이지 오브젝트, 응답), `registry.py`(기능 연결 지점), `order.py`(실행 순서), `input.py`, `render.py`, `time.py`, `state.py`, `effects.py`(음식 효과) |
+| `visionpad/features/<name>/` | 활동별 폴더: cooking, farming, fishing, flowers, harvest, home, inventory, minimap, mining, npc, research, seafood, shop, village. 사용 목록은 `visionpad/features/__init__.py` |
+| `visionpad/display/` | 도트 행렬과 기본 도형(`dotpad.py`), 아이콘(`icons.py`), 키패드 메뉴(`keypad.py`) |
+| `visionpad/services/` | 상태 직렬화와 저장 슬롯(`saves.py`), 고정 음성 모델과 WAV 캐시(`speech.py`), 음성 대기열(`speech_queue.py`) |
+| `visionpad/spectator/state.py` | 시각화에 필요한 오브젝트·밭·돌·경로·수량 등 공개 데이터 구성 |
+| `config/game.json` | 게임 규칙, 초기 자원, 활동·오디오 설정과 배치 데이터 |
+| `config/npc.json`, `config/speech.json`, `config/tracking.json` | Rowan 대사, 음성과 발음, 카메라 추적 |
 
 ### 브라우저·하드웨어·오디오
 
 | 파일 | 역할 |
 |---|---|
-| `web/game.html` | Dot Pad 시뮬레이터, 포인터 입력, 상태 표시, 음성 제어, 시각화 창 연결 |
+| `web/game.html` | 페이지 구조와 스타일, 아래 스크립트 불러오기 |
+| `web/core/game.js` | Dot Pad 시뮬레이터, 포인터 입력, 상태 표시, 음성 제어, 시각화 창 연결 |
+| `web/core/pages.js`, `web/features/<name>/client.js` | 기능별 화면 안내 문구, 상태 줄, 반복 작업 (`DotdewPages`) |
 | `web/core/game-speech.js` | 음성 재생, 다시 듣기, 취소, 우선순위와 음량 조정 연결 |
 | `web/core/game-keys.js` | 기능 키와 방향 키, F3 짧게·길게 누르기, 중복 입력·취소 처리 |
-| `web/core/pad/hardware.mjs` | Web Serial 패드 통신과 물리 버튼 수신, WebSocket 손 좌표 연결 |
+| `web/core/pad/hardware.mjs`, `bluetooth-pad.mjs` | USB(Web Serial)·블루투스 패드 통신과 물리 버튼 수신, WebSocket 손 좌표 연결. Dot Pad SDK는 `web/core/pad/vendor/`에 둔다 (`web/core/pad/README.md` 참고) |
 | `web/core/game-audio.js` | 배경음악·작업음·성공음·단발 효과음의 독립 재생과 음량 제어 |
 | `web/audio/` | 공통 배경·피드백 MP3 음원 (기능별 음원은 `web/features/<name>/audio/`) |
 | `game.bat`, `launch_game.py` | Windows 실행 및 서버·브라우저 시작 보조 |
@@ -192,15 +197,15 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 | `viewer.js` | 화면·카드·오브젝트·진행 효과를 그리는 원본 코드 |
 | `model.mjs` | 게임 상태와 시각화 배치·표현 사이의 변환 |
 | `viewer.css` | 카드, 수량, 색상, 선택 강조, 시간 막대 스타일 |
-| `display.js` | 실제 페이지에서 불러오는 실행용 묶음 |
-| `build_display.py` | 원본 코드에서 실행용 `display.js` 생성 |
+| `display.js` | 실제 페이지에서 불러오는 실행용 묶음 (직접 수정된 파일이므로 다시 생성하지 않는다. `web/spectator/README.md` 참고) |
+| `build_display.py` (저장소 루트) | 예전 묶음 생성 도구. 현재 결과는 `display.js`와 다르다 |
 | `visual-assets.json` | 배경·시설·아이템 이미지 및 스프라이트 영역 등록 |
 | `scene-objects.json` | 장소별 시설 위치·크기·표시 순서 |
-| `assets/` | `scenes.png`, `scenes2.png`, `facilities.png`, `items.png`, `extras.png` 등 이미지 |
+| `assets/` | `scenes.png`, `scenes2.png`, `facilities.png`, `items.png`, `extras.png` 등 공통 이미지. 기능별 이미지는 `web/features/<name>/assets/` |
 
 농장의 각 밭과 광산의 각 돌은 실제 게임 오브젝트와 연결된다. 농장은 개별 밭에 울타리를 두며, 상점은 왼쪽 목록과 오른쪽 상인·매대로 구성한다. 인벤토리와 상점은 한 페이지의 항목을 스크롤 없이 표시한다.
 
-이미지 관리는 배경·시설·오브젝트 등록을 분리해 기존 이미지를 재사용한다. 새 활동의 화면이 아직 준비되지 않았으면 도트 화면을 표시하고, 등록되지 않은 아이템은 프레임과 이름으로 표시한다. 원본 코드를 수정한 경우 `display.js`도 다시 생성해야 실제 실행에 반영된다.
+이미지 관리는 배경·시설·오브젝트 등록을 분리해 기존 이미지를 재사용한다. 새 활동의 화면이 아직 준비되지 않았으면 도트 화면을 표시하고, 등록되지 않은 아이템은 프레임과 이름으로 표시한다. `display.js`에는 `viewer.js`/`model.mjs`에 없는 수정이 들어 있어 다시 생성하면 그 수정이 사라진다 (docs/refactor/FOLLOWUPS.md F5).
 
 ## 저장과 로드
 
@@ -226,7 +231,7 @@ F3을 길게 누르면 누르는 도중 저장이 실행된다. 저장 후 키�
 
 ## 설정 파일
 
-설정은 `game_config.json`에서 변경한다. 변경 후 서버를 재시작한다. 아래 값은 현재 설정 기준이다.
+설정은 `config/game.json`에서 변경한다. 변경 후 서버를 재시작한다. 아래 값은 현재 설정 기준이다.
 
 시간은 게임 틱, `_ms`는 밀리초, 확률은 0~1, 좌표는 도트 단위다. 엔진에서 별도로 제한하는 항목은 표 아래에 정리했다.
 
@@ -323,6 +328,8 @@ F3을 길게 누르면 누르는 도중 저장이 실행된다. 저장 후 키�
 
 사용자 평가는 아직 진행하지 않았다. 실물 패드 갱신 속도, 조명·카메라 위치·가림에 따른 추적 오차, 음성 품질을 함께 점검할 예정이다. 현재는 청각과 손 조작을 사용할 수 있는 사용자를 대상으로 한다.
 
+아래 업데이트 기록은 작성 당시 내용을 유지한다. 파일 경로만 현재 구조로 고쳤으며, 기록에 나오지만 지금은 없는 테스트 파일은 docs/refactor/FOLLOWUPS.md(F6)에 정리했다.
+
 ## 낚시 업데이트
 
 이동 경로는 농장 ↔ 집 ↔ 마을 ↔ 광산 ↔ 낚시 호수다. 낚싯대 없이 호수에 들어갈 수 있지만 낚시에는 낚싯대가 필요하다. 낚싯대는 100골드이며 한 개만 보유한다. 성공한 낚시 4회까지 안전하고, 5번째 성공부터 파괴 확률이 10%씩 증가한다. 꽝은 내구도 횟수에 포함하지 않는다. 파괴된 시도의 획득물은 유지되며 destroy 효과음으로 안내한다.
@@ -333,7 +340,7 @@ F3을 길게 누르면 누르는 도중 저장이 실행된다. 저장 후 키�
 
 ### 개발 설정
 
-모든 경로는 game_config.json 기준이다. 아래 등급은 개발용 분류다.
+모든 경로는 config/game.json 기준이다. 아래 등급은 개발용 분류다.
 
 | 항목 | 설정 |
 |---|---|
@@ -352,7 +359,7 @@ F3을 길게 누르면 누르는 도중 저장이 실행된다. 저장 후 키�
 
 기본 내부 분류: 하=Sardine/Bass/Mackerel, 중=Carp/Catfish/Flounder, 상=Salmon/Rainbow trout. 판매가는 구리 가격을 기준으로 하/중/상 그룹마다 0/3/6골드를 더한다. 현재 21/24/27골드다.
 
-낚시 판정은 game_fishing.py에 분리했다. game_engine.py에서 입력·이동·상점·인벤토리와 연결한다. game-audio.js는 기존 water.mp3를 HRTF 공간 음향으로 반복 재생한다. 로컬 포인터 이동에서 음향을 즉시 갱신하며 API 응답을 기다리지 않는다. Visual Companion은 기존 scene3.png의 호수와 items2.png의 물고기를 사용한다. 낚싯대 이미지는 아직 없어 기존 이름 카드 대체 표시를 사용한다.
+낚시 판정은 `visionpad/features/fishing/`에 있고 엔진(`visionpad/core/engine.py`)에 등록되어 입력·이동·상점·인벤토리와 연결된다. `web/core/game-audio.js`는 기존 water.mp3를 HRTF 공간 음향으로 반복 재생한다. 로컬 포인터 이동에서 음향을 즉시 갱신하며 API 응답을 기다리지 않는다. Visual Companion은 기존 scene3.png의 호수와 items2.png의 물고기를 사용한다. 낚싯대 이미지는 아직 없어 기존 이름 카드 대체 표시를 사용한다.
 
 전체 파일을 기존 프로젝트에 적용하고 서버를 재시작한 뒤 Ctrl+F5로 새로고침한다. 시각화 창도 다시 연다. 저장 폴더와 가상환경은 배포 ZIP에서 제외했으며 기존 폴더를 유지한다. 기존 저장을 읽으면 낚싯대와 물고기 항목만 기본값으로 추가한다.
 
@@ -378,7 +385,7 @@ F3을 길게 누르면 누르는 도중 저장이 실행된다. 저장 후 키�
 
 희귀 재료 효과는 광산 연구를 적용한 뒤 철·다이아몬드 가중치를 높이며, 낚시에서는 해당 거리 구역의 상급 어종 가중치를 높인다. 최종 확률은 전체 가중치 합으로 정규화한다. 판매 효과는 화면 가격과 실제 지급액에 동일하게 적용하며, 판매 실패·구매·이동에는 횟수를 차감하지 않는다. 획득량 효과는 수확 작물·회수 씨앗·광물·물고기·완성 요리에 적용한다. 구매와 판매 골드에는 적용하지 않는다. 기존처럼 음식 효과는 한 번에 하나만 적용되며 새 음식을 먹으면 교체된다.
 
-`game_seafood.py`는 생선 재료 선택, 음식 효과, 낚싯대·생선 가격 계산을 담당한다. 공통 조리 경로는 `cooking_methods.gestures`에서 관리하고 각 생선 요리는 `gesture_steps`의 method로 참조한다. 현재 준비 동작은 채소 썰기와 생선 손질이며, 마무리 동작은 젓기·튀김·구이다. 세 번째 준비 동작인 달걀 처리는 계획 항목으로 남겨 두었다. 기존 채소 요리의 경로는 변경하지 않았다.
+`visionpad/features/seafood/`는 생선 재료 선택을, `visionpad/core/effects.py`는 공통 음식 효과를, `visionpad/features/fishing/`은 낚싯대·생선 가격 계산을 담당한다. 공통 조리 경로는 `cooking_methods.gestures`에서 관리하고 각 생선 요리는 `gesture_steps`의 method로 참조한다. 현재 준비 동작은 채소 썰기와 생선 손질이며, 마무리 동작은 젓기·튀김·구이다. 세 번째 준비 동작인 달걀 처리는 계획 항목으로 남겨 두었다. 기존 채소 요리의 경로는 변경하지 않았다.
 
 낚싯대 내구도는 `fishing.rod_safe_casts`(5), `rod_break_increment`(0.1)로 조정한다. 물고기 가격은 `fish_price_base_mineral`(copper)과 `fish_price_grade_bonus`로 조정한다. 내구도와 완성 음식의 효과, 남은 판매 횟수는 저장·로드된다. 이전 저장 파일의 낚싯대는 사용 횟수 0부터 시작한다.
 
@@ -450,7 +457,7 @@ Rowan은 마을의 상점 옆에 서 있습니다. 선택하면 고정 영어 Ro
 
 인벤토리 첫 페이지에는 골드와 사용 가능한 음식이 표시됩니다. 나머지 재료·씨앗·작물·물고기·도구는 다음 페이지부터 표시합니다. 음식 종류가 11개를 초과하면 추가 음식 페이지를 먼저 배치해 누락을 방지합니다. 방향키는 페이지 전환만 수행하며 F2로 닫거나 F1로 미니맵을 열 수 있습니다.
 
-`game_village.py`는 Rowan 퀘스트와 대사, 작물 제출, 요일별 가격 계산을 담당합니다. `game_config.json`의 `rowan.seed_gift_each`는 종류별 선물 씨앗 수, `rowan.vegetable_reward_gold`는 채소 제출 보상입니다. `weekly_market.discount_percent`, `bonus_percent`, `days`에서 할인·고가 매입 비율과 요일별 적용 분류를 설정합니다. 수프는 `recipes.rowan_soup`에서 설정합니다.
+`visionpad/features/village/`는 Rowan 퀘스트와 대사, 작물 제출, 요일별 가격 계산을 담당합니다. `config/game.json`의 `rowan.seed_gift_each`는 종류별 선물 씨앗 수, `rowan.vegetable_reward_gold`는 채소 제출 보상입니다. `weekly_market.discount_percent`, `bonus_percent`, `days`에서 할인·고가 매입 비율과 요일별 적용 분류를 설정합니다. 수프는 `recipes.rowan_soup`에서 설정합니다.
 
 `web/features/npc/assets/rowan.png`에 대화 초상화·전신·낚싯대를 함께 담았습니다. `visual-assets.json`에서 각 이미지 영역을, `scene-objects.json`에서 마을 배치를 관리합니다. 기존 이미지는 그대로 사용합니다. 새 에셋은 기본 이미지 생성 도구로 제작했으며, 밀짚모자·녹색 셔츠·갈색 멜빵바지를 입은 갈색 머리의 수염 있는 남성 농부와 나무 낚싯대를 투명 배경의 픽셀 아트로 구성했습니다.
 
@@ -463,6 +470,6 @@ Rowan과 대화하면 마을 페이지와 이동 버튼을 유지합니다. 채�
 
 초상화는 자체 6:7 비율을 사용하고, 기존 8:5 화면 비율은 메인 캔버스에만 적용합니다. 낚싯대가 있으면 낚시터에 큰 낚싯대가 표시됩니다. 곡괭이가 있으면 포인터로 지정한 광산 바위 옆에 들어 올린 곡괭이가 표시됩니다. 두 표시는 시각적 안내이며 게임 판정에는 영향을 주지 않습니다.
 
-`assets/items3.png`는 투명 배경 3×3 스프라이트 시트입니다. 첫 행은 낚싯대·달력·새, 둘째 행은 커피콩·커피·가위, 셋째 행은 사료·식칼·벌레잡이채입니다. `visual-assets.json`에서 각 영역을 등록했습니다. 소형 낚싯대는 인벤토리와 상점에서 사용하며 기존 큰 이미지는 `fishing_rod_equipped`로 등록했습니다. 추후용 나머지 일곱 아이템은 그래픽만 추가했으며 게임 기능은 추가하지 않았습니다.
+`web/spectator/assets/items3.png`는 투명 배경 3×3 스프라이트 시트입니다. 첫 행은 낚싯대·달력·새, 둘째 행은 커피콩·커피·가위, 셋째 행은 사료·식칼·벌레잡이채입니다. `visual-assets.json`에서 각 영역을 등록했습니다. 소형 낚싯대는 인벤토리와 상점에서 사용하며 기존 큰 이미지는 `fishing_rod_equipped`로 등록했습니다. 추후용 나머지 일곱 아이템은 그래픽만 추가했으며 게임 기능은 추가하지 않았습니다.
 
 기본 이미지 생성 도구로 제작했습니다. 생성 조건은 따뜻한 색의 농장 게임용 픽셀 아트 아이템 9종, 투명 배경, 동일한 3×3 셀, 글자·프레임 없음입니다. 기존 이미지는 유지합니다.
