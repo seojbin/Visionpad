@@ -1,138 +1,56 @@
-# Code owners: who reviews which folder. Mirrors the ownership table in AGENTS.md.
-# Every handle below is a PLACEHOLDER. Replace @REPLACE-* with real GitHub users or teams that
-# have write access; GitHub ignores owners without it. Later rules override earlier ones.
+# Code owners: who reviews which folder. Mirrors AGENTS.md: a feature task touches only game/<name>/;
+# engine/ needs approval. Every handle is a PLACEHOLDER: replace @REPLACE-* with GitHub users or teams
+# that have write access (GitHub ignores owners without it). Later rules override earlier ones.
 
-# Default: anything not listed below
+# Default, and files at the root (README, AGENTS.md, launchers)
 *                                   @REPLACE-lead
-
-# Core engine, shared services and app (explicit approval, AGENTS.md)
-/engine/                         @REPLACE-core-owner
-/engine/core/                    @REPLACE-core-owner
-/engine/display/                 @REPLACE-core-owner
-/engine/spectator/               @REPLACE-core-owner
-/engine/services/                @REPLACE-core-owner
-/engine/server/                     @REPLACE-core-owner
-/game/__init__.py     @REPLACE-core-owner
-# engine/config/game.json is one file, so feature config sections are reviewed by the core owner too.
-/config/                            @REPLACE-core-owner
-
-# Save format: engine attribute names, key order and fixtures
-/engine/services/saves.py        @REPLACE-core-owner @REPLACE-lead
-/tests/fixtures/saves/              @REPLACE-core-owner @REPLACE-lead
-
-# Shared client, companion window and assets
-/engine/web/                               @REPLACE-web-owner
-/engine/web/core/                          @REPLACE-web-owner
-/engine/web/core/pad/                      @REPLACE-hardware-owner
-/engine/web/game.html                      @REPLACE-web-owner
-/engine/web/spectator/                     @REPLACE-web-owner
-/engine/web/spectator/display.js           @REPLACE-web-owner @REPLACE-lead
-/engine/web/audio/                         @REPLACE-audio-owner
-*.mp3                               @REPLACE-audio-owner
-*.png                               @REPLACE-web-owner
-
-# Shared tests, baseline and refactor records
-/tests/                             @REPLACE-core-owner
-/docs/refactor/                     @REPLACE-lead
-
-# Setup, launchers and tools
-/tools/                             @REPLACE-setup-owner
-/launch_game.py                     @REPLACE-setup-owner
-/game.bat                           @REPLACE-setup-owner
-/setup-windows.bat                  @REPLACE-setup-owner
-/setup-mac.command                  @REPLACE-setup-owner
+/install-windows.bat                @REPLACE-setup-owner
+/install-mac.command                @REPLACE-setup-owner
+/start-windows.bat                  @REPLACE-setup-owner
 /start-mac.command                  @REPLACE-setup-owner
-/requirements.txt                   @REPLACE-setup-owner
-/requirements-dev.txt               @REPLACE-setup-owner
 
-# Camera tracking
-/tracking/                          @REPLACE-hardware-owner
-/tracking_*                         @REPLACE-hardware-owner
+# Shared engine (explicit approval)
+/engine/                            @REPLACE-engine-owner
+/engine/config/                     @REPLACE-engine-owner @REPLACE-lead
+/engine/services/saves.py           @REPLACE-engine-owner @REPLACE-lead
+/engine/tests/fixtures/saves/       @REPLACE-engine-owner @REPLACE-lead
+/engine/web/                        @REPLACE-web-owner
+/engine/web/core/pad/               @REPLACE-hardware-owner
+/engine/web/spectator/display.js    @REPLACE-web-owner @REPLACE-lead
+/engine/web/audio/                  @REPLACE-audio-owner
+/engine/launcher/                   @REPLACE-setup-owner
+/engine/requirements*.txt           @REPLACE-setup-owner
+/engine/tracking/                   @REPLACE-hardware-owner
+
+# Feature list and registration order (shared by every feature)
+/game/__init__.py                   @REPLACE-engine-owner
+/game/README.md                     @REPLACE-lead
 
 # Rules for people and agents
 /AGENTS.md                          @REPLACE-lead
-/CLAUDE.md                          @REPLACE-lead
+/.claude/                           @REPLACE-lead
 /.github/                           @REPLACE-lead
 
-# Features: one owner per feature (server code, client page texts, feature tests).
-# Feature sounds and textures need the feature owner and the asset owner (AGENTS.md: assets need approval).
-/game/cooking/        @REPLACE-cooking-owner
-/game/cooking/              @REPLACE-cooking-owner
-/tests/python/cooking/              @REPLACE-cooking-owner
-/tests/js/cooking/                  @REPLACE-cooking-owner
-/game/cooking/audio/        @REPLACE-cooking-owner @REPLACE-audio-owner
-
-/game/farming/        @REPLACE-farming-owner
-/game/farming/              @REPLACE-farming-owner
-/tests/python/farming/              @REPLACE-farming-owner
-/tests/js/farming/                  @REPLACE-farming-owner
-/game/farming/audio/        @REPLACE-farming-owner @REPLACE-audio-owner
-
-/game/fishing/        @REPLACE-fishing-owner
-/game/fishing/              @REPLACE-fishing-owner
-/tests/python/fishing/              @REPLACE-fishing-owner
-/tests/js/fishing/                  @REPLACE-fishing-owner
-/game/fishing/audio/        @REPLACE-fishing-owner @REPLACE-audio-owner
-/game/fishing/assets/       @REPLACE-fishing-owner @REPLACE-web-owner
-
-/game/flowers/        @REPLACE-flowers-owner
-/game/flowers/              @REPLACE-flowers-owner
-/tests/python/flowers/              @REPLACE-flowers-owner
-/tests/js/flowers/                  @REPLACE-flowers-owner
-/game/flowers/assets/       @REPLACE-flowers-owner @REPLACE-web-owner
-
-/game/harvest/        @REPLACE-harvest-owner
-/game/harvest/              @REPLACE-harvest-owner
-/tests/python/harvest/              @REPLACE-harvest-owner
-/tests/js/harvest/                  @REPLACE-harvest-owner
-/game/harvest/audio/        @REPLACE-harvest-owner @REPLACE-audio-owner
-
-/game/home/           @REPLACE-home-owner
-/game/home/                 @REPLACE-home-owner
-/tests/python/home/                 @REPLACE-home-owner
-/tests/js/home/                     @REPLACE-home-owner
-
-/game/inventory/      @REPLACE-inventory-owner
-/game/inventory/            @REPLACE-inventory-owner
-/tests/python/inventory/            @REPLACE-inventory-owner
-/tests/js/inventory/                @REPLACE-inventory-owner
-
-/game/minimap/        @REPLACE-minimap-owner
-/game/minimap/              @REPLACE-minimap-owner
-/tests/python/minimap/              @REPLACE-minimap-owner
-/tests/js/minimap/                  @REPLACE-minimap-owner
-
-/game/mining/         @REPLACE-mining-owner
-/game/mining/               @REPLACE-mining-owner
-/tests/python/mining/               @REPLACE-mining-owner
-/tests/js/mining/                   @REPLACE-mining-owner
-/game/mining/audio/         @REPLACE-mining-owner @REPLACE-audio-owner
-
-/game/npc/            @REPLACE-npc-owner
-/game/npc/                  @REPLACE-npc-owner
-/tests/python/npc/                  @REPLACE-npc-owner
-/tests/js/npc/                      @REPLACE-npc-owner
-/game/npc/assets/           @REPLACE-npc-owner @REPLACE-web-owner
-
-/game/research/       @REPLACE-research-owner
-/game/research/             @REPLACE-research-owner
-/tests/python/research/             @REPLACE-research-owner
-/tests/js/research/                 @REPLACE-research-owner
-
-/game/seafood/        @REPLACE-seafood-owner
-/game/seafood/              @REPLACE-seafood-owner
-/tests/python/seafood/              @REPLACE-seafood-owner
-/tests/js/seafood/                  @REPLACE-seafood-owner
-
-/game/shop/           @REPLACE-shop-owner
-/game/shop/                 @REPLACE-shop-owner
-/tests/python/shop/                 @REPLACE-shop-owner
-/tests/js/shop/                     @REPLACE-shop-owner
-
-/game/village/        @REPLACE-village-owner
-/game/village/              @REPLACE-village-owner
-/tests/python/village/              @REPLACE-village-owner
-/tests/js/village/                  @REPLACE-village-owner
-
-/game/*/audio/              @REPLACE-audio-owner
-/game/*/assets/             @REPLACE-web-owner
+# Features: one owner per feature. Sounds and images also need the asset owner.
+/game/cooking/                      @REPLACE-cooking-owner
+/game/cooking/audio/                @REPLACE-cooking-owner @REPLACE-audio-owner
+/game/farming/                      @REPLACE-farming-owner
+/game/farming/audio/                @REPLACE-farming-owner @REPLACE-audio-owner
+/game/fishing/                      @REPLACE-fishing-owner
+/game/fishing/audio/                @REPLACE-fishing-owner @REPLACE-audio-owner
+/game/fishing/assets/               @REPLACE-fishing-owner @REPLACE-web-owner
+/game/flowers/                      @REPLACE-flowers-owner
+/game/flowers/assets/               @REPLACE-flowers-owner @REPLACE-web-owner
+/game/harvest/                      @REPLACE-harvest-owner
+/game/harvest/audio/                @REPLACE-harvest-owner @REPLACE-audio-owner
+/game/home/                         @REPLACE-home-owner
+/game/inventory/                    @REPLACE-inventory-owner
+/game/minimap/                      @REPLACE-minimap-owner
+/game/mining/                       @REPLACE-mining-owner
+/game/mining/audio/                 @REPLACE-mining-owner @REPLACE-audio-owner
+/game/npc/                          @REPLACE-npc-owner
+/game/npc/assets/                   @REPLACE-npc-owner @REPLACE-web-owner
+/game/research/                     @REPLACE-research-owner
+/game/seafood/                      @REPLACE-seafood-owner
+/game/shop/                         @REPLACE-shop-owner
+/game/village/                      @REPLACE-village-owner

@@ -18,3 +18,15 @@ Fish as cooking ingredients, graded seafood dishes, and the food effects they gr
 | Client (web) | none (no `game/seafood/` folder; the game page shows its pages with the shared defaults); fish textures belong to fishing |
 | Tests | `engine/tests/python/audio/test_gameplay_audio.py` (cooking reaction) |
 | Note | Seafood dishes grant food effects (rare finds, double loot, better sales); the modifiers that apply them are in `engine/core/effects.py`. |
+
+## Gameplay
+
+In the ingredient screen choose one owned fish and the vegetable; cooking starts when both are selected and uses them only after both paths are traced. Each dish accepts only its `allowed_fish`:
+
+| Dish | Vegetable | Fish (grade) | Effect (low / medium / high) |
+|---|---|---|---|
+| Grilled fish | Potato | mackerel (low), carp (medium), salmon (high) | Rare finds (iron, diamonds, high-grade fish) ×1.5 / ×2 / ×3 for 12 / 14 / 16 ticks |
+| Fish stew | Tomato | sardine (low), catfish (medium), rainbow trout (high) | Sale prices +25 / +50 / +80 % (rounded down) for 3 / 4 / 5 sales; failed sales and purchases use no charge |
+| Fried fish | Carrot | bass (low), flounder (medium); no high variant | 30 / 60 % chance to double crops, recovered seeds, minerals, fish or dishes for 12 / 14 ticks (not purchases or sale gold) |
+
+Dish names say Simple / Ordinary / Luxurious; descriptions show the effect and its remaining hours or sales, never the multipliers. One food effect is active at a time. Preparation and second-stage paths come from `cooking_methods.gestures` (fish preparation, grilling, stirring, frying), referenced by `method` in each recipe's `gesture_steps`. Older saves: high-grade fried fish becomes the medium variant, and an active seafood effect takes the current strength without resetting its remaining time or exceeding the new sale count.

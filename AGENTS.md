@@ -1,78 +1,53 @@
 # AGENTS.md
 
-Working rules for people and AI agents in this repository. `CLAUDE.md` points here; this file is the single source.
+Rules for people and AI agents working in this repository. `.claude/CLAUDE.md` points here; this file is the single source.
 
-The game server is one `GameEngine` (`engine/core/engine.py`) with features plugged in through a registry (`engine/core/registry.py`). Each feature lives in its own folders and describes itself in `game/<name>/README.md`. Background: `docs/refactor/` (audit, test baseline, follow-ups, refactor report).
+The game is one `GameEngine` (`engine/core/engine.py`) with features plugged in through a registry (`engine/core/registry.py`). Shared code is in `engine/` ([engine/README.md](engine/README.md)); each feature is one folder in `game/` ([game/README.md](game/README.md)) with its own README.
 
-## Who owns what
+## Who may edit what
 
-A task for feature **X** may edit only:
+- **A task for feature X edits only `game/X/`**: its Python code, `client.js`, tests in `game/X/tests/` and its README.
+- **`engine/` needs explicit approval** from the owner before any change, including configuration values in `engine/config/`, the browser player, the companion window, launcher, tools and shared tests.
+- Also needs approval although it sits outside `engine/`: `game/__init__.py` (the `ENABLED` list and its order), sounds and images (`game/X/audio/`, `game/X/assets/`; binaries are committed without LFS), the root `install-*` and `start-*` files, `README.md`, `README.ko.md`, this file and `.github/`.
+- Never edit or regenerate `engine/web/spectator/display.js` (hand-edited bundle, follow-up F5) or the save fixtures in `engine/tests/fixtures/saves/`.
+- When a feature task needs an engine change (a new event, slot, script tag in `engine/web/game.html`, sound registration, config key), stop and ask; describe the smallest change.
 
-| Path | Notes |
-|---|---|
-| `game/X/` | Server code and the feature README. Keep the README's table current. |
-| `game/X/client.js` | What the game page shows for X's pages (`DotdewPages.register`, see `engine/web/core/pages.js`). |
-| `engine/tests/python/X/`, `engine/tests/js/X/` | Feature tests. A new Python test folder needs an empty `__init__.py`. Name new test files in the README's Tests row. |
-| X's section of `engine/config/game.json` | Adding keys X reads. Changing existing values (prices, timings, balance) needs approval. |
-
-Everything else needs **explicit approval** from the owner before it is changed:
-
-| Path | Why |
-|---|---|
-| `engine/core/` (engine, registry, `order.py`, input, render, time, state, effects) | Every feature depends on it. New run orders go in `order.py`. |
-| `engine/display/` (Dot Pad matrix, icons, keypad), `engine/spectator/` | Shared drawing and public state. |
-| `engine/services/` (saves, speech, speech queue) | Save format and speech pipeline. |
-| `engine/server/` (FastAPI app, routes, static fallback map) | HTTP API used by the page and the launcher. |
-| `game/__init__.py` | The `ENABLED` list: adding a feature is one line here. |
-| `engine/config/__init__.py`, `engine/paths.py`, `engine/config/*.json` outside your section, any config **value** | Shared settings. |
-| Saves: attribute names, `SAVE_KEY_ORDER`, `engine/tests/fixtures/saves/` | The save format (see below). Never edit the fixtures. |
-| Assets: every `.mp3` and `.png`, including `game/X/audio/` and `game/X/assets/`; `engine/web/spectator/visual-assets.json`, `scene-objects.json` | Binaries are committed without LFS (follow-up F9). A new sound also needs entries in `engine/web/core/game-audio.js` (`FEATURE_SOUND_URLS` and the sound list) and `engine/launcher/check_setup.py` (`ASSETS`, `FEATURE_SOUNDS`). |
-| `engine/web/spectator/display.js` | Hand-edited bundle. Never regenerate it with `engine/tools/build_display.py` (follow-up F5). |
-| `engine/web/core/`, `engine/web/game.html`, `engine/web/spectator/` (other files) | Shared client. A new `game/X/client.js` needs one script tag in `engine/web/game.html`. |
-| `engine/tests/python/{audio,core,saves,setup,speech,support}/`, `engine/tests/js/{audio,pad,speech}/`, `engine/tests/browser/` | Shared tests. Adding a test here is fine with approval; never change an existing assertion to make it pass. |
-| `docs/refactor/BASELINE.md` | Expected results. Add an addendum for new tests; changing a known result needs approval. |
-| `engine/tools/`, launchers (`engine/launcher/launch_game.py`, `start-windows.bat`, `setup-*`, `start-mac.command`), `requirements*.txt` | Setup and launch (Phase 6 will replace these). |
-| `engine/tracking/`, `tracking_*` | Camera tracking; not installed or testable in the default setup. |
-
-`.github/CODEOWNERS` mirrors this table for review requests.
+`.github/CODEOWNERS` assigns reviewers per folder.
 
 ## Game state and saves
 
-- **Never rename or remove engine attributes.** Their names are the save-file keys (`engine/services/saves.py`, `engine/tests/python/saves/test_save_compat.py`); a rename breaks every existing save.
-- A feature declares the attributes it owns with `reg.owns(...)`. Write only your own attributes; shared state goes through the helpers in `engine/core/state.py` (`set_page`, `resource`, `add_resource`).
-- A new attribute is a save-format change (approval): own it, set it in your `reset` handler, and list it in `reg.save_fields(defaults=...)` so older saves load. Transient values (drag flags, deadlines) use `transient=` or `clock=`.
-- Do not change behaviour while restructuring: player-visible text, sounds, timing, random draws and `/api/state` keys stay identical unless the task says otherwise.
+- **Never rename or remove engine attributes.** Their names are the save-file keys (`engine/services/saves.py`); a rename breaks every existing save. `engine/tests/python/saves/test_save_compat.py` loads a pre-refactor save to guard this.
+- A feature declares the attributes it owns with `reg.owns(...)` and writes only those; shared state goes through `engine/core/state.py` (`set_page`, `resource`, `add_resource`).
+- A new attribute changes the save format (approval): own it, set it in the `reset` handler, list it in `reg.save_fields(defaults=...)` so older saves load; transient values use `transient=` or `clock=`.
+- Do not change gameplay while restructuring: player-visible text, sounds, timing, random draws and `/api/state` keys stay identical unless the task asks for it.
 
 ## Connecting features
 
-- Prefer **events** (`reg.on(...)`, `registry.run(...)`; list in `EVENTS`, `engine/core/registry.py`) and **slots** (`reg.slot(...)`, `reg.contribute(...)`) for anything one feature needs from another. Pass run orders from `engine/core/order.py`, never a bare number.
-- Use `reg.expose(name, fn)` only for:
-  - methods that tests or tools call on the engine (`engine.talk_rowan()`), or
-  - paired features that already depend on each other (npc ↔ village, cooking ↔ seafood, farming ↔ harvest).
-- Every exposed name is listed with its owner in `engine/tests/python/core/test_registry.py` (`ExposeTests.EXPECTED`). Adding one fails that test until the list is updated, so it shows up in review. The goal is fewer, not more (follow-up F15).
-- When a feature calls another feature's exposed method, list it under "Engine API used" in the calling feature's README.
+- Prefer **events** (`reg.on`, `registry.run`; the list is `EVENTS` in `engine/core/registry.py`) and **slots** (`reg.slot`, `reg.contribute`) over `reg.expose`. Pass run orders from `engine/core/order.py`, never a bare number.
+- Use `reg.expose(name, fn)` only for methods tests or tools call on the engine, or for paired features that already depend on each other (npc ↔ village, cooking ↔ seafood, farming ↔ harvest). Every exposed name is listed with its owner in `engine/tests/python/core/test_registry.py` (`ExposeTests.EXPECTED`), so a new one fails that test until it is reviewed. The goal is fewer (follow-up F15).
+- List other features' exposed methods you call under "Engine API used" in your README.
 
 ## Feature README
 
-Each `game/<name>/README.md` is one table. Keep these rows accurate when you change the feature: Code, Pages, Actions, Object types, Owned engine attributes, Shared attributes written/read, Events, Slots, State keys, Saves, Engine API provided, Engine API used, Config, Client (web), Tests. Write "none" rather than leaving a row out. The Tests row lists full paths; `engine/tools/run_tests.py --feature <name>` runs exactly those files.
+Each `game/X/README.md` is a table: Code, Pages, Actions, Object types, Owned engine attributes, Shared attributes written/read, Events, Slots, State keys, Saves, Engine API provided/used, Config, Client (web), Tests. Write "none" rather than leaving a row out. The Tests row lists shared test files by full path; `engine/tools/run_tests.py --feature X` runs those plus `game/X/tests/`.
 
 ## Before you finish: run the tests
 
-From the repository root, inside the project environment (`.venv`, Python 3.11+; Node.js 20+ for the JS tests):
+From the repository root, with the project environment (`.venv`, Python 3.11+; Node.js 20+):
 
 ```
 # Windows
-.venv\Scripts\python.exe tools\run_tests.py --feature X     # the feature you changed (repeat --feature for several)
-.venv\Scripts\python.exe tools\run_tests.py                 # everything: Python, Node, URL check, browser smoke test
+.venv\Scripts\python.exe engine\tools\run_tests.py --feature X     # the feature you changed (repeat --feature for several)
+.venv\Scripts\python.exe engine\tools\run_tests.py                 # everything: Python, Node, URL check, browser smoke test
 
 # macOS / Linux
 .venv/bin/python engine/tools/run_tests.py --feature X
 .venv/bin/python engine/tools/run_tests.py
 ```
 
-- Done means the last line reads `All results match docs/refactor/BASELINE.md (known failures included).` The 11 known failures (follow-up F1–F4) are expected; do not fix them in an unrelated task.
-- The browser checks need `pip install -r engine/requirements-dev.txt` and `python -m playwright install chromium`; `--no-browser` skips them. On Windows the smoke test fails when the registry maps `.mjs` to `text/plain` (follow-up F17); that is the machine, not your change.
-- Report the exact command and its final lines. If a result differs, say so; do not edit the baseline to match.
+- Done means the last line reads `All green.` Known failures are marked in the tests (`@unittest.expectedFailure` or a node `todo`, each with its follow-up ID and reason) and listed at the end of the run. Do not fix them in an unrelated task. If your change makes one pass, the run fails: remove that marker in the same change and say so.
+- The browser checks need `pip install -r engine/requirements-dev.txt` and `python -m playwright install chromium`; `--no-browser` skips them (then say so).
+- Report the exact command and its final lines. Never weaken an assertion to make a test pass.
 
 ## Commits
 

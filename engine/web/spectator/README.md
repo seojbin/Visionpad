@@ -20,7 +20,7 @@ scene; clicking it never changes the game.
 | `assets/` | Shared texture sheets (scenes, items, facilities) |
 
 Feature-only sheets live next to their feature and are referenced from `visual-assets.json`
-with `../features/<name>/assets/...`: flower sheets in `game/flowers/assets/`, fish and
+with `../features/<name>/assets/...` (the server maps `/static/features/<name>/` to `game/<name>/`): flower sheets in `game/flowers/assets/`, fish and
 fish dishes (`items2.png`) in `game/fishing/assets/`, and the Rowan atlas (`rowan.png`)
 in `game/npc/assets/`. Their old `/static/spectator/assets/...` URLs still resolve
 (`LEGACY_STATIC` in `engine/server/routes/static.py`).

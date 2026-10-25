@@ -21,3 +21,21 @@ Rowan's sequential tutorial quest (soup → seeds → bring a vegetable → advi
 | Client (web) | `game/village/client.js` (town task text) |
 | Tests | `engine/tests/python/audio/test_team_audio.py`, `engine/tests/python/speech/test_speech.py` (5 of 8 known Rowan failures, follow-up F1) |
 | Note | The home/town icon sort in `engine/display/icons.py` still names the `town` page. |
+
+## Gameplay
+
+Rowan stands beside the shop. Talking to him keeps the village page: the first talk gives one Rowan's soup (stew image and harvest effect, sells for 100, cannot be cooked); after you use or sell it he gives one seed of each crop (`rowan.seed_gift_each`); then the farming tutorial; bring any one crop and select it on the submission page (owned crops only) for 100 gold (`rowan.vegetable_reward_gold`). Gifts and rewards are given once; quest progress is saved, and older saves start the quest from the beginning. Either arrow cancels the submission page.
+
+Game day 1 is Monday; the shop counter's Calendar button speaks the week's offers. They repeat every seven days (`weekly_market`, 20 %):
+
+| Day | Offer |
+|---|---|
+| Monday | Ore purchases 20 % off |
+| Tuesday | Cooked food sells for 20 % more |
+| Wednesday | Fish sells for 20 % more |
+| Thursday | Seeds 20 % off |
+| Friday | Ore sells for 20 % more |
+| Saturday | Fertilizer, pickaxes and fishing rods 20 % off |
+| Sunday | Everything sells for 20 % more |
+
+Prices are rounded down after the day's change; an active sale-boost food applies afterwards and rounds down again. Research costs and quest rewards are unaffected. The companion shows Rowan and his portrait from `game/npc/assets/rowan.png` and never sends game input.

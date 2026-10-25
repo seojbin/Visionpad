@@ -2,6 +2,72 @@
 
 Shared code that every feature uses: the server, the game engine core, the Dot Pad display, saves, speech, the browser player (audio, keys, pad), the companion window, configuration, the launcher and installer logic, dev tools and the shared tests. Changes here need approval (see `AGENTS.md`).
 
+The server owns game state and checks every action. The browser sends pointer and key input and receives dot frames, public state, speech and sound events. Mouse, keyboard, pad buttons and hand tracking all become the same move, press, drag and release events.
+
+## Folders
+
+| Path | Contents |
+|---|---|
+| `server/` | FastAPI app (`main.py`, run as `uvicorn engine.server.main:app`), shared runtime, routes: game page and input/state API (`/api/state`, `/api/pointer/*`, `/api/command`, `/api/reset`, `/api/visual-tick`), speech (`/api/speech*`), static files |
+| `core/` | `engine.py` (state, reset, page objects, responses), `registry.py` (how features plug in), `order.py` (run orders for events and slots), `input.py`, `render.py`, `time.py` (time, night, sleep), `state.py` (shared-state helpers), `effects.py` (food effects) |
+| `display/` | `dotpad.py` (dot matrix and drawing), `icons.py` (icon grid and symbols), `keypad.py` (F-key menus, arrow navigation) |
+| `services/` | `saves.py` (save files and migrations), `speech.py` (Piper and WAV cache), `speech_queue.py` |
+| `spectator/` | `state.py`: public data for the companion window |
+| `config/` | `game.json` (rules), `npc.json` (Rowan's lines), `speech.json` (voices), `tracking.json` (camera); `load_config()` in `__init__.py` |
+| `web/` | `game.html`; `core/` (`game.js` page script, `pages.js` feature hooks, `game-audio.js`, `game-speech.js`, `game-keys.js`, `pad/`); `audio/` (shared sounds); `spectator/` (companion window) |
+| `launcher/` | `launch_game.py`, `setup_game.py`, `check_setup.py`: the logic behind the root `start-*` and `install-*` files |
+| `tools/` | Dev tools (below) |
+| `tracking/` | Camera hand and ArUco tracking (below) |
+| `tests/` | Shared tests: `python/`, `js/`, `browser/` (URL check, Playwright smoke test), `fixtures/saves/` (a pre-refactor save that must keep loading) |
+| `requirements.txt`, `requirements-dev.txt` | Game dependencies; dev-only tools (Playwright) |
+
+Features are in `game/`; the engine loads the names in `game/__init__.py` `ENABLED` and each feature registers its pages, actions, renderers, hover speech and sounds, state keys, event handlers, slot contributions, save fields and shop items. `GameEngine` stays one object whose attribute names are the save-file keys.
+
+## Configuration
+
+Edit `engine/config/game.json` and restart the server. Time is in game ticks, `_ms` values in milliseconds, probabilities 0–1, coordinates in dots.
+
+| Key | Meaning (current value) |
+|---|---|
+| `game.start_day` | Starting day (1) |
+| `resources` | Starting gold, fertilizer, seeds and crops |
+| `time.total_cells`, `time.action_costs` | Ticks per day (20); cost per action: travel, plant, water, fertilize, harvest, research, cook, mine, fish |
+| `seeds.<id>` | `growth_days`, `yield`, `seed_price`, `crop_price`, `seed_return_chance` (0.1) |
+| `fertilizer.growth_day_bonus`, `shop.fertilizer_price` | Immediate growth (1 day); price (12) |
+| `recipes.<id>` | `ingredients`, `buff_kind` (`harvest_multiplier`, `pickaxe_protection`, `time_slow`, …), `buff_multiplier`, `buff_ticks`, `gesture_steps` (per stage `kind`, `path`, `tolerance`) |
+| `research.seed_return`, `field_expansion`, `mineral_luck` | Costs, levels and effects (farm expansion: `[30, 50, 70, 90]` gold and `[5, 10, 15, 20]` stone, two to six plots; seed return `[0.3, 0.6]`) |
+| `care_minigame` | `target_count`, `target_positions`, `tolerance`, `success_ratio` (0.65) |
+| `harvest_minigame` | `target_count`, `target_positions` (all targets required; the hit tolerance is fixed at 3.5 in code) |
+| `interaction.feedback` | `disappear_delay_ms` (200), `visual_refresh_interval_ms` (100, minimum 50) |
+| `interaction.cooking` | `resume_marker_delay_ms` (400), `stir_scale` (1.6) |
+| `interaction.inventory` | `items_per_page` (12, range 1–12), `hide_zero_items` (true) |
+| `interaction.sleep.blackout_ms` | Sleep blackout and input pause (2000) |
+| `interaction.audio` | Volumes and gains (see Audio); `fishing` holds the lake sound settings |
+| `mine` | `daily_rock_limit` (7, also capped in code), rock size and gap (10, 10, 5), `hits_to_break` (3), `pickaxe_price_multiplier` (5× fertilizer), `pickaxe_safe_hits` (9), `pickaxe_break_increment` (0.05), `loot_weights` (diamond 1, iron 15, copper 34, stone 50), `mineral_sell_multipliers`, `mineral_sell_price_bonus` (3), `mineral_buy_multiplier` (2) |
+| `fishing`, `flowers`, `rowan`, `weekly_market` | See `game/fishing`, `game/flowers`, `game/village` |
+| `dotpad`, `time.bar`, `home`, `farm`, `town`, `minimap` | Panel sizes and base layouts. Some screens are normalised to fixed grids in code, so a coordinate or `label` change may not show directly |
+
+The F3 hold time is `holdMs` in `engine/web/core/game-keys.js`. Companion positions belong in `web/spectator/scene-objects.json`, image registration in `visual-assets.json`, card styles in `viewer.css`.
+
+## Saves
+
+Holding F3 saves to a new slot before the key is released (releasing it does not open the list); a short press opens the slot list. Saves are JSON files in `saves/` (the latest 12 are kept, not committed). A save is the engine's attributes in a fixed key order (`services/saves.py`, `SAVE_KEY_ORDER`), so **attribute names must never change**. Older saves get defaults for attributes added later (`reg.save_fields(defaults=...)`) and per-feature migrations. Pad connections, camera calibration and speech settings are not saved.
+
+## Browser page, Dot Pad and tracking
+
+- `web/core/game.js` draws the dot matrix, sends pointer input (queued and throttled), plays responses and exposes `window.DotdewInput` for the pad and tracking code. Feature-specific texts come from `game/<name>/client.js` through `web/core/pages.js`.
+- `web/core/pad/hardware.mjs`: USB pad (Web Serial) output and buttons, and the hand-tracking WebSocket client (coordinates; a server that sends no press state needs the press button or F4). `bluetooth-pad.mjs`: Bluetooth pad through the Dot Inc. SDK, which you download by hand into `web/core/pad/vendor/` (gitignored; see `web/core/pad/README.md`). The Dot Pad itself does not sense touch.
+- **Hand tracking** (`tracking/`): a camera finds the pad with ArUco markers and the hand with MediaPipe, maps the fingertip onto the pad and sends coordinates over WebSocket (port in `config/tracking.json`, default 8765, the page's default too). Its dependencies (`opencv-python`, `mediapipe`, `numpy`, `websockets`) are not in `requirements.txt`; install them into `.venv` yourself. Run `engine\tracking\tracking_server.bat` (or `python engine/tracking/tracking_server.py`) for the server, `tracking_test.bat` / `tracking_test.py` for a local preview window. The `.bat` files look for `venv`, `.venv`, `..\venv`, `..\.venv` relative to the project folder, in that order.
+- After changing web files, hard-refresh the game page and reopen the companion window. Serve the page through the server; opening the HTML file directly does not work.
+
+## Visual Companion
+
+A separate, read-only window (`web/spectator/`) that follows locations, selections, minigames, time of day and sleep; clicking it changes nothing. `standalone.html` is the entry page, `display.js` the bundle it loads, `model.mjs` turns game state into layout, `viewer.js` draws scenes, cards, objects and effects, `viewer.css` styles them, `visual-assets.json` registers backgrounds, facilities, items and sprite regions, `scene-objects.json` places facilities. Shared images are in `web/spectator/assets/`, feature images in `game/<name>/assets/`. Each plot and rock is a game object; a page without a visual renderer falls back to the dot display and an unregistered item shows its name in a frame.
+
+**Do not regenerate `display.js`** with `tools/build_display.py`: it has hand edits that are not in `viewer.js`/`model.mjs` (follow-up F5).
+
+`web/spectator/assets/items3.png` is a 3×3 item atlas: fishing rod / calendar / bird; coffee beans / coffee / scissors; animal feed / kitchen knife / bug net. The small rod is used in inventory and shop cards (the detailed rod is `fishing_rod_equipped` in `game/npc/assets/rowan.png`); the other seven are assets for future content. `items3.png` and `rowan.png` were generated with an image tool (pixel-art sprites on transparent backgrounds).
+
 ## Audio
 
 Recorded sounds are 18 MP3 files: shared ones in `engine/web/audio/`, feature sounds in `game/<name>/audio/`. The original recordings are unchanged. Short synthetic cues are defined in `engine/web/core/game-audio.js` (`SOUND_CUES`, `feedback`, `cue`); all playback goes through `GameAudio`.
@@ -51,6 +117,8 @@ Speech is generated on the server by Piper 1.8.0 with two fixed English models: 
 Both model cards state the Hi Fi Captain dataset license, CC BY-NC-SA 4.0 (non-commercial). Check the model choice and terms again before any wider distribution.
 
 ## Speech
+
+Player controls on the game page: **Test guide** (system voice) and **Test Rowan**; **Replay** repeats the current NPC line or the latest announcement; **Stop speech**; **Speech on/off** and **Speech rate**; **Speech volume** (85% by default, speech only; changing it mid-line does not restart or regenerate the line). Music drops to 25% while speech plays. Hover descriptions wait behind action results and dialogue. Leaving the window silences speech and sounds, including late responses; coming back restores music and the lake sound for the current screen and keeps mute settings, without replaying old lines (the caption and **Replay** still have them). Rowan adds a one-time reaction to the latest real result (first harvest, dish, catch, mineral, broken tool); it survives saves, and older saves get general reactions.
 
 - Voice profiles, pronunciation version and sample sentences: `engine/config/speech.json`; Rowan's lines: `engine/config/npc.json`. Display text and spoken text are separate: `F1`–`F4` are read as words, and `NPC` and `Dotdew` have fixed readings.
 - `engine/services/speech.py` generates and caches WAVs (a repeated sentence reuses its file; partial or corrupt files are regenerated). `engine/services/speech_queue.py` serves requests through one worker.
