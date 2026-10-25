@@ -5,6 +5,8 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from engine.services.audio_files import migrate_legacy_audio  # noqa: E402 (standard library only)
 
 
 def environment_python(root=ROOT, windows=None):
@@ -21,6 +23,7 @@ def setup(root=ROOT, run=subprocess.run):
     root = Path(root)
     if sys.version_info < (3, 11):
         raise RuntimeError("Python 3.11 or newer is required. Install it, then run setup again.")
+    migrate_legacy_audio(root)
     python = environment_python(root)
     if python is None:
         environment = root / ".venv"

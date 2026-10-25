@@ -166,7 +166,7 @@ def main():
     if args.stdout:
         print(json.dumps(result))
     else:
-        target=ROOT/'output/audio/integration-flow.json'
+        target=ROOT/'.audio/reports/integration-flow.json'
         target.parent.mkdir(parents=True,exist_ok=True)
         target.write_text(json.dumps(result,indent=2)+'\n')
         print(f"Recorded {len(result['events'])} real input responses and {len(result['milestones'])} milestones: {target.relative_to(ROOT)}")

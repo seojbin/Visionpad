@@ -12,6 +12,7 @@ from threading import RLock
 import wave
 
 from engine.config import config_path
+from engine.services.audio_files import cache_dir as speech_cache_dir, voices_dir
 
 
 class SpeechUnavailable(RuntimeError):
@@ -29,7 +30,7 @@ def spoken_text(text):
 
 class PiperSynthesizer:
     def __init__(self, root, profiles):
-        self.model_dir = Path(root) / "models" / "piper"
+        self.model_dir = voices_dir(root)
         self.profiles = profiles
         self.voices = {}
         self.identities = {}
@@ -79,7 +80,7 @@ class SpeechService:
         self.config = json.loads(config_path("speech", self.root).read_text(encoding="utf-8"))
         self.profiles = self.config["profiles"]
         self.synthesizer = synthesizer or PiperSynthesizer(self.root, self.profiles)
-        self.cache_dir = Path(cache_dir) if cache_dir is not None else self.root / ".cache" / "speech"
+        self.cache_dir = Path(cache_dir) if cache_dir is not None else speech_cache_dir(self.root)
         # Piper model access and writes are serialized, outside the ASGI event loop.
         self.lock = RLock()
 

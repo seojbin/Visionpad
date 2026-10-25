@@ -8,7 +8,7 @@ A browser simulator supports mouse and keyboard. A USB or Bluetooth Dot Pad and 
 
 ## Install
 
-Install Python 3.11 or newer, then open **install-windows.bat** (Windows) or **install-mac.command** (macOS) once. It creates `.venv/` in the project, installs `engine/requirements.txt` and downloads the two English voices; nothing is installed globally. Internet is needed for this step; no account or API key is used.
+Install Python 3.11 or newer, then open **install-windows.bat** (Windows) or **install-mac.command** (macOS) once. It creates `.venv/` in the project, installs `engine/requirements.txt` and downloads the two English voices into `.audio/voices/`; nothing is installed globally. Internet is needed for this step; no account or API key is used.
 
 Manual install from the project folder:
 
@@ -51,6 +51,7 @@ Locations run Farm ↔ Home ↔ Village ↔ Mine ↔ Fishing lake. Exploring and
 | `engine/` | Shared code: server, engine core, Dot Pad display, saves, speech, browser player (audio, keys, pad), Visual Companion, configuration, launcher and installer logic, camera tracking, dev tools and shared tests. See [engine/README.md](engine/README.md). |
 | `game/` | One folder per feature (cooking, farming, fishing, flowers, harvest, home, inventory, minimap, mining, npc, research, seafood, shop, village) with its Python code, browser texts, sounds, images, tests and README. See [game/README.md](game/README.md). |
 | `install-*`, `start-*` | Thin wrappers that call `engine/launcher/`. |
+| `.audio/`, `saves/` | Created when you install and play, not committed: voices, speech cache and audio reports; saved games. Voices and cache from older versions (`models/`, `.cache/`, `output/`) are moved into `.audio/` automatically. |
 | `AGENTS.md` | Rules for people and AI agents: who owns which folder, what needs approval, the save format. |
 
 ## Add a feature

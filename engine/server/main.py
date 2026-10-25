@@ -3,13 +3,16 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from engine.paths import ROOT
 from engine.server import runtime
+from engine.services.audio_files import migrate_legacy_audio
 from engine.server.routes import game, speech, static
 
 
 def create_app():
     @asynccontextmanager
     async def lifespan(app):
+        migrate_legacy_audio(ROOT)
         yield
         await runtime.speech_jobs.close()
 

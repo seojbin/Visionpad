@@ -38,7 +38,7 @@ class SetupChecks(unittest.TestCase):
             target.write_bytes(b"sound")
         config = {"profiles": {"system": {"model": "test-voice"}}, "samples": [{"text": "Hello."}]}
         (self.root / "engine/config/speech.json").write_text(json.dumps(config))
-        self.model = self.root / "models/piper/test-voice.onnx"
+        self.model = self.root / ".audio/voices/test-voice.onnx"
         self.model.parent.mkdir(parents=True)
         self.model.write_bytes(b"model")
         self.model.with_suffix(".onnx.json").write_text(json.dumps({"audio": {"sample_rate": 22050}, "phoneme_id_map": {"a": [1]}}))
@@ -49,7 +49,7 @@ class SetupChecks(unittest.TestCase):
     def test_complete_setup_reports_ready_without_creating_progress_or_cache(self):
         self.assertTrue(self.report()["ready"])
         self.assertFalse((self.root / "saves").exists())
-        self.assertFalse((self.root / ".cache").exists())
+        self.assertFalse((self.root / ".audio/cache").exists())
 
     def test_missing_dependency_has_an_actionable_fix(self):
         def absent(name):

@@ -49,7 +49,7 @@ def collect():
 
 if __name__ == "__main__":
     entries = collect()
-    target = ROOT / "output" / "audio" / "speech-catalog.json"
+    target = ROOT / ".audio" / "reports" / "speech-catalog.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps({"scope": "Speech literals and templates; variable-only expressions and browser-authored messages are not expanded.", "entries": entries}, indent=2), encoding="utf-8")
     print(f"Collected {len(entries)} source-backed expressions into {target.relative_to(ROOT)}")

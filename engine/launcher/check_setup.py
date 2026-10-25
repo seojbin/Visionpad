@@ -71,7 +71,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
         for profile, entry in config["profiles"].items():
             if not isinstance(entry, dict) or not isinstance(entry.get("model"), str):
                 raise ValueError("Invalid voice model entry")
-            model = root / "models/piper" / (entry["model"] + ".onnx")
+            model = root / ".audio/voices" / (entry["model"] + ".onnx")
             model_config = model.with_suffix(".onnx.json")
             good = model.is_file() and model.stat().st_size > 0
             reason = "Model missing or empty: " + str(model) if not good else ""
@@ -87,7 +87,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
         add("Voice configuration", False, "engine/config/speech.json is missing or invalid", "Restore engine/config/speech.json.")
 
     # Probe existing writable locations using disposable files; no saves or caches are removed.
-    for name in ("saves", ".cache/speech"):
+    for name in ("saves", ".audio/cache"):
         directory = root / name
         parent = directory
         while not parent.exists() and parent != root.parent:
@@ -112,7 +112,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
                         "Generated valid WAV in temporary storage")
                 except Exception as error:
                     add("Voice synthesis: " + profile, False, str(error),
-                        "Check Python and audio package support. For an interrupted model download, rename its model/config pair in models/piper and run setup again.")
+                        "Check Python and audio package support. For an interrupted model download, rename its model/config pair in .audio/voices and run setup again.")
 
     return {"ready": all(check["ok"] for check in checks), "platform": platform.platform(),
             "python": sys.executable, "voice_synthesis_requested": synthesize, "checks": checks,

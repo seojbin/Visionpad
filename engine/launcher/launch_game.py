@@ -17,6 +17,7 @@ import webbrowser
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from engine.launcher.check_setup import check_setup, show_report  # noqa: E402
+from engine.services.audio_files import migrate_legacy_audio  # noqa: E402
 
 
 def port_is_available(url):
@@ -107,6 +108,7 @@ def main(argv=None):
         if status == "game":
             print(f"Game is already running. Reusing {url} without restarting it.", flush=True)
         else:
+            migrate_legacy_audio(ROOT)
             report = check_setup(ROOT)
             show_report(report)
             if not report["ready"]:

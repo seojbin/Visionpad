@@ -147,7 +147,7 @@ def main():
     parser.add_argument("--server", default="http://127.0.0.1:8000", help="Running game server")
     parser.add_argument("--rate", type=float, default=1.0, help="Prepare this playback rate (0.8 to 1.5)")
     parser.add_argument("--list", action="store_true", help="List source-backed lines without generating speech")
-    parser.add_argument("--report", type=Path, default=ROOT / "output/audio/demo-ready.json")
+    parser.add_argument("--report", type=Path, default=ROOT / ".audio/reports/demo-ready.json")
     args = parser.parse_args()
     if not 0.8 <= args.rate <= 1.5:
         parser.error("rate must be between 0.8 and 1.5")

@@ -8,7 +8,7 @@
 
 ## 설치
 
-Python 3.11 이상을 설치한 뒤 **install-windows.bat**(Windows) 또는 **install-mac.command**(macOS)를 한 번 연다. 프로젝트 안에 `.venv/`를 만들고 `engine/requirements.txt`를 설치하며 영어 음성 두 개를 내려받는다. 전역 Python에는 아무것도 설치하지 않는다. 이 단계에는 인터넷이 필요하며 계정이나 API 키는 쓰지 않는다.
+Python 3.11 이상을 설치한 뒤 **install-windows.bat**(Windows) 또는 **install-mac.command**(macOS)를 한 번 연다. 프로젝트 안에 `.venv/`를 만들고 `engine/requirements.txt`를 설치하며 영어 음성 두 개를 `.audio/voices/`에 내려받는다. 전역 Python에는 아무것도 설치하지 않는다. 이 단계에는 인터넷이 필요하며 계정이나 API 키는 쓰지 않는다.
 
 프로젝트 폴더에서 직접 설치하려면:
 
@@ -51,6 +51,7 @@ python engine/tools/prepare_speech.py --download
 | `engine/` | 공통 코드: 서버, 엔진 핵심, Dot Pad 화면, 저장, 음성, 브라우저 재생기(오디오·키·패드), Visual Companion, 설정, 실행기·설치 로직, 카메라 추적, 개발 도구, 공통 테스트. [engine/README.md](engine/README.md) 참고(영어). |
 | `game/` | 기능마다 한 폴더(cooking, farming, fishing, flowers, harvest, home, inventory, minimap, mining, npc, research, seafood, shop, village). 각 폴더에 Python 코드, 브라우저 문구, 소리, 이미지, 테스트, README가 있다. [game/README.md](game/README.md) 참고(영어). |
 | `install-*`, `start-*` | `engine/launcher/`를 호출하는 얇은 실행 파일. |
+| `.audio/`, `saves/` | 설치하고 플레이하면 생기며 저장소에 올리지 않는다: 음성 모델, 음성 캐시, 오디오 보고서와 저장 파일. 이전 버전의 음성과 캐시(`models/`, `.cache/`, `output/`)는 자동으로 `.audio/`로 옮겨진다. |
 | `AGENTS.md` | 사람과 AI 에이전트를 위한 규칙: 폴더 담당, 승인이 필요한 변경, 저장 형식. |
 
 ## 기능 추가

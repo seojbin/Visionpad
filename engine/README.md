@@ -21,6 +21,8 @@ The server owns game state and checks every action. The browser sends pointer an
 | `tests/` | Shared tests: `python/`, `js/`, `browser/` (URL check, Playwright smoke test), `fixtures/saves/` (a pre-refactor save that must keep loading) |
 | `requirements.txt`, `requirements-dev.txt` | Game dependencies; dev-only tools (Playwright) |
 
+Runtime audio files live in one hidden, gitignored folder at the project root, created by the installer and the server: `.audio/voices/` (Piper voice models), `.audio/cache/` (generated speech WAVs) and `.audio/reports/` (voice previews, `demo-ready.json`, `speech-catalog.json`, `integration-flow.json` from `audio_flow.py`, `effects-preview.wav`). Older checkouts used `models/piper/`, `.cache/speech/` and `output/audio/`; the installer, the launcher and the server move those files into `.audio/` on start and print a note (`services/audio_files.py`), so the voices are not downloaded again. A file that already exists in `.audio/` is kept, and anything else in those old folders is left where it is. Saves stay in `saves/`.
+
 Features are in `game/`; the engine loads the names in `game/__init__.py` `ENABLED` and each feature registers its pages, actions, renderers, hover speech and sounds, state keys, event handlers, slot contributions, save fields and shop items. `GameEngine` stays one object whose attribute names are the save-file keys.
 
 ## Configuration
@@ -103,11 +105,11 @@ Mixing rules (values in `engine/config/game.json` → `interaction.audio`):
 - Music gains 0.30 / 0.20 (minigame) / 0.45 (shop), times the 0.9 master volume. During speech music is multiplied by 0.25 and one-shots and synthetic cues by 0.65; fishing exploration keeps its full gain.
 - The quiet harvest and rare-reward recordings are boosted (crop 1.4, shine 3.0); soil 0.35 and cut 0.45. These are linear gains on the source, not slider percentages, and are a first mix for listening tests.
 
-`python engine/tools/prepare_effects_preview.py` writes a labelled, about 37-second mono reel of every effect with the current gains to `output/audio/effects-preview.wav` (needs FFmpeg and Node). It does not reproduce HRTF or the live mix with music and speech.
+`python engine/tools/prepare_effects_preview.py` writes a labelled, about 37-second mono reel of every effect with the current gains to `.audio/reports/effects-preview.wav` (needs FFmpeg and Node). It does not reproduce HRTF or the live mix with music and speech.
 
 ### Voices and their sources
 
-Speech is generated on the server by Piper 1.8.0 with two fixed English models: `en_US-hfc_female-medium` (system) and `en_US-hfc_male-medium` (Rowan). The browser plays the server's WAV files, never operating-system voices. No account or API key is needed. Models are stored in `models/piper/` and generated audio in `.cache/speech/`; neither is committed.
+Speech is generated on the server by Piper 1.8.0 with two fixed English models: `en_US-hfc_female-medium` (system) and `en_US-hfc_male-medium` (Rowan). The browser plays the server's WAV files, never operating-system voices. No account or API key is needed. Models are stored in `.audio/voices/` and generated audio in `.audio/cache/`; neither is committed.
 
 - [Piper Python API](https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/API_PYTHON.md)
 - [Piper package, GPL-3.0-or-later](https://pypi.org/project/piper-tts/)
@@ -123,7 +125,7 @@ Player controls on the game page: **Test guide** (system voice) and **Test Rowan
 - Voice profiles, pronunciation version and sample sentences: `engine/config/speech.json`; Rowan's lines: `engine/config/npc.json`. Display text and spoken text are separate: `F1`–`F4` are read as words, and `NPC` and `Dotdew` have fixed readings.
 - `engine/services/speech.py` generates and caches WAVs (a repeated sentence reuses its file; partial or corrupt files are regenerated). `engine/services/speech_queue.py` serves requests through one worker.
 - Queue rules: requests carry `client_id`, `sequence` and `priority`, so each browser's latest line wins and a late cancel never cancels a newer line. Action results and dialogue go before hover descriptions and before background preparation (`background` priority). Disconnected requests leave the queue; a synthesis already running finishes and may be cached, but cancelled audio is never delivered. The queue holds at most 64 requests (429 when full). Superseded requests get 204, invalid ones 422, synthesis errors 503. The plain `text/profile/rate` request still works.
-- `python engine/tools/speech_inventory.py` lists the speech literals and templates in the game code (`engine/` without tests, tools, launcher and tracking, plus `game/`) into `output/audio/speech-catalog.json`. Text passed only through variables and browser-side messages are not expanded.
+- `python engine/tools/speech_inventory.py` lists the speech literals and templates in the game code (`engine/` without tests, tools, launcher and tracking, plus `game/`) into `.audio/reports/speech-catalog.json`. Text passed only through variables and browser-side messages are not expanded.
 
 ### Demo voice preparation
 
@@ -136,7 +138,7 @@ python engine/tools/prepare_demo.py --list                            # print th
 python engine/tools/prepare_demo.py --rate 1.2                        # cache for another speech rate
 ```
 
-It collects about 210 lines at rate 1.0 (fixed guidance, Rowan's tutorial and advice branches, representative actions, objects and reactions) with a temporary engine and temporary saves, then calls only `/api/speech/voices` and `/api/speech`; it never sends game input. Finished WAVs are reused and failures are listed in `output/audio/demo-ready.json`; re-running regenerates only what failed. New quantities, prices, reactions and other rates are generated on first use, and the browser still has to download and decode each file.
+It collects about 210 lines at rate 1.0 (fixed guidance, Rowan's tutorial and advice branches, representative actions, objects and reactions) with a temporary engine and temporary saves, then calls only `/api/speech/voices` and `/api/speech`; it never sends game input. Finished WAVs are reused and failures are listed in `.audio/reports/demo-ready.json`; re-running regenerates only what failed. New quantities, prices, reactions and other rates are generated on first use, and the browser still has to download and decode each file.
 
 ## Dev tools
 
@@ -145,7 +147,7 @@ It collects about 210 lines at rate 1.0 (fixed guidance, Rowan's tutorial and ad
 | `python engine/tools/run_tests.py` | Every test suite (see the root README) |
 | `python engine/tools/audio_flow.py` | Scripted farming, cooking, Rowan/trading, mining, fishing and save/load run through real pointer and key input on temporary saves; `--stdout` prints the JSON |
 | `python engine/tools/audio_integration_lab.py` | Browser lab on `http://127.0.0.1:8001/` starting in a temporary watering scene; does not touch real saves |
-| `python engine/tools/prepare_speech.py [--download]` | Download the voice models; write preview samples to `output/audio/` |
+| `python engine/tools/prepare_speech.py [--download]` | Download the voice models; write preview samples to `.audio/reports/` |
 | `python engine/tools/prepare_effects_preview.py` | Effects reel (above) |
 | `python engine/launcher/check_setup.py [--synthesize]` | Diagnose packages, files, sounds, voices and writable folders without starting a game |
 
@@ -162,8 +164,8 @@ Use stereo headphones (both ears). Refresh the game, click once to enable audio,
 3. **Leaving and returning.** Open the map with F1 and press F1 again: the water stops on the map and returns at the lake. Play **Test Rowan**, switch to another window and back: sound stops while away, old lines and effects do not suddenly play, music and lake sound return for the current screen. **Speech off** and **Sound off** stay off across the switch.
 4. **A cast (optional, needs a rod).** Press once near the sound: a catch plays splash and the fish name and count; a miss plays no catch sound; holding or dragging does not cast again.
 5. **Farm and mine target cues.** While watering, fertilizing, harvesting and mining, toggle **Target cues**. Can you tell direction and closeness, and do the beacons stay out of the way of work sounds, target sounds and speech? Can you hear progress in the rising pitch of farm targets and successive mine hits?
-6. **Effects balance.** Listen to `output/audio/effects-preview.wav`, then in the game check: travel, shop entry and trading each sound once; water/fertilizer/harvest work sound, target sound and completion are distinct and a quick tap still sounds; chopping and stirring fade when you stop; mining hit, break, rare find and tool break are distinct; impossible actions play the error cue; music and effects do not cover speech; harvest and rare-find sounds are audible.
-7. **Another computer.** After installing there, play **Test guide** and **Test Rowan** at the same rate and compare voice and pronunciation. Locally generated audio is not guaranteed to be bit-identical; compare the same `output/audio/` sample file when that matters.
+6. **Effects balance.** Listen to `.audio/reports/effects-preview.wav`, then in the game check: travel, shop entry and trading each sound once; water/fertilizer/harvest work sound, target sound and completion are distinct and a quick tap still sounds; chopping and stirring fade when you stop; mining hit, break, rare find and tool break are distinct; impossible actions play the error cue; music and effects do not cover speech; harvest and rare-find sounds are audible.
+7. **Another computer.** After installing there, play **Test guide** and **Test Rowan** at the same rate and compare voice and pronunciation. Locally generated audio is not guaranteed to be bit-identical; compare the same `.audio/reports/` sample file when that matters.
 
 Write down date, computer, browser, headphones, left/right, front/back, near/far, speech with water, recovery after map and window changes, and any badly pronounced sentence word for word.
 
@@ -190,4 +192,4 @@ Run on Windows with `start-windows.bat` (port 8003) and, if possible, on a Mac w
 17. Saves: load a save made before the refactor (an existing `saves/*.json` from the old version) and continue; save and reload a new one.
 18. Hard-refresh the game page after a run with the old version cached; no 404s.
 19. Hardware, if available: USB pad, Bluetooth pad (with the SDK in `engine/web/core/pad/vendor/`), hand tracking server (`engine/tracking/`). The console must not show "Expected a JavaScript-or-Wasm module script" for `hardware.mjs`.
-20. Demo preparation: `python engine/launcher/launch_game.py --prepare-demo` completes and `output/audio/demo-ready.json` reports the lines ready.
+20. Demo preparation: `python engine/launcher/launch_game.py --prepare-demo` completes and `.audio/reports/demo-ready.json` reports the lines ready.

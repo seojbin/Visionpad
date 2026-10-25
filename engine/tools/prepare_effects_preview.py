@@ -42,7 +42,7 @@ def main():
     cues = json.loads(subprocess.check_output(['node','-e',
         "process.stdout.write(JSON.stringify(require('./engine/web/core/game-audio.js').SOUND_CUES))"],cwd=ROOT))
     speech = SpeechService(ROOT)
-    output_dir = ROOT/'output'/'audio'
+    output_dir = ROOT/'.audio'/'reports'
     output_dir.mkdir(parents=True,exist_ok=True)
     examples = [('Watering','water','work',1.5),('Fertilizing','soil','work',1.5),
         ('Harvesting','crop','work',None),('Chopping','cut','work',None),('Cooking','cook','work',1.5),

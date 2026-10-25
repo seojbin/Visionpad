@@ -10,6 +10,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+from engine.services.audio_files import reports_dir, voices_dir  # noqa: E402
 from engine.services.speech import SpeechService
 
 def fallback_download(model, dest_dir):
@@ -64,7 +65,7 @@ def main():
     
     if args.download:
         from piper.download_voices import download_voice
-        models_dir = ROOT / "models" / "piper"
+        models_dir = voices_dir(ROOT)
         models_dir.mkdir(parents=True, exist_ok=True)
         
         for model in sorted({profile["model"] for profile in service.profiles.values()}):
@@ -76,7 +77,7 @@ def main():
                 # 2. 실패할 경우 직접 HuggingFace 접속 다운로드 시도
                 fallback_download(model, models_dir)
                 
-    output_dir = ROOT / "output" / "audio"
+    output_dir = reports_dir(ROOT)
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest = []
     for profile in service.profiles:
