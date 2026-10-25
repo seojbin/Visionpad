@@ -15,7 +15,7 @@ The server owns game state and checks every action. The browser sends pointer an
 | `spectator/` | `state.py`: public data for the companion window |
 | `config/` | `game.json` (rules), `npc.json` (Rowan's lines), `speech.json` (voices), `tracking.json` (camera); `load_config()` in `__init__.py` |
 | `web/` | `game.html`; `core/` (`game.js` page script, `pages.js` feature hooks, `game-audio.js`, `game-speech.js`, `game-keys.js`, `pad/`); `audio/` (shared sounds); `spectator/` (companion window) |
-| `launcher/` | `launch_game.py`, `setup_game.py`, `check_setup.py`: the logic behind the root `start-*` and `install-*` files |
+| `launcher/` | `launch_game.py`, `setup_game.py` (`--with-pad`), `check_setup.py`, `prepare_pad.py` (optional Dot Pad SDK): the logic behind the root `start-*` and `install-*` files |
 | `tools/` | Dev tools (below) |
 | `tracking/` | Camera hand and ArUco tracking (below) |
 | `tests/` | Shared tests: `python/`, `js/`, `browser/` (URL check, Playwright smoke test), `fixtures/saves/` (a pre-refactor save that must keep loading) |
@@ -58,7 +58,7 @@ Holding F3 saves to a new slot before the key is released (releasing it does not
 ## Browser page, Dot Pad and tracking
 
 - `web/core/game.js` draws the dot matrix, sends pointer input (queued and throttled), plays responses and exposes `window.DotdewInput` for the pad and tracking code. Feature-specific texts come from `game/<name>/client.js` through `web/core/pages.js`.
-- `web/core/pad/hardware.mjs`: USB pad (Web Serial) output and buttons, and the hand-tracking WebSocket client (coordinates; a server that sends no press state needs the press button or F4). `bluetooth-pad.mjs`: Bluetooth pad through the Dot Inc. SDK, which you download by hand into `web/core/pad/vendor/` (gitignored; see `web/core/pad/README.md`). The Dot Pad itself does not sense touch.
+- `web/core/pad/hardware.mjs`: USB pad (Web Serial) output and buttons, and the hand-tracking WebSocket client (coordinates; a server that sends no press state needs the press button or F4). `bluetooth-pad.mjs`: Bluetooth pad through the Dot Inc. SDK in `web/core/pad/vendor/` (gitignored). It is optional: `install-windows.bat --with-pad` / `install-mac.command --with-pad` (or `python engine/launcher/prepare_pad.py`) downloads SDK 3.0.3 from Dot Inc.'s public SDK guide at a fixed commit and checks the pinned size and SHA-256. Without it the setup check prints a WARN line, the game still starts, and `test_hardware.mjs` is skipped with a message. The Dot Pad itself does not sense touch.
 - **Hand tracking** (`tracking/`): a camera finds the pad with ArUco markers and the hand with MediaPipe, maps the fingertip onto the pad and sends coordinates over WebSocket (port in `config/tracking.json`, default 8765, the page's default too). Its dependencies (`opencv-python`, `mediapipe`, `numpy`, `websockets`) are not in `requirements.txt`; install them into `.venv` yourself. Run `engine\tracking\tracking_server.bat` (or `python engine/tracking/tracking_server.py`) for the server, `tracking_test.bat` / `tracking_test.py` for a local preview window. The `.bat` files look for `venv`, `.venv`, `..\venv`, `..\.venv` relative to the project folder, in that order.
 - After changing web files, hard-refresh the game page and reopen the companion window. Serve the page through the server; opening the HTML file directly does not work.
 
@@ -122,7 +122,7 @@ Both model cards state the Hi Fi Captain dataset license, CC BY-NC-SA 4.0 (non-c
 
 Player controls on the game page: **Test guide** (system voice) and **Test Rowan**; **Replay** repeats the current NPC line or the latest announcement; **Stop speech**; **Speech on/off** and **Speech rate**; **Speech volume** (85% by default, speech only; changing it mid-line does not restart or regenerate the line). Music drops to 25% while speech plays. Hover descriptions wait behind action results and dialogue. Leaving the window silences speech and sounds, including late responses; coming back restores music and the lake sound for the current screen and keeps mute settings, without replaying old lines (the caption and **Replay** still have them). Rowan adds a one-time reaction to the latest real result (first harvest, dish, catch, mineral, broken tool); it survives saves, and older saves get general reactions.
 
-- Voice profiles, pronunciation version and sample sentences: `engine/config/speech.json`; Rowan's lines: `engine/config/npc.json`. Display text and spoken text are separate: `F1`–`F4` are read as words, and `NPC` and `Dotdew` have fixed readings.
+- Voice profiles, pronunciation version, sample sentences and `downloads` (each voice file's pinned URL, size and SHA-256): `engine/config/speech.json`; Rowan's lines: `engine/config/npc.json`. All settings files are read as utf-8-sig, so a byte-order mark added by a Windows editor is harmless; reports are written as UTF-8, and the Windows scripts and installer run Python with `PYTHONUTF8=1`. Display text and spoken text are separate: `F1`–`F4` are read as words, and `NPC` and `Dotdew` have fixed readings.
 - `engine/services/speech.py` generates and caches WAVs (a repeated sentence reuses its file; partial or corrupt files are regenerated). `engine/services/speech_queue.py` serves requests through one worker.
 - Queue rules: requests carry `client_id`, `sequence` and `priority`, so each browser's latest line wins and a late cancel never cancels a newer line. Action results and dialogue go before hover descriptions and before background preparation (`background` priority). Disconnected requests leave the queue; a synthesis already running finishes and may be cached, but cancelled audio is never delivered. The queue holds at most 64 requests (429 when full). Superseded requests get 204, invalid ones 422, synthesis errors 503. The plain `text/profile/rate` request still works.
 - `python engine/tools/speech_inventory.py` lists the speech literals and templates in the game code (`engine/` without tests, tools, launcher and tracking, plus `game/`) into `.audio/reports/speech-catalog.json`. Text passed only through variables and browser-side messages are not expanded.
@@ -147,7 +147,7 @@ It collects about 210 lines at rate 1.0 (fixed guidance, Rowan's tutorial and ad
 | `python engine/tools/run_tests.py` | Every test suite (see the root README) |
 | `python engine/tools/audio_flow.py` | Scripted farming, cooking, Rowan/trading, mining, fishing and save/load run through real pointer and key input on temporary saves; `--stdout` prints the JSON |
 | `python engine/tools/audio_integration_lab.py` | Browser lab on `http://127.0.0.1:8001/` starting in a temporary watering scene; does not touch real saves |
-| `python engine/tools/prepare_speech.py [--download]` | Download the voice models; write preview samples to `.audio/reports/` |
+| `python engine/tools/prepare_speech.py [--download]` | Download the voice models (verified against the pinned size and SHA-256, three attempts, the old file is kept if a download fails, matching files are reused offline); write preview samples to `.audio/reports/` |
 | `python engine/tools/prepare_effects_preview.py` | Effects reel (above) |
 | `python engine/launcher/check_setup.py [--synthesize]` | Diagnose packages, files, sounds, voices and writable folders without starting a game |
 
@@ -191,5 +191,5 @@ Run on Windows with `start-windows.bat` (port 8003) and, if possible, on a Mac w
 16. Menus: F1 map and F2 inventory open and close with either arrow; F3 short press opens the save list; F3 hold saves ("Game saved.").
 17. Saves: load a save made before the refactor (an existing `saves/*.json` from the old version) and continue; save and reload a new one.
 18. Hard-refresh the game page after a run with the old version cached; no 404s.
-19. Hardware, if available: USB pad, Bluetooth pad (with the SDK in `engine/web/core/pad/vendor/`), hand tracking server (`engine/tracking/`). The console must not show "Expected a JavaScript-or-Wasm module script" for `hardware.mjs`.
+19. Hardware, if available: USB pad, Bluetooth pad (install the SDK with `--with-pad`), hand tracking server (`engine/tracking/`). The console must not show "Expected a JavaScript-or-Wasm module script" for `hardware.mjs`.
 20. Demo preparation: `python engine/launcher/launch_game.py --prepare-demo` completes and `.audio/reports/demo-ready.json` reports the lines ready.

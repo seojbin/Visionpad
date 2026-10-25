@@ -8,7 +8,7 @@
 
 ## 설치
 
-Python 3.11 이상을 설치한 뒤 **install-windows.bat**(Windows) 또는 **install-mac.command**(macOS)를 한 번 연다. 프로젝트 안에 `.venv/`를 만들고 `engine/requirements.txt`를 설치하며 영어 음성 두 개를 `.audio/voices/`에 내려받는다. 전역 Python에는 아무것도 설치하지 않는다. 이 단계에는 인터넷이 필요하며 계정이나 API 키는 쓰지 않는다.
+Python 3.11 이상을 설치한 뒤(3.12 64비트 권장. Windows 설치 파일은 3.12가 있으면 그것을 쓴다) **install-windows.bat**(Windows) 또는 **install-mac.command**(macOS)를 한 번 연다. 프로젝트 안에 `.venv/`를 만들고 `engine/requirements.txt`를 설치하며 영어 음성 두 개를 `.audio/voices/`에 내려받는다. 내려받은 파일은 크기와 SHA-256으로 확인하며, 끊기거나 손상된 파일은 다시 받는다(오류가 나면 설치 파일을 다시 실행한다). 전역 Python에는 아무것도 설치하지 않는다. 이 단계에는 인터넷이 필요하며 계정이나 API 키는 쓰지 않는다. 블루투스 Dot Pad를 쓰려면 설치 파일을 `--with-pad`와 함께 실행해(예: `install-windows.bat --with-pad`) Dot Inc.의 SDK도 내려받는다. 게임, USB 패드, 손 추적은 SDK 없이도 동작한다.
 
 프로젝트 폴더에서 직접 설치하려면:
 
@@ -19,7 +19,7 @@ python -m pip install -r engine/requirements.txt
 python engine/tools/prepare_speech.py --download
 ```
 
-`python engine/launcher/check_setup.py --synthesize`는 게임을 시작하지 않고 패키지·파일·소리·음성을 점검한다.
+`python engine/launcher/check_setup.py --synthesize`는 게임을 시작하지 않고 패키지·파일·소리·음성을 점검한다. 설정 파일은 편집기가 BOM을 붙여 저장해도 UTF-8로 읽으며, Windows 실행 파일은 Python을 UTF-8 모드로 실행하므로 한국어(cp949) 코드 페이지와 상관없이 동작한다.
 
 ## 실행
 
