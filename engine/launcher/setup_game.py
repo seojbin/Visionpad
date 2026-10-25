@@ -20,7 +20,7 @@ def environment_python(root=ROOT, windows=None):
     return None
 
 
-def setup(root=ROOT, run=subprocess.run):
+def setup(root=ROOT, run=subprocess.run, with_pad=False):
     root = Path(root)
     if sys.version_info < (3, 11):
         raise RuntimeError("Python 3.11 or newer is required. Install it, then run setup again.")
@@ -37,20 +37,30 @@ def setup(root=ROOT, run=subprocess.run):
     checked = run([str(python), "-c", "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"], cwd=root, check=False)
     if checked.returncode:
         raise RuntimeError("The project environment needs Python 3.11 or newer. Rename the old environment folder and run setup again.")
+    # UTF-8 mode for the child Pythons too, whatever the Windows code page.
+    env = {**os.environ, "PYTHONUTF8": "1"}
     commands = [[str(python), "-m", "pip", "install", "-r", str(root / "engine/requirements.txt")],
                 [str(python), "-m", "pip", "check"],
-                [str(python), str(root / "engine/tools/prepare_speech.py"), "--download"],
-                [str(python), str(root / "engine/launcher/check_setup.py"), "--synthesize"]]
+                [str(python), str(root / "engine/tools/prepare_speech.py"), "--download"]]
     for command in commands:
-        # UTF-8 mode for the child Pythons too, whatever the Windows code page.
-        run(command, cwd=root, check=True, env={**os.environ, "PYTHONUTF8": "1"})
+        run(command, cwd=root, check=True, env=env)
+    if with_pad:
+        # Optional Bluetooth pad SDK: a failed download is reported but never fails the setup.
+        result = run([str(python), str(root / "engine/launcher/prepare_pad.py")], cwd=root, check=False, env=env)
+        if result.returncode:
+            print("The Bluetooth pad SDK was not installed. The game works without it; run setup with --with-pad again to retry.",
+                  file=sys.stderr)
+    run([str(python), str(root / "engine/launcher/check_setup.py"), "--synthesize"], cwd=root, check=True, env=env)
     return python
 
 
 def main():
-    argparse.ArgumentParser(description=__doc__).parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--with-pad", action="store_true",
+                        help="Also download Dot Inc.'s Dot Pad SDK for the Bluetooth pad (optional)")
+    args = parser.parse_args()
     try:
-        python = setup()
+        python = setup(with_pad=args.with_pad)
     except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
         print(f"Setup did not finish: {error}", file=sys.stderr)
         print("Completed downloads are kept. Fix the issue and run setup again.", file=sys.stderr)

@@ -10,6 +10,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from engine.services.speech import valid_model_file  # noqa: E402 (Piper itself is imported only for synthesis)
+from engine.launcher.prepare_pad import FILES as PAD_FILES, SDK_DIR  # noqa: E402
 
 DEPENDENCIES = {"fastapi": ((0, 110), (1,)), "uvicorn": ((0, 29), (1,)),
                 "piper-tts": ((1, 8, 0), (1, 8, 1)), "onnxruntime": (None, None)}
@@ -33,6 +34,11 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
 
     def add(name, ok, detail, fix=""):
         checks.append({"name": name, "ok": bool(ok), "detail": detail, "fix": "" if ok else fix})
+
+    def warn(name, present, detail, advice):
+        """An optional part: reported, but never makes the setup not ready."""
+        checks.append({"name": name, "ok": True, "warning": not present, "detail": detail,
+                       "fix": "" if present else advice})
 
     current = python_version or sys.version_info[:3]
     add("Python", current >= (3, 11), ".".join(map(str, current)),
@@ -67,6 +73,11 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
                or not (root / sound_path(name)).stat().st_size]
     add("Game sounds", not missing, "18 files present" if not missing else ", ".join(missing),
         "Restore engine/web/audio and game/*/audio from the project source.")
+    sdk = root / SDK_DIR / "DotPadSDK-3.0.3.js"
+    sdk_ok = valid_model_file(sdk, PAD_FILES["DotPadSDK-3.0.3.js"])
+    warn("Bluetooth pad SDK (optional)", sdk_ok, "Installed" if sdk_ok else "Not installed or damaged: " + str(sdk),
+         "Only the Bluetooth pad needs it; the game, the USB pad and hand tracking work without it. "
+         "To add it, run install-windows.bat --with-pad or install-mac.command --with-pad.")
 
     config = None
     try:
@@ -124,7 +135,8 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
 
 def show_report(report):
     for check in report["checks"]:
-        print(f"{'OK' if check['ok'] else 'FIX'}  {check['name']}: {check['detail']}")
+        label = "WARN" if check.get("warning") else "OK" if check["ok"] else "FIX"
+        print(f"{label}  {check['name']}: {check['detail']}")
         if check["fix"]:
             print("     " + check["fix"])
     print("Setup ready." if report["ready"] else "Setup needs attention. Follow the FIX messages above.")

@@ -52,6 +52,14 @@ class SetupChecks(unittest.TestCase):
         self.assertFalse((self.root / "saves").exists())
         self.assertFalse((self.root / ".audio/cache").exists())
 
+    def test_missing_pad_sdk_is_a_warning_and_the_setup_stays_ready(self):
+        report = self.report()
+        sdk = next(check for check in report["checks"] if check["name"].startswith("Bluetooth pad SDK"))
+        self.assertTrue(report["ready"])
+        self.assertTrue(sdk["ok"])
+        self.assertTrue(sdk["warning"])
+        self.assertIn("--with-pad", sdk["fix"])
+
     def test_missing_dependency_has_an_actionable_fix(self):
         def absent(name):
             raise PackageNotFoundError(name)
@@ -170,6 +178,26 @@ class StartupTests(unittest.TestCase):
             self.assertTrue(all(command[0] == str(python) for command in commands[1:]))
             self.assertIn("--download", commands[-2])
             self.assertIn("--synthesize", commands[-1])
+
+    def test_pad_sdk_is_installed_only_on_request_and_its_failure_does_not_stop_setup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            python = root / ".venv/bin/python"
+            python.parent.mkdir(parents=True)
+            python.touch()
+            for with_pad in (False, True):
+                commands = []
+
+                def record(command, **kwargs):
+                    commands.append(command)
+                    failed = any(str(part).endswith("prepare_pad.py") for part in command)
+                    return subprocess.CompletedProcess(command, 1 if failed else 0)
+
+                with patch("engine.launcher.setup_game.environment_python", return_value=python):
+                    self.assertEqual(setup(root, run=record, with_pad=with_pad), python)
+                pad = [command for command in commands if str(command[-1]).endswith("prepare_pad.py")]
+                self.assertEqual(len(pad), 1 if with_pad else 0)
+                self.assertIn("--synthesize", commands[-1])
 
     def test_old_environment_python_is_rejected_before_installing(self):
         with tempfile.TemporaryDirectory() as directory:
