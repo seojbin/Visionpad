@@ -77,7 +77,7 @@ class PiperSynthesizer:
 class SpeechService:
     def __init__(self, root, synthesizer=None, cache_dir=None):
         self.root = Path(root)
-        self.config = json.loads(config_path("speech", self.root).read_text(encoding="utf-8"))
+        self.config = json.loads(config_path("speech", self.root).read_text(encoding="utf-8-sig"))
         self.profiles = self.config["profiles"]
         self.synthesizer = synthesizer or PiperSynthesizer(self.root, self.profiles)
         self.cache_dir = Path(cache_dir) if cache_dir is not None else speech_cache_dir(self.root)

@@ -2,10 +2,18 @@
 rem First-time setup on Windows. The installer logic is engine\launcher\setup_game.py.
 chcp 65001 > nul
 setlocal
+rem Read settings and print messages as UTF-8 regardless of the Windows code page (cp949 etc.).
+set "PYTHONUTF8=1"
 cd /d "%~dp0"
 where py > nul 2>&1
 if not errorlevel 1 (
-    py -3 engine\launcher\setup_game.py
+    rem Python 3.12 is the tested version; use it when installed, otherwise the newest Python 3.
+    py -3.12 -c "import sys" > nul 2>&1
+    if not errorlevel 1 (
+        py -3.12 engine\launcher\setup_game.py
+    ) else (
+        py -3 engine\launcher\setup_game.py
+    )
 ) else (
     where python > nul 2>&1
     if errorlevel 1 (

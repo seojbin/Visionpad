@@ -19,7 +19,7 @@ def collect():
     for path in sorted(game_code()):
         if path.relative_to(ROOT).as_posix() == "engine/services/speech.py":
             continue
-        source = path.read_text(encoding="utf-8")
+        source = path.read_text(encoding="utf-8-sig")
         tree = ast.parse(source)
         nodes = []
         for node in ast.walk(tree):

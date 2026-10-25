@@ -63,7 +63,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
 
     config = None
     try:
-        config = json.loads((root / "engine/config/speech.json").read_text(encoding="utf-8"))
+        config = json.loads((root / "engine/config/speech.json").read_text(encoding="utf-8-sig"))
         if not isinstance(config, dict):
             raise ValueError("Invalid voice configuration")
         if not isinstance(config.get("profiles"), dict) or not config["profiles"] or not config.get("samples"):
@@ -136,7 +136,7 @@ def main():
     show_report(result)
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.report.write_text(json.dumps(result, indent=2) + "\n")
+        args.report.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     return 0 if result["ready"] else 1
 
 

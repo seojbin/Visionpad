@@ -2,6 +2,8 @@
 rem Start the game on Windows (port 8003). The launcher logic is engine\launcher\launch_game.py.
 chcp 65001 > nul
 setlocal
+rem Read settings and print messages as UTF-8 regardless of the Windows code page (cp949 etc.).
+set "PYTHONUTF8=1"
 cd /d "%~dp0"
 
 set "VISIONPAD_PYTHON=.venv\Scripts\python.exe"

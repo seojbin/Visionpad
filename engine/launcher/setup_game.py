@@ -1,5 +1,6 @@
 """Create this project's environment and install its game and fixed voices."""
 import argparse
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -41,7 +42,8 @@ def setup(root=ROOT, run=subprocess.run):
                 [str(python), str(root / "engine/tools/prepare_speech.py"), "--download"],
                 [str(python), str(root / "engine/launcher/check_setup.py"), "--synthesize"]]
     for command in commands:
-        run(command, cwd=root, check=True)
+        # UTF-8 mode for the child Pythons too, whatever the Windows code page.
+        run(command, cwd=root, check=True, env={**os.environ, "PYTHONUTF8": "1"})
     return python
 
 
