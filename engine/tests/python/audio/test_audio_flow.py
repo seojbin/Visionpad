@@ -1,6 +1,6 @@
 """End-to-end game input sequence, without altering the player's running game."""
 import unittest
-from tools.audio_flow import run_flow
+from engine.tools.audio_flow import run_flow
 
 
 class AudioFlowTests(unittest.TestCase):

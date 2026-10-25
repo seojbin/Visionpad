@@ -1,7 +1,7 @@
 """Build a classic-script display bundle; avoids OS-specific module MIME mappings."""
 from pathlib import Path
 import re
-root=Path(__file__).parent/'engine/web/spectator'
+root=Path(__file__).resolve().parents[1]/'web/spectator'
 model=(root/'model.mjs').read_text()
 viewer=(root/'viewer.js').read_text()
 viewer=re.sub(r'^import\s*\{.*?\}\s*from\s*"./model.mjs";\s*','',viewer,count=1,flags=re.S)

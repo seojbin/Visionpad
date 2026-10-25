@@ -7,11 +7,11 @@ import wave
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT))
 from engine.config import load_config
 from engine.services.speech import SpeechService
-from tools.check_setup import sound_path
+from engine.launcher.check_setup import sound_path
 
 RATE = 22050
 

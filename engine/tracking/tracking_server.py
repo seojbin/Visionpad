@@ -2,12 +2,14 @@ from pathlib import Path
 import asyncio
 import base64
 import json
+import sys
 
 import cv2
 import websockets
 
-from tracking import VisionPadTracker
-from engine.config import config_path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from engine.tracking import VisionPadTracker  # noqa: E402
+from engine.config import config_path  # noqa: E402
 
 
 BASE_DIR = Path(__file__).resolve().parent

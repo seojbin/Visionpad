@@ -10,12 +10,12 @@ from time import perf_counter
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from engine.config import load_config
 from engine.services.speech import spoken_text
-from tools.audio_flow import run_flow
-from tools.speech_inventory import collect
+from engine.tools.audio_flow import run_flow
+from engine.tools.speech_inventory import collect
 
 
 def demo_lines():

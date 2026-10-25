@@ -14,9 +14,9 @@ from urllib.request import build_opener, ProxyHandler
 urlopen = build_opener(ProxyHandler({})).open
 import webbrowser
 
-from tools.check_setup import check_setup, show_report
-
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from engine.launcher.check_setup import check_setup, show_report  # noqa: E402
 
 
 def port_is_available(url):
@@ -114,7 +114,7 @@ def main(argv=None):
             process = subprocess.Popen([sys.executable, "-m", "uvicorn", "engine.server.main:app", "--host", "127.0.0.1", "--port", str(args.port)], cwd=ROOT)
             wait_for_server(process, url)
         if args.prepare_demo:
-            prepared = subprocess.run([sys.executable, str(ROOT / "tools/prepare_demo.py"), "--server", url], cwd=ROOT)
+            prepared = subprocess.run([sys.executable, str(ROOT / "engine/tools/prepare_demo.py"), "--server", url], cwd=ROOT)
             if prepared.returncode:
                 raise RuntimeError("Demo voices are not fully ready. Check the preparation messages and retry.")
         print(f"Ready: {url}", flush=True)

@@ -24,7 +24,7 @@ Farming, cooking, mining, trading, research, fishing, and one authored NPC conve
 
 ## Running the game
 
-For the first setup, install Python 3.11 or newer and open **setup-mac.command** on Mac or **setup-windows.bat** on Windows. These create a project environment, install the dependencies and download both voices. Internet is needed for that setup. For later starts, open **start-mac.command** or **game.bat**. The launcher checks the setup, waits for the server, prepares demo voices and opens the game. An existing game on the selected port is reused without a restart. See the [setup and handoff guide](docs/audio/SETUP.md).
+For the first setup, install Python 3.11 or newer and open **install-mac.command** on Mac or **install-windows.bat** on Windows. These create a project environment, install the dependencies and download both voices. Internet is needed for that setup. For later starts, open **start-mac.command** or **start-windows.bat**. The launcher checks the setup, waits for the server, prepares demo voices and opens the game. An existing game on the selected port is reused without a restart. See the [setup and handoff guide](docs/audio/SETUP.md).
 
 For manual setup, create a Python environment and install the dependencies from the project root.
 
@@ -35,12 +35,12 @@ python -m venv .venv
 # macOS / Linux
 source .venv/bin/activate
 
-python -m pip install -r requirements.txt
-python tools/prepare_speech.py --download
-python launch_game.py --prepare-demo
+python -m pip install -r engine/requirements.txt
+python engine/tools/prepare_speech.py --download
+python engine/launcher/launch_game.py --prepare-demo
 ```
 
-The Mac launcher and manual command default to `http://127.0.0.1:8000`. Windows `game.bat` preserves its existing port, `http://127.0.0.1:8003`. Use the address printed by the launcher. Serve the HTML through the local server rather than opening it directly.
+The Mac launcher and manual command default to `http://127.0.0.1:8000`. Windows `start-windows.bat` preserves its existing port, `http://127.0.0.1:8003`. Use the address printed by the launcher. Serve the HTML through the local server rather than opening it directly.
 
 1. Click or press a key on the game page to enable audio.
 2. Use the mouse and keyboard, or connect the USB pad and hand-tracking server.
@@ -49,7 +49,7 @@ The Mac launcher and manual command default to `http://127.0.0.1:8000`. Windows 
 
 Restart the server after changing the configuration. After replacing web files, hard-refresh the game page and reopen the companion window.
 
-On this Mac, the prepared environment is `.venv/`. The launchers also recognize an existing `venv/`. Run `python tools/check_setup.py --synthesize` from the active environment to diagnose files, packages and actual voice generation without starting or changing a game. Mac arm64 with Python 3.14.3 has been checked; the Windows helpers still need an actual Windows run.
+On this Mac, the prepared environment is `.venv/`. The launchers also recognize an existing `venv/`. Run `python engine/launcher/check_setup.py --synthesize` from the active environment to diagnose files, packages and actual voice generation without starting or changing a game. Mac arm64 with Python 3.14.3 has been checked; the Windows helpers still need an actual Windows run.
 
 ## English voices and Rowan
 
@@ -65,11 +65,11 @@ Speech uses Piper on the Python server with fixed English models, rather than th
 - Leaving the game window silences speech and game sounds, including delayed responses. Returning restores ambient music and lake guidance for the current screen, while keeping mute settings. Old speech and one-shot effects do not replay automatically; delayed text remains available in the caption and with **Replay**.
 - Changing scenes cancels old task, target, transaction, and deferred mining sounds. The sleep recording still continues into the next morning. Failed sound assets can retry on a later action or state update after a one-second cooldown; old effects are not replayed.
 
-Voice models and sample sentences are in `engine/config/speech.json`; authored dialogue is in `engine/config/npc.json`. Run `python tools/prepare_speech.py` to regenerate previews in `output/audio/`, or `python tools/speech_inventory.py` to refresh the source sentence inventory. See [the sound map and model sources](docs/audio/SOUND_MAP.md), [team handoff](docs/audio/TEAM_HANDOFF.md). The prototype models use the dataset license listed in their linked model cards (CC BY NC SA 4.0); Piper is GPL 3.0 or later.
+Voice models and sample sentences are in `engine/config/speech.json`; authored dialogue is in `engine/config/npc.json`. Run `python engine/tools/prepare_speech.py` to regenerate previews in `output/audio/`, or `python engine/tools/speech_inventory.py` to refresh the source sentence inventory. See [the sound map and model sources](docs/audio/SOUND_MAP.md), [team handoff](docs/audio/TEAM_HANDOFF.md). The prototype models use the dataset license listed in their linked model cards (CC BY NC SA 4.0); Piper is GPL 3.0 or later.
 
-Before a demo, keep the game server running and run `python tools/prepare_demo.py` in a second terminal. It prepares fixed guidance, Rowan tutorial and advice branches and representative action/object/reaction announcements through the speech API, without changing player progress. At the current revision it prepares 203 lines at speed 1.0; other rates, changing quantities and save timestamps may still need first-time generation. The report is `output/audio/demo-ready.json`. See [demo preparation and verification](docs/audio/DEMO_READY.md).
+Before a demo, keep the game server running and run `python engine/tools/prepare_demo.py` in a second terminal. It prepares fixed guidance, Rowan tutorial and advice branches and representative action/object/reaction announcements through the speech API, without changing player progress. At the current revision it prepares 203 lines at speed 1.0; other rates, changing quantities and save timestamps may still need first-time generation. The report is `output/audio/demo-ready.json`. See [demo preparation and verification](docs/audio/DEMO_READY.md).
 
-Software checks: run `python tools/run_tests.py` from the project environment. It runs the Python suite (`engine/tests/python/`), every Node test file (`engine/tests/js/`, Node.js 20+), the URL check and the browser smoke test (`engine/tests/browser/`, needs `pip install -r requirements-dev.txt` and `python -m playwright install chromium`; skip them with `--no-browser`), then compares every result with [BASELINE.md](docs/refactor/BASELINE.md), where the known failures are listed. `python tools/run_tests.py --feature fishing` runs one feature's tests (the files named in its README) plus the registry and save guards. Rules for changing code, including who owns which folder, are in [AGENTS.md](AGENTS.md). `python tools/audio_flow.py` records a farming, cooking, NPC/trading, mining, fishing, save/load sequence in temporary progress. For a separate browser check, run `python tools/audio_integration_lab.py` and open `http://127.0.0.1:8001/`; it starts a temporary watering scene and does not use the normal game's progress. See the [integration report](docs/audio/INTEGRATION_REPORT.md) for coverage and fixture differences.
+Software checks: run `python engine/tools/run_tests.py` from the project environment. It runs the Python suite (`engine/tests/python/`), every Node test file (`engine/tests/js/`, Node.js 20+), the URL check and the browser smoke test (`engine/tests/browser/`, needs `pip install -r engine/requirements-dev.txt` and `python -m playwright install chromium`; skip them with `--no-browser`), then compares every result with [BASELINE.md](docs/refactor/BASELINE.md), where the known failures are listed. `python engine/tools/run_tests.py --feature fishing` runs one feature's tests (the files named in its README) plus the registry and save guards. Rules for changing code, including who owns which folder, are in [AGENTS.md](AGENTS.md). `python engine/tools/audio_flow.py` records a farming, cooking, NPC/trading, mining, fishing, save/load sequence in temporary progress. For a separate browser check, run `python engine/tools/audio_integration_lab.py` and open `http://127.0.0.1:8001/`; it starts a temporary watering scene and does not use the normal game's progress. See the [integration report](docs/audio/INTEGRATION_REPORT.md) for coverage and fixture differences.
 
 The user accepted the first voices and gave a positive initial assessment of direction cues and effects balance, requesting slightly quieter speech. The 85% speech level implements that feedback. Detailed direction/listening results, pronunciation, another computer, and a physical Dot Pad still require further checks; follow the [listening checklist](docs/audio/LISTENING_CHECK.md).
 
@@ -185,7 +185,7 @@ Server code is the `engine/` and `game/` package. Each activity is a feature fol
 | `engine/web/core/pad/hardware.mjs`, `bluetooth-pad.mjs` | USB (Web Serial) and Bluetooth pad output and physical buttons; WebSocket hand coordinates. The Dot Pad SDK goes in `engine/web/core/pad/vendor/` (see `engine/web/core/pad/README.md`) |
 | `engine/web/core/game-audio.js` | Separate music, action, reward, and one-shot sound channels |
 | `engine/web/audio/` | Shared MP3 assets (feature sounds are in `game/<name>/audio/`) |
-| `game.bat`, `launch_game.py` | Windows startup and server/browser launch helpers |
+| `start-windows.bat`, `engine/launcher/launch_game.py` | Windows startup and server/browser launch helpers |
 
 ### Visual Companion
 
@@ -198,7 +198,7 @@ The companion is a separate, read-only window under `engine/web/spectator/`. It 
 | `model.mjs` | Convert game state into visual layout data |
 | `viewer.css` | Cards, quantities, colors, selection highlights, and time bar |
 | `display.js` | Runtime bundle loaded by the page (hand-edited; do not regenerate, see `engine/web/spectator/README.md`) |
-| `build_display.py` (repository root) | Old bundle builder; its output no longer matches `display.js` |
+| `engine/tools/build_display.py` (repository root) | Old bundle builder; its output no longer matches `display.js` |
 | `visual-assets.json` | Background, facility, item, and sprite-region registry |
 | `scene-objects.json` | Facility positions, sizes, and draw order |
 | `assets/` | Shared images including `scenes.png`, `scenes2.png`, `facilities.png`, `items.png`, and `extras.png`; feature images are in `game/<name>/assets/` |
@@ -227,7 +227,7 @@ Saves are JSON files in `saves/`; the latest 12 are retained. They restore progr
 
 Assets use matching MP3 names in `engine/web/audio/` (shared) and `game/<name>/audio/` (feature sounds). Reward sounds do not interrupt action sounds. Moving within the same music group does not restart the track. Speech uses server-generated English audio and has separate controls from game audio.
 
-Recorded action sounds and short outcome cues now share `GameAudio`: target progress, task completion, unavailable actions and fishing misses have distinct feedback. Held work avoids overlapping its tap recording, and TTS cannot revive idle chopping or stirring. Recorded doors, footsteps and coins suppress duplicate synthetic cues. Music is quieter, low-level crop and rare-reward recordings are amplified, and one-shot effects also reduce during speech. Original MP3 files are unchanged. Run `python tools/prepare_effects_preview.py` (requires FFmpeg and Node) for a labelled 37-second mono effects reel in `output/audio/effects-preview.wav`; it does not reproduce live mixing or HRTF.
+Recorded action sounds and short outcome cues now share `GameAudio`: target progress, task completion, unavailable actions and fishing misses have distinct feedback. Held work avoids overlapping its tap recording, and TTS cannot revive idle chopping or stirring. Recorded doors, footsteps and coins suppress duplicate synthetic cues. Music is quieter, low-level crop and rare-reward recordings are amplified, and one-shot effects also reduce during speech. Original MP3 files are unchanged. Run `python engine/tools/prepare_effects_preview.py` (requires FFmpeg and Node) for a labelled 37-second mono effects reel in `output/audio/effects-preview.wav`; it does not reproduce live mixing or HRTF.
 
 ## Configuration
 

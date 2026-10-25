@@ -1,6 +1,7 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+rem Lives in engine\tracking\; runs from the repository root, so the venv lookup below is unchanged.
+cd /d "%~dp0..\.."
 
 set "PYTHON_EXE="
 
@@ -17,11 +18,11 @@ if not defined PYTHON_EXE (
 )
 
 echo Using: %PYTHON_EXE%
-"%PYTHON_EXE%" tracking_test.py
+"%PYTHON_EXE%" engine\tracking\tracking_server.py
 
 if errorlevel 1 (
     echo.
-    echo tracking_test.py exited with an error.
+    echo tracking_server.py exited with an error.
 )
 
 pause

@@ -7,7 +7,7 @@ import platform
 import sys
 import tempfile
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEPENDENCIES = {"fastapi": ((0, 110), (1,)), "uvicorn": ((0, 29), (1,)),
                 "piper-tts": ((1, 8, 0), (1, 8, 1)), "onnxruntime": (None, None)}
 ASSETS = ("water", "soil", "cut", "cook", "crop", "correct", "sleep", "door", "coin",
@@ -42,7 +42,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
             # Piper's exact engine version is part of the voice cache identity.
             if name == "piper-tts":
                 valid = installed == "1.8.0"
-            add(name, valid, installed, "Run setup-mac.command or setup-windows.bat to install requirements.txt.")
+            add(name, valid, installed, "Run install-mac.command or install-windows.bat to install engine/requirements.txt.")
         except PackageNotFoundError:
             add(name, False, "Not installed", "Run the setup file in this project folder.")
 
@@ -50,9 +50,9 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
                 "engine/services/speech.py", "engine/services/speech_queue.py", "engine/services/saves.py",
                 "game/npc/feature.py", "engine/display/keypad.py", "game/flowers/feature.py",
                 "game/fishing/feature.py", "game/seafood/feature.py", "engine/display/dotpad.py",
-                "engine/spectator/state.py", "engine/config/game.json", "engine/config/npc.json", "requirements.txt",
+                "engine/spectator/state.py", "engine/config/game.json", "engine/config/npc.json", "engine/requirements.txt",
                 "engine/web/game.html", "engine/web/core/game-audio.js", "engine/web/core/game-speech.js", "engine/web/core/game-keys.js",
-                "tools/prepare_demo.py", "tools/prepare_speech.py")
+                "engine/tools/prepare_demo.py", "engine/tools/prepare_speech.py")
     missing = [name for name in required if not (root / name).is_file()]
     add("Game files", not missing, "Complete" if not missing else ", ".join(missing),
         "Copy the complete project source, including web and tools folders.")
@@ -82,7 +82,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
                 good = False
                 reason = f"Voice config {model_config}: {type(error).__name__}: {error}"
             add("Voice: " + profile, good, entry["model"] if good else reason or "Invalid voice configuration: " + str(model_config),
-                "Run setup-mac.command or setup-windows.bat. If a damaged download remains, rename that model and its .onnx.json file before retrying setup.")
+                "Run install-mac.command or install-windows.bat. If a damaged download remains, rename that model and its .onnx.json file before retrying setup.")
     except (OSError, ValueError, KeyError, TypeError, AssertionError):
         add("Voice configuration", False, "engine/config/speech.json is missing or invalid", "Restore engine/config/speech.json.")
 

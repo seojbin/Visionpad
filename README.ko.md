@@ -24,7 +24,7 @@ Dot Pad를 사용하는 농장·생활 시뮬레이션 게임. 집, 농장, 마�
 
 ## 실행
 
-처음에는 Python 3.11 이상을 설치하고 Mac은 **setup-mac.command**, Windows는 **setup-windows.bat**를 연다. 프로젝트 안에 실행 환경을 만들고 패키지와 두 음성을 준비한다. 최초 설치에는 인터넷이 필요하다. 이후에는 **start-mac.command** 또는 **game.bat**만 연다. 실행 준비 확인, 서버 연결 대기와 시연 음성 준비 후 게임을 열며, 같은 포트의 게임이 이미 켜져 있으면 재시작 없이 사용한다. [설치와 전달 안내](docs/audio/SETUP.md)를 참고한다.
+처음에는 Python 3.11 이상을 설치하고 Mac은 **install-mac.command**, Windows는 **install-windows.bat**를 연다. 프로젝트 안에 실행 환경을 만들고 패키지와 두 음성을 준비한다. 최초 설치에는 인터넷이 필요하다. 이후에는 **start-mac.command** 또는 **start-windows.bat**만 연다. 실행 준비 확인, 서버 연결 대기와 시연 음성 준비 후 게임을 열며, 같은 포트의 게임이 이미 켜져 있으면 재시작 없이 사용한다. [설치와 전달 안내](docs/audio/SETUP.md)를 참고한다.
 
 직접 설치하려면 프로젝트 루트에서 Python 가상환경을 준비하고 의존성을 설치한다.
 
@@ -35,12 +35,12 @@ python -m venv .venv
 # macOS / Linux
 source .venv/bin/activate
 
-python -m pip install -r requirements.txt
-python tools/prepare_speech.py --download
-python launch_game.py --prepare-demo
+python -m pip install -r engine/requirements.txt
+python engine/tools/prepare_speech.py --download
+python engine/launcher/launch_game.py --prepare-demo
 ```
 
-Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:8000`이다. Windows `game.bat`는 기존 포트를 유지해 `http://127.0.0.1:8003`을 사용한다. 실제 주소는 실행창의 안내를 따른다. HTML을 파일 탐색기에서 직접 열지 말고 서버를 통해 실행한다.
+Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:8000`이다. Windows `start-windows.bat`는 기존 포트를 유지해 `http://127.0.0.1:8003`을 사용한다. 실제 주소는 실행창의 안내를 따른다. HTML을 파일 탐색기에서 직접 열지 말고 서버를 통해 실행한다.
 
 1. 게임 페이지를 열고 클릭 또는 키 입력으로 음성을 활성화한다.
 2. 마우스·키보드로 먼저 플레이하거나 USB 패드와 손 추적 서버를 연결한다.
@@ -49,7 +49,7 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 
 설정 파일을 수정하면 서버를 재시작한다. 웹 파일을 교체한 뒤에는 Ctrl+F5로 새로고침하고 시각화 창도 다시 연다.
 
-현재 준비한 Mac 환경은 `.venv/`이며 실행 파일은 기존 `venv/`도 인식한다. 활성화한 환경에서 `python tools/check_setup.py --synthesize`를 실행하면 게임을 시작하거나 변경하지 않고 파일·패키지·실제 음성 생성을 점검한다. Mac arm64/Python 3.14.3에서 확인했으며 Windows 실행 파일은 실제 Windows에서 확인이 남아 있다.
+현재 준비한 Mac 환경은 `.venv/`이며 실행 파일은 기존 `venv/`도 인식한다. 활성화한 환경에서 `python engine/launcher/check_setup.py --synthesize`를 실행하면 게임을 시작하거나 변경하지 않고 파일·패키지·실제 음성 생성을 점검한다. Mac arm64/Python 3.14.3에서 확인했으며 Windows 실행 파일은 실제 Windows에서 확인이 남아 있다.
 
 ## 영어 음성과 Rowan 대화
 
@@ -65,11 +65,11 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 - 게임 창을 떠나면 음성과 게임 소리를 멈추고 늦은 응답의 소리도 차단한다. 돌아오면 현재 화면의 배경음과 낚시 탐색음만 복구하며 음소거 설정은 유지한다. 이전 대사와 단발 효과음은 자동 재생하지 않는다. 늦게 도착한 문장은 자막과 **Replay**로 확인할 수 있다.
 - 장면을 이동하면 이전 작업·목표·거래 소리와 늦은 채굴 획득 안내를 취소한다. 수면 녹음은 기존처럼 다음 날까지 이어진다. 음원 로딩에 실패하면 1초 뒤 이후 행동이나 상태 갱신에서 다시 시도하며, 지나간 효과음을 뒤늦게 재생하지 않는다.
 
-목소리와 대표 문장은 `engine/config/speech.json`, NPC 대사는 `engine/config/npc.json`에서 관리한다. `python tools/prepare_speech.py`는 `output/audio/`의 비교 음원을, `python tools/speech_inventory.py`는 코드 내 문장 목록을 갱신한다. [사운드 목록과 모델 출처](docs/audio/SOUND_MAP.md), [팀 전달 안내](docs/audio/TEAM_HANDOFF.md)을 참고한다. 프로토타입 모델의 데이터셋 라이선스는 연결된 모델 카드에 기록된 CC BY NC SA 4.0이며 Piper는 GPL 3.0 이상이다.
+목소리와 대표 문장은 `engine/config/speech.json`, NPC 대사는 `engine/config/npc.json`에서 관리한다. `python engine/tools/prepare_speech.py`는 `output/audio/`의 비교 음원을, `python engine/tools/speech_inventory.py`는 코드 내 문장 목록을 갱신한다. [사운드 목록과 모델 출처](docs/audio/SOUND_MAP.md), [팀 전달 안내](docs/audio/TEAM_HANDOFF.md)을 참고한다. 프로토타입 모델의 데이터셋 라이선스는 연결된 모델 카드에 기록된 CC BY NC SA 4.0이며 Piper는 GPL 3.0 이상이다.
 
-시연 전에는 게임 서버를 실행한 상태에서 다른 터미널에 `python tools/prepare_demo.py`를 실행한다. 고정 안내, Rowan 튜토리얼·조언 대사와 대표 행동·대상·최근 반응 안내를 음성 API로 미리 준비하며 게임 진행은 바꾸지 않는다. 현재 기준 속도 1.0의 203문장이다. 다른 속도, 바뀌는 수량과 저장 시각 안내는 처음 생성할 수 있다. 결과는 `output/audio/demo-ready.json`에 저장한다. [시연 준비와 검증](docs/audio/DEMO_READY.md)을 참고한다.
+시연 전에는 게임 서버를 실행한 상태에서 다른 터미널에 `python engine/tools/prepare_demo.py`를 실행한다. 고정 안내, Rowan 튜토리얼·조언 대사와 대표 행동·대상·최근 반응 안내를 음성 API로 미리 준비하며 게임 진행은 바꾸지 않는다. 현재 기준 속도 1.0의 203문장이다. 다른 속도, 바뀌는 수량과 저장 시각 안내는 처음 생성할 수 있다. 결과는 `output/audio/demo-ready.json`에 저장한다. [시연 준비와 검증](docs/audio/DEMO_READY.md)을 참고한다.
 
-소프트웨어 검증은 프로젝트 환경에서 `python tools/run_tests.py`로 실행한다. Python 테스트(`engine/tests/python/`), 모든 Node 테스트 파일(`engine/tests/js/`, Node.js 20 이상), URL 점검과 브라우저 스모크 테스트(`engine/tests/browser/`, `pip install -r requirements-dev.txt`와 `python -m playwright install chromium` 필요, `--no-browser`로 생략)를 실행한 뒤 모든 결과를 [BASELINE.md](docs/refactor/BASELINE.md)와 비교한다. 알려진 실패도 이 파일에 있다. `python tools/run_tests.py --feature fishing`은 한 기능의 테스트(기능 README에 적힌 파일)와 registry·저장 호환 테스트만 실행한다. 폴더별 담당과 코드 변경 규칙은 [AGENTS.md](AGENTS.md)에 있다. `python tools/audio_flow.py`는 임시 진행에서 농사·요리·NPC와 거래·채굴·낚시·저장과 로드를 기록한다. 별도 브라우저 검증은 `python tools/audio_integration_lab.py` 실행 후 `http://127.0.0.1:8001/`에 접속한다. 임시 물 주기 장면에서 시작하며 실제 사용자의 게임 진행은 사용하지 않는다. 범위와 테스트 조건은 [통합 검증 결과](docs/audio/INTEGRATION_REPORT.md)에 기록했다.
+소프트웨어 검증은 프로젝트 환경에서 `python engine/tools/run_tests.py`로 실행한다. Python 테스트(`engine/tests/python/`), 모든 Node 테스트 파일(`engine/tests/js/`, Node.js 20 이상), URL 점검과 브라우저 스모크 테스트(`engine/tests/browser/`, `pip install -r engine/requirements-dev.txt`와 `python -m playwright install chromium` 필요, `--no-browser`로 생략)를 실행한 뒤 모든 결과를 [BASELINE.md](docs/refactor/BASELINE.md)와 비교한다. 알려진 실패도 이 파일에 있다. `python engine/tools/run_tests.py --feature fishing`은 한 기능의 테스트(기능 README에 적힌 파일)와 registry·저장 호환 테스트만 실행한다. 폴더별 담당과 코드 변경 규칙은 [AGENTS.md](AGENTS.md)에 있다. `python engine/tools/audio_flow.py`는 임시 진행에서 농사·요리·NPC와 거래·채굴·낚시·저장과 로드를 기록한다. 별도 브라우저 검증은 `python engine/tools/audio_integration_lab.py` 실행 후 `http://127.0.0.1:8001/`에 접속한다. 임시 물 주기 장면에서 시작하며 실제 사용자의 게임 진행은 사용하지 않는다. 범위와 테스트 조건은 [통합 검증 결과](docs/audio/INTEGRATION_REPORT.md)에 기록했다.
 
 사용자는 첫 음성과 방향감·효과음 균형을 긍정적으로 평가하고 음성을 조금 낮춰 달라고 했다. 기본 음성 85%는 이 의견을 반영한 값이다. 세부 방향별 청취, 발음, 다른 컴퓨터와 실물 Dot Pad는 [청취 확인 순서](docs/audio/LISTENING_CHECK.md)에 따라 추가로 확인한다.
 
@@ -185,7 +185,7 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 | `engine/web/core/pad/hardware.mjs`, `bluetooth-pad.mjs` | USB(Web Serial)·블루투스 패드 통신과 물리 버튼 수신, WebSocket 손 좌표 연결. Dot Pad SDK는 `engine/web/core/pad/vendor/`에 둔다 (`engine/web/core/pad/README.md` 참고) |
 | `engine/web/core/game-audio.js` | 배경음악·작업음·성공음·단발 효과음의 독립 재생과 음량 제어 |
 | `engine/web/audio/` | 공통 배경·피드백 MP3 음원 (기능별 음원은 `game/<name>/audio/`) |
-| `game.bat`, `launch_game.py` | Windows 실행 및 서버·브라우저 시작 보조 |
+| `start-windows.bat`, `engine/launcher/launch_game.py` | Windows 실행 및 서버·브라우저 시작 보조 |
 
 ### Visual Companion
 
@@ -198,7 +198,7 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 | `model.mjs` | 게임 상태와 시각화 배치·표현 사이의 변환 |
 | `viewer.css` | 카드, 수량, 색상, 선택 강조, 시간 막대 스타일 |
 | `display.js` | 실제 페이지에서 불러오는 실행용 묶음 (직접 수정된 파일이므로 다시 생성하지 않는다. `engine/web/spectator/README.md` 참고) |
-| `build_display.py` (저장소 루트) | 예전 묶음 생성 도구. 현재 결과는 `display.js`와 다르다 |
+| `engine/tools/build_display.py` (저장소 루트) | 예전 묶음 생성 도구. 현재 결과는 `display.js`와 다르다 |
 | `visual-assets.json` | 배경·시설·아이템 이미지 및 스프라이트 영역 등록 |
 | `scene-objects.json` | 장소별 시설 위치·크기·표시 순서 |
 | `assets/` | `scenes.png`, `scenes2.png`, `facilities.png`, `items.png`, `extras.png` 등 공통 이미지. 기능별 이미지는 `game/<name>/assets/` |
@@ -227,7 +227,7 @@ F3을 길게 누르면 누르는 도중 저장이 실행된다. 저장 후 키�
 
 음원은 `engine/web/audio/`(공통)와 `game/<name>/audio/`(기능별)의 같은 이름 MP3를 사용한다. 작업음과 성공음은 별도 채널이므로 성공음이 작업음을 끊지 않는다. 같은 배경음악 그룹 안에서는 음악을 다시 시작하지 않는다. 영어 음성은 서버가 생성한 WAV를 재생하며, 효과음 음량 설정과 음성 설정은 별개다. TTS 중 배경음악 배율은 `interaction.audio.bgm_during_tts`로 조정하며 기본값은 0.25다.
 
-작업 녹음과 짧은 결과음을 `GameAudio`로 통합했다. 목표 통과·전체 완료·행동 불가·낚시 실패를 구분하고, 길게 누를 때 클릭 녹음과 작업 녹음이 겹치지 않도록 한다. 음성 시작과 종료가 멈춰 있는 자르기·젓기 소리를 다시 키우지 않는다. 문·발걸음·동전 녹음이 있으면 합성음을 중복하지 않는다. 음악은 낮추고 작은 수확·희귀 보상 녹음은 보정했으며 단발 효과음도 TTS 중 줄인다. 원본 MP3는 변경하지 않았다. `python tools/prepare_effects_preview.py`로 약 37초의 모노 비교 음원 `output/audio/effects-preview.wav`를 만든다. FFmpeg와 Node가 필요하며 실제 동시 혼합이나 HRTF를 재현하는 파일은 아니다.
+작업 녹음과 짧은 결과음을 `GameAudio`로 통합했다. 목표 통과·전체 완료·행동 불가·낚시 실패를 구분하고, 길게 누를 때 클릭 녹음과 작업 녹음이 겹치지 않도록 한다. 음성 시작과 종료가 멈춰 있는 자르기·젓기 소리를 다시 키우지 않는다. 문·발걸음·동전 녹음이 있으면 합성음을 중복하지 않는다. 음악은 낮추고 작은 수확·희귀 보상 녹음은 보정했으며 단발 효과음도 TTS 중 줄인다. 원본 MP3는 변경하지 않았다. `python engine/tools/prepare_effects_preview.py`로 약 37초의 모노 비교 음원 `output/audio/effects-preview.wav`를 만든다. FFmpeg와 Node가 필요하며 실제 동시 혼합이나 HRTF를 재현하는 파일은 아니다.
 
 ## 설정 파일
 

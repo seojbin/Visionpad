@@ -3,12 +3,20 @@ import ast
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def game_code():
+    """The Python files the running game uses: engine/ without its tests, tools, launcher and tracking, and game/ without tests."""
+    skip = {"tests", "tools", "launcher", "tracking"}
+    for path in [*ROOT.glob("engine/**/*.py"), *ROOT.glob("game/**/*.py")]:
+        if not skip & set(path.relative_to(ROOT).parts[1:-1]):
+            yield path
 
 
 def collect():
     entries = []
-    for path in sorted([*ROOT.glob("engine/**/*.py"), *ROOT.glob("game/**/*.py")]):
+    for path in sorted(game_code()):
         if path.relative_to(ROOT).as_posix() == "engine/services/speech.py":
             continue
         source = path.read_text(encoding="utf-8")

@@ -10,9 +10,9 @@ from unittest.mock import Mock, patch
 from importlib.metadata import PackageNotFoundError
 from urllib.error import URLError
 
-import launch_game
-from tools.check_setup import ASSETS, check_setup, sound_path
-from tools.setup_game import environment_python, setup
+from engine.launcher import launch_game
+from engine.launcher.check_setup import ASSETS, check_setup, sound_path
+from engine.launcher.setup_game import environment_python, setup
 
 ROOT = Path(__file__).resolve().parents[4]
 VERSIONS = {"fastapi": "0.143.0", "uvicorn": "0.54.0", "piper-tts": "1.8.0", "onnxruntime": "1.31.0"}
@@ -28,7 +28,7 @@ class SetupChecks(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.touch()
         for name in ("engine/web/game.html", "engine/web/core/game-audio.js", "engine/web/core/game-speech.js", "engine/web/core/game-keys.js",
-                     "tools/prepare_demo.py", "tools/prepare_speech.py", "engine/config/game.json", "engine/config/npc.json", "requirements.txt"):
+                     "engine/tools/prepare_demo.py", "engine/tools/prepare_speech.py", "engine/config/game.json", "engine/config/npc.json", "engine/requirements.txt"):
             target = self.root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.touch()
@@ -79,28 +79,28 @@ class SetupChecks(unittest.TestCase):
 class StartupTests(unittest.TestCase):
     def test_server_probe_requires_game_title_and_speech_endpoints(self):
         schema = {"info": {"title": "Dotdew Valley"}, "paths": {path: {} for path in ("/api/state", "/api/speech", "/api/speech/voices")}}
-        with patch("launch_game.urlopen", return_value=io.BytesIO(json.dumps(schema).encode())):
+        with patch("engine.launcher.launch_game.urlopen", return_value=io.BytesIO(json.dumps(schema).encode())):
             self.assertEqual(launch_game.server_status("http://127.0.0.1:8000"), "game")
         schema["paths"] = {}
-        with patch("launch_game.urlopen", return_value=io.BytesIO(json.dumps(schema).encode())):
+        with patch("engine.launcher.launch_game.urlopen", return_value=io.BytesIO(json.dumps(schema).encode())):
             self.assertEqual(launch_game.server_status("http://127.0.0.1:8000"), "other")
-        with patch("launch_game.urlopen", side_effect=URLError(ConnectionRefusedError())):
+        with patch("engine.launcher.launch_game.urlopen", side_effect=URLError(ConnectionRefusedError())):
             self.assertEqual(launch_game.server_status("http://127.0.0.1:8000"), "free")
 
     def test_existing_server_is_reused_without_launching_or_stopping_a_process(self):
-        with patch("launch_game.server_status", return_value="game"), patch("launch_game.subprocess.Popen") as start:
+        with patch("engine.launcher.launch_game.server_status", return_value="game"), patch("engine.launcher.launch_game.subprocess.Popen") as start:
             self.assertEqual(launch_game.main(["--no-browser"]), 0)
             start.assert_not_called()
 
     def test_unrelated_busy_port_is_never_replaced(self):
-        with patch("launch_game.server_status", return_value="other"), patch("launch_game.subprocess.Popen") as start:
+        with patch("engine.launcher.launch_game.server_status", return_value="other"), patch("engine.launcher.launch_game.subprocess.Popen") as start:
             self.assertEqual(launch_game.main(["--no-browser"]), 1)
             start.assert_not_called()
 
     def test_startup_failure_terminates_only_the_server_created_by_the_launcher(self):
         process = Mock()
         process.poll.return_value = None
-        with patch("launch_game.server_status", return_value="free"), patch("launch_game.check_setup", return_value={"ready": True, "checks": []}), patch("launch_game.subprocess.Popen", return_value=process), patch("launch_game.wait_for_server", side_effect=RuntimeError("startup failed")), patch("launch_game.webbrowser.open") as browser:
+        with patch("engine.launcher.launch_game.server_status", return_value="free"), patch("engine.launcher.launch_game.check_setup", return_value={"ready": True, "checks": []}), patch("engine.launcher.launch_game.subprocess.Popen", return_value=process), patch("engine.launcher.launch_game.wait_for_server", side_effect=RuntimeError("startup failed")), patch("engine.launcher.launch_game.webbrowser.open") as browser:
             self.assertEqual(launch_game.main([]), 1)
             browser.assert_not_called()
         process.terminate.assert_called_once()
@@ -135,11 +135,11 @@ class StartupTests(unittest.TestCase):
                     raise subprocess.CalledProcessError(1, command)
                 return subprocess.CompletedProcess(command, 0)
 
-            with patch("tools.setup_game.environment_python", return_value=python):
+            with patch("engine.launcher.setup_game.environment_python", return_value=python):
                 with self.assertRaises(subprocess.CalledProcessError):
                     setup(root, run=fail_install)
             self.assertEqual(len(commands), 2)
-            self.assertEqual(commands[-1][-1], str(root / "requirements.txt"))
+            self.assertEqual(commands[-1][-1], str(root / "engine/requirements.txt"))
 
     def test_broken_existing_environment_is_preserved(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -174,7 +174,7 @@ class StartupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             python = Path(directory) / ".venv/bin/python"
             run = Mock(return_value=subprocess.CompletedProcess([], 1))
-            with patch("tools.setup_game.environment_python", return_value=python):
+            with patch("engine.launcher.setup_game.environment_python", return_value=python):
                 with self.assertRaisesRegex(RuntimeError, "3.11"):
                     setup(directory, run=run)
             self.assertEqual(run.call_count, 1)

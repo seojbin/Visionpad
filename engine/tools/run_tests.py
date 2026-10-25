@@ -1,8 +1,8 @@
 """Run every test suite: Python, Node and the browser checks.
 
-    python tools/run_tests.py                     # everything
-    python tools/run_tests.py --no-browser        # skip the URL check and the Playwright smoke test
-    python tools/run_tests.py --feature fishing   # one feature's tests plus the shared guards
+    python engine/tools/run_tests.py                     # everything
+    python engine/tools/run_tests.py --no-browser        # skip the URL check and the Playwright smoke test
+    python engine/tools/run_tests.py --feature fishing   # one feature's tests plus the shared guards
 
 Known failures are marked in the tests themselves (unittest.expectedFailure, node:test todo) with
 their reason, and are listed at the end. The run passes when nothing else fails and no known
@@ -22,7 +22,7 @@ import sys
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 FEATURES = ROOT / "game"
 GUARDS = ("engine/tests/python/core/test_registry.py", "engine/tests/python/saves/test_save_compat.py")
 BROWSER = ("engine/tests/browser/url_check.py", "engine/tests/browser/smoke_test.py")
@@ -111,7 +111,7 @@ def run_browser(report):
     print("== Browser", flush=True)
     for script in BROWSER:
         if script.endswith("smoke_test.py") and importlib.util.find_spec("playwright") is None:
-            report["problems"].append(f"{script}: playwright is not installed (requirements-dev.txt); not run")
+            report["problems"].append(f"{script}: playwright is not installed (engine/requirements-dev.txt); not run")
             continue
         if subprocess.run([sys.executable, script], cwd=ROOT).returncode:
             report["problems"].append(f"{script}: FAIL")

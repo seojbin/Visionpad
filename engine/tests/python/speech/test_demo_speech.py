@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from engine.config import load_config
 from engine.services.speech import spoken_text
-from tools.prepare_demo import demo_lines, prepare, ServerSpeech
+from engine.tools.prepare_demo import demo_lines, prepare, ServerSpeech
 
 
 
@@ -93,7 +93,7 @@ class DemoSpeechTests(unittest.TestCase):
                 result = {"cache_hit": True, "key": "a" * 64, "url": "/api/speech/audio/clip.wav"}
             return io.BytesIO(json.dumps(result).encode())
 
-        with patch("tools.prepare_demo.urlopen", side_effect=reply):
+        with patch("engine.tools.prepare_demo.urlopen", side_effect=reply):
             result = prepare(self.lines[:3], ServerSpeech("http://127.0.0.1:8000/"))
         self.assertEqual(len(requests), 4)
         self.assertEqual(result["cache_hits"], 3)

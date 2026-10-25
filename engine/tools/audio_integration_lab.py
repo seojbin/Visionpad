@@ -4,14 +4,14 @@ from pathlib import Path
 import sys
 import tempfile
 
-ROOT=Path(__file__).resolve().parents[1]
+ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT))
 import uvicorn
 from fastapi.responses import HTMLResponse
 from engine.server import runtime
 from engine.server.main import app
 from engine.core.engine import GameEngine
-from tools.audio_flow import fixture_config
+from engine.tools.audio_flow import fixture_config
 
 
 def main():

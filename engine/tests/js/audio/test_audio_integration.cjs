@@ -99,7 +99,7 @@ test('background music can recover from an initial asset failure',async t=>{
 test('the full real-engine flow drives the audio module without leftover task loops',async t=>{
     const root=join(__dirname,'..','..','..','..');
     const python=join(root,'.venv',process.platform==='win32'?'Scripts/python.exe':'bin/python');
-    const run=spawnSync(existsSync(python)?python:'python',['tools/audio_flow.py','--stdout'],{cwd:root,encoding:'utf8',maxBuffer:64*1024*1024});
+    const run=spawnSync(existsSync(python)?python:'python',['engine/tools/audio_flow.py','--stdout'],{cwd:root,encoding:'utf8',maxBuffer:64*1024*1024});
     assert.equal(run.status,0,run.stderr);
     const flow=JSON.parse(run.stdout);const s=setup();t.after(()=>s.audio.stopAll());
     let state=null,at=flow.events[0].at,configured=false;

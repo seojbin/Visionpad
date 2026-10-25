@@ -8,7 +8,7 @@ import sys
 import tempfile
 from unittest.mock import patch
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT))
 from engine.config import load_config
 from engine.core.engine import GameEngine

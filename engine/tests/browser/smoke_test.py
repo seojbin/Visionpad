@@ -1,6 +1,6 @@
 """Browser smoke test: game page and companion window load cleanly and travel works everywhere.
 
-Dev-only: pip install -r requirements-dev.txt && python -m playwright install chromium
+Dev-only: pip install -r engine/requirements-dev.txt && python -m playwright install chromium
 Run:      python engine/tests/browser/smoke_test.py
 
 Fails on any console error, page error, failed request or HTTP status >= 400 in either window.

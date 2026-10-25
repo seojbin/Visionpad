@@ -44,7 +44,7 @@ class PiperSynthesizer:
     def identity(self, profile):
         model_path, config_path = self.paths(profile)
         if not self.available(profile):
-            raise SpeechUnavailable("Voice model missing. Run tools/prepare_speech.py --download.")
+            raise SpeechUnavailable("Voice model missing. Run engine/tools/prepare_speech.py --download.")
         if profile not in self.identities:
             digest = sha256()
             for path in (model_path, config_path):
@@ -54,7 +54,7 @@ class PiperSynthesizer:
             try:
                 engine_version = version("piper-tts")
             except Exception as error:
-                raise SpeechUnavailable("Install requirements.txt to enable fixed voices.") from error
+                raise SpeechUnavailable("Install engine/requirements.txt to enable fixed voices.") from error
             self.identities[profile] = f"piper-{engine_version}:{digest.hexdigest()}"
         return self.identities[profile]
 

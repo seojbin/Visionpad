@@ -15,7 +15,7 @@ The F2 item pages: gold and food first, then everything else, twelve per page. F
 | Slot contributions | Shared resources first (gold, fertilizer, wood, stone, `InventoryItems.CORE_RESOURCES`); mining, farming, cooking, fishing and flowers contribute their own entries. |
 | Events | `reset` (`Reset.INVENTORY`) |
 | State key | `inventory` in `/api/state` |
-| Engine methods kept for callers | `engine.open_inventory()` (tests, `tools/prepare_demo.py`), `engine.get_inventory_objects()` |
+| Engine methods kept for callers | `engine.open_inventory()` (tests, `engine/tools/prepare_demo.py`), `engine.get_inventory_objects()` |
 | Config | `engine/config/game.json` → `interaction.inventory.items_per_page`, `interaction.inventory.hide_zero_items`; page name `pages.inventory` |
 | Engine API used | none from other features (entries come through the `inventory.items` slot); core `_perform_action` (Left/Right paging), `leave_activities`, `set_page` |
 | Client (web) | `game/inventory/client.js` (page N/M task text) |

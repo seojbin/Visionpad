@@ -4,7 +4,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def environment_python(root=ROOT, windows=None):
@@ -33,10 +33,10 @@ def setup(root=ROOT, run=subprocess.run):
     checked = run([str(python), "-c", "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"], cwd=root, check=False)
     if checked.returncode:
         raise RuntimeError("The project environment needs Python 3.11 or newer. Rename the old environment folder and run setup again.")
-    commands = [[str(python), "-m", "pip", "install", "-r", str(root / "requirements.txt")],
+    commands = [[str(python), "-m", "pip", "install", "-r", str(root / "engine/requirements.txt")],
                 [str(python), "-m", "pip", "check"],
-                [str(python), str(root / "tools/prepare_speech.py"), "--download"],
-                [str(python), str(root / "tools/check_setup.py"), "--synthesize"]]
+                [str(python), str(root / "engine/tools/prepare_speech.py"), "--download"],
+                [str(python), str(root / "engine/launcher/check_setup.py"), "--synthesize"]]
     for command in commands:
         run(command, cwd=root, check=True)
     return python
@@ -50,7 +50,7 @@ def main():
         print(f"Setup did not finish: {error}", file=sys.stderr)
         print("Completed downloads are kept. Fix the issue and run setup again.", file=sys.stderr)
         return 1
-    print(f"Setup complete: {python}\nStart with start-mac.command or game.bat.")
+    print(f"Setup complete: {python}\nStart with start-mac.command or start-windows.bat.")
     return 0
 
 

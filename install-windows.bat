@@ -1,10 +1,11 @@
 @echo off
+rem First-time setup on Windows. The installer logic is engine\launcher\setup_game.py.
 chcp 65001 > nul
 setlocal
 cd /d "%~dp0"
 where py > nul 2>&1
 if not errorlevel 1 (
-    py -3 tools\setup_game.py
+    py -3 engine\launcher\setup_game.py
 ) else (
     where python > nul 2>&1
     if errorlevel 1 (
@@ -12,13 +13,13 @@ if not errorlevel 1 (
         pause
         exit /b 1
     )
-    python tools\setup_game.py
+    python engine\launcher\setup_game.py
 )
 if errorlevel 1 (
     echo 준비하지 못한 항목이 있습니다. 위의 안내를 확인하고 다시 실행하세요.
     pause
     exit /b 1
 )
-echo 준비가 끝났습니다. game.bat를 열어 주세요.
+echo 준비가 끝났습니다. start-windows.bat를 열어 주세요.
 pause
 endlocal
