@@ -14,5 +14,7 @@ Fish as cooking ingredients, graded seafood dishes, and the food effects they gr
 | Engine API provided | to cooking (paired): `selected_fish`, `seafood_ready`, `seafood_ingredient_objects`, `toggle_fish`, `finish_seafood` |
 | Engine API used | `fishing_config` (fishing), `open_cooking_minigame`, `clear_cooking` (cooking, paired); `loot_amount` (core effects), `get_recipe_config` (core) |
 | Config | `config/game.json` → seafood entries in `recipes` (`seafood`, `allowed_fish`, `fish_required`, `quality_effects`) |
+| Slots | none |
+| Client (web) | none (no `web/features/seafood/` folder; the game page shows its pages with the shared defaults); fish textures belong to fishing |
 | Tests | `tests/python/audio/test_gameplay_audio.py` (cooking reaction) |
 | Note | Seafood dishes grant food effects (rare finds, double loot, better sales); the modifiers that apply them are in `visionpad/core/effects.py`. |

@@ -17,5 +17,7 @@ Rowan's sequential tutorial quest (soup → seeds → bring a vegetable → advi
 | Engine API provided | `market_price(price, kind, mode)` (used by shop, mining, fishing), `talk_rowan()`, `submit_rowan_crop(seed)`, `open_calendar()` |
 | Engine API used | from NPC: `recent_reaction`, `npc_voice_profile`, `rowan_advice`, `next_rowan_advice`; from seafood: `sale_price` |
 | Config | `config/game.json` → `rowan.*`, `weekly_market.*`, `town.objects`, `seeds`; page name `pages.town` |
+| Slots | none |
+| Client (web) | `web/features/village/client.js` (town task text) |
 | Tests | `tests/python/audio/test_team_audio.py`, `tests/python/speech/test_speech.py` (5 of 8 known Rowan failures, FOLLOWUPS F1) |
 | Note | The home/town icon sort in `visionpad/display/icons.py` still names the `town` page. |

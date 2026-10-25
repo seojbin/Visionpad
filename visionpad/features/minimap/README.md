@@ -11,7 +11,10 @@ The F1 map: location nodes and the paths between them, compressed to fit the pad
 | Owned engine attributes | none |
 | Shared attributes read | `config`, `current_location`, `paused`, `sleep_until`, `day_ended` |
 | Shared attributes written | `_menu_stack` (clears it when closing), `current_page` (only in the unused `open`) |
-| Core helpers used | `compress_axis`, `get_relative_direction`, `draw_filled_square`, `return_to_scene` |
+| Engine API used | none from other features; core `compress_axis`, `get_relative_direction`, `draw_filled_square`, `point_to_segment_distance`, `return_to_scene`, `leave_activities` |
 | Config | `config/game.json` → `minimap.locations`, `minimap.routes`; page name `pages.minimap` |
-| Tests | No dedicated tests. Old-vs-new comparison script used during the split. |
+| Events | none |
+| Slots | none |
+| Client (web) | none (no `web/features/minimap/` folder; the game page shows its pages with the shared defaults) |
+| Tests | No dedicated tests. The F1 map is used by `tests/python/audio/test_sound_events.py` (menus) and `tests/python/audio/test_audio_flow.py` (travel). |
 | Note | `open()` was unused before the split too (docs/refactor/AUDIT.md §2.4); kept for parity. |

@@ -18,5 +18,6 @@ Daily rocks at the mine, pickaxe wear and breakage, mineral loot (with mineral-d
 | Engine API provided | `get_mineral_price(mineral, buying=False)` (fishing fish prices), `hit_mine_rock(rock_id)` (tests) |
 | Engine API used | `market_price` (village), `boost_rare_weights`, `loot_amount` (seafood), `get_fertilizer_price` (farming, for the pickaxe price), `buff_multiplier_for` (cooking, core), `item_destroyed_event` (core) |
 | Config | `config/game.json` → `mine.*`, `research.mineral_luck.*`, `time.action_costs.mine` |
+| Client (web) | `web/features/mining/client.js` (mine task text); sounds `web/features/mining/audio/pickaxe.mp3`, `break.mp3` (`shine`, `destroy` are shared in `web/audio/`) |
 | Tests | `tests/python/audio/test_gameplay_audio.py` (rock guidance, tool break) |
 | Note | `draw_item` was unused before the split (docs/refactor/AUDIT.md §2.4); kept for parity. |

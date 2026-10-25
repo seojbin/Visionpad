@@ -16,4 +16,6 @@ The houseplant at home: buying morning glory seeds, planting, watering by keepin
 | State key | `flowers` in `/api/state` |
 | Saves | `flower_contact_at` and `flower_watering` are reset on save and load; all four attributes default from a fresh engine for older saves |
 | Config | `config/game.json` → `flowers.*` (`seed_price`, `watering_seconds`, `contact_gap_seconds`, `sprout_days`, `stem_days`, `bloom_cycle_days`, `bloom_wilt_increment`, `dry_wilt_increment`, `harvest_bonus`) |
-| Tests | No dedicated tests yet. Covered by the save-compatibility fixture (owned attributes) and `tests/python/core/test_registry.py`. |
+| Engine API used | none from other features; core helpers `add_resource`, `resource`, `set_page`, `back_arrow`, `draw_solid_pattern`, `night_only_response` |
+| Client (web) | `web/features/flowers/client.js` (100 ms pointer re-send while the mouse rests on the pot during watering); textures `web/features/flowers/assets/flower-backgrounds.png`, `flower-items.png`, `flower-stages.png` |
+| Tests | No dedicated tests yet. Covered by `tests/python/saves/test_save_compat.py` (owned attributes) and `tests/python/core/test_registry.py`. |

@@ -19,4 +19,5 @@ The lake: a hidden target that moves after every cast and each morning, distance
 | Engine API provided | `fishing_config()` (seafood; cooking in core), `cast_fishing(x, y)` (tests), `get_fish_price(fish_id)` (shop, for seafood dish prices) |
 | Engine API used | `get_mineral_price` (mining), `boost_rare_weights`, `loot_amount` (seafood), `market_price` (village), `item_destroyed_event` (core) |
 | Config | `config/game.json` → `fishing.*`, `resources.fishing_rod`, `resources.fish`, `time.action_costs.fish` |
-| Tests | `tests/python/audio/test_gameplay_audio.py`, `tests/python/audio/test_sound_events.py`; JS `tests/js/audio/test_fishing_audio.cjs` (client sounds) |
+| Client (web) | `web/features/fishing/client.js` (lake task text with and without a rod, empty-list help); sound `web/features/fishing/audio/splash.mp3`; texture `web/features/fishing/assets/items2.png` (fish and fish dishes). The lake sonar is still in `web/core/game-audio.js` (FOLLOWUPS F16) |
+| Tests | `tests/python/audio/test_gameplay_audio.py`, `tests/python/audio/test_sound_events.py`, `tests/js/audio/test_fishing_audio.cjs` (client sounds) |

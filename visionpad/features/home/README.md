@@ -13,4 +13,6 @@ The home page: bed, research chest and kitchen icons, the drawn home scene with 
 | Slots declared | `home.objects`, `home.scene_objects`, `home.scene` (order tables `order.HomeObjects`, `HomeSceneObjects`, `HomeScene`); flowers contributes |
 | Engine API used | `can_craft_recipe` (cooking) for "Kitchen. Available recipes: N."; `draw_icon_pattern`, `draw_solid_pattern` (core) |
 | Config | `config/game.json` → `home.objects`; page name `pages.home` |
-| Tests | covered through `tests/python/audio/test_audio_flow.py` and the save fixture |
+| Events | none |
+| Client (web) | `web/features/home/client.js` (home task text) |
+| Tests | No dedicated tests. Covered through `tests/python/audio/test_audio_flow.py` and `tests/python/saves/test_save_compat.py`. |

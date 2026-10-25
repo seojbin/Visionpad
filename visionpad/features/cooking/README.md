@@ -18,5 +18,6 @@ Recipes, ingredient selection, the traced cutting/stirring minigame (with fading
 | Engine API provided | `can_craft_recipe` (home kitchen count), `open_cooking_minigame`, `clear_cooking` (seafood, paired), `finish_cooking_success`, `use_food`, `get_cooking_gesture` (tests, tools) |
 | Engine API used | from seafood (paired): `seafood_ready`, `seafood_ingredient_objects`, `toggle_fish`, `selected_fish`, `finish_seafood`; from fishing: `get_fish_price`, `fishing_config` (seafood dish prices) |
 | Config | `config/game.json` → `recipes.*`, `cooking_methods.gestures`, `interaction.cooking.*` |
-| Tests | `tests/python/audio/test_sound_events.py`, `tests/python/audio/test_gameplay_audio.py`, `tests/python/audio/test_audio_flow.py`; JS `tests/js/audio/test_guidance.cjs` |
+| Client (web) | `web/features/cooking/client.js` (task text for `ingredient_select`/`cooking`, stage progress, empty-list help, debug status line); sounds `web/features/cooking/audio/cut.mp3`, `cook.mp3` |
+| Tests | `tests/python/audio/test_sound_events.py`, `tests/python/audio/test_gameplay_audio.py`, `tests/python/audio/test_audio_flow.py`, `tests/js/audio/test_guidance.cjs` |
 | Note | `fail_or_continue` and `draw_recipe_icon` were unreachable before the split (the minigame branch returned first); kept for parity. |

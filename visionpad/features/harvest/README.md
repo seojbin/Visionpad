@@ -18,5 +18,6 @@ The crop-collecting minigame on a mature plot: drag across the crop targets, the
 | Engine API provided | `start_harvest_minigame`, `finish_harvest_minigame` (tests, tools), `clear_harvest`, `get_harvest_base_yield` (farming, paired) |
 | Engine API used | `new_plot_state`, `get_effective_seed_return_chance` (farming), `loot_amount`, `buff_multiplier_for` (core effects) |
 | Config | `config/game.json` → `harvest_minigame.*`, `seeds.*.yield`, `time.action_costs.harvest` |
+| Client (web) | `web/features/harvest/client.js` (collected/total task text, hides `harvest_crop`/`harvest_field`, status line); sound `web/features/harvest/audio/crop.mp3` |
 | Tests | `tests/python/audio/test_gameplay_audio.py`, `tests/python/audio/test_sound_events.py`, `tests/python/audio/test_team_audio.py` |
 | Note | `press` and `collect_point` were unreachable before the split (presses always went to the minigame handler); kept for parity. |
