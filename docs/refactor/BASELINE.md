@@ -14,7 +14,14 @@ Replaces AUDIT.md §1 as the reference. Recorded on branch `refactor/modular-str
 
 ## Commands
 
-Since Phase 1 (tests live under `tests/`):
+Since Phase 5, one command runs every suite and compares each result with this file (exit code 0 only when everything matches):
+
+```
+.venv\Scripts\python.exe tools\run_tests.py                  # Python, Node, URL check, browser smoke test
+.venv\Scripts\python.exe tools\run_tests.py --feature fishing # one feature's README test files + registry/alias/save guards
+```
+
+The separate commands it wraps (since Phase 1, tests live under `tests/`):
 
 ```
 .venv\Scripts\python.exe -m unittest discover -s tests/python -t . -v
@@ -228,3 +235,28 @@ Added after the npc + village review. These 9 tests are new; every result above 
 | tests.python.core.test_registry | SaveOrderTests | test_new_attributes_survive_save_and_load | ok |  |
 | tests.python.core.test_root_aliases | RootAliasTests | test_every_root_alias_imports_the_moved_module | ok |  |
 | tests.python.core.test_root_aliases | RootAliasTests | test_game_app_alias_serves_the_same_app | ok |  |
+
+## Verification on a second machine (start of Phase 5)
+
+Re-run on a different computer before Phase 5, at commit `7b87762`, 2026-10-25. The old machine's old-vs-new comparison scripts and the Phase 0 worktree lived in its scratchpad and were not available; they were not recreated. All per-test results equal the tables above.
+
+| Item | Value |
+|---|---|
+| OS | Windows 11 Home 10.0.26200 |
+| Python | 3.12.10 (installed for this check with winget `Python.Python.3.12`; the machine also has 3.10, 3.11, 3.13), project `.venv` from `requirements.txt` + `requirements-dev.txt`: fastapi 0.162.0, uvicorn 0.54.0, piper-tts 1.8.0, onnxruntime 1.31.0, playwright 1.64.1 (Chromium); `pip check` clean |
+| Node.js | v24.16.0 (already installed) |
+| Not installed | tracking deps, DotPadSDK 3.0.3 |
+
+| Check | Result |
+|---|---|
+| Python suite, 95 tests | identical per test: 86 ok, 6 FAIL, 3 ERROR (the 9 listed above) |
+| Node suite, 59 entries | identical per test: 57 ok, 2 FAIL. The two load failures are reported under their paths (`tests\js\pad\test_hardware.mjs`, `...\test_tracking_input.mjs`) with the same causes: SDK missing, `TrackingGestureInput` not exported |
+| Save compatibility (`tests/python/saves/test_save_compat.py`) | 3 ok (part of the Python suite) |
+| URL check (`tests/browser/url_check.py`) | 82 URLs (50 recorded, 32 current): 0 failed, 2 optional missing (Dot Pad SDK) |
+| Browser smoke test (`tests/browser/smoke_test.py`) | **FAIL on this machine**: the Windows registry maps `.mjs` to `text/plain`, so `hardware.mjs` is refused as a module script (FOLLOWUPS F17). Travel to all five locations works. Passes when the server process registers `text/javascript` for `.mjs` (temporary `sitecustomize.py` outside the repo). Pre-existing: the pre-refactor server used the same `StaticFiles` mount. |
+| `tools/audio_flow.py` | 161 input responses, 12 milestones; `--stdout` is 1,128,947 bytes, the size recorded in Phase 0. Two runs differ only in the generated save-slot id (timestamp + random suffix). |
+| `tools/check_setup.py` | Setup ready (both voices, 18 sounds) |
+
+## Phase 5 additions
+
+No test was added or changed in Phase 5. `tools/run_tests.py` (new) reproduces exactly the results above: 154 Python + Node results matching, plus the two browser checks.
