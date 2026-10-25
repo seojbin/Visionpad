@@ -21,7 +21,7 @@ Ownership
     features owning one attribute is an error, and every owned attribute must
     exist after `engine.reset()`.
 
-Hotspots (docs/refactor/AUDIT.md section 3.4) and the call that replaces each one:
+Hotspots (the places every feature had to edit in the old single-file engine) and the call that replaces each one:
     1 page table, 2 page names, 5 pointer handlers, 8 guidance, 3 page scene  -> page()
     3 object renderers                                                        -> renderer()
     4 action chain                                                            -> action()

@@ -236,7 +236,7 @@ class Mining(Feature):
         return e.response(tts=f"{label} bought. Gold left: {e.resources['coin']} gold", sound_events=[{"kind": "one_shot", "sound": "coin"}])
 
     def draw_item(self, x, y, kind):
-        """Unused before the split as well (docs/refactor/AUDIT.md section 2.4); kept for parity."""
+        """Unused before the split as well (follow-up F14); kept for parity."""
         e = self.engine
         x, y = int(x), int(y)
         if kind == "pickaxe":

@@ -177,7 +177,7 @@ class CareMinigame:
 
     def care_press(self, x, y):
         """Unreachable before the split as well: care presses went to the minigame handler first
-        (docs/refactor/AUDIT.md section 2.4). Kept for parity."""
+        (follow-up F14). Kept for parity."""
         e = self.engine
         e.care_dragging = True
         before = len(e.care_collected_ids)

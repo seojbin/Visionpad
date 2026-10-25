@@ -19,5 +19,5 @@ Rowan's sequential tutorial quest (soup → seeds → bring a vegetable → advi
 | Config | `engine/config/game.json` → `rowan.*`, `weekly_market.*`, `town.objects`, `seeds`; page name `pages.town` |
 | Slots | none |
 | Client (web) | `game/village/client.js` (town task text) |
-| Tests | `engine/tests/python/audio/test_team_audio.py`, `engine/tests/python/speech/test_speech.py` (5 of 8 known Rowan failures, FOLLOWUPS F1) |
+| Tests | `engine/tests/python/audio/test_team_audio.py`, `engine/tests/python/speech/test_speech.py` (5 of 8 known Rowan failures, follow-up F1) |
 | Note | The home/town icon sort in `engine/display/icons.py` still names the `town` page. |

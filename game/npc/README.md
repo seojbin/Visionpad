@@ -6,7 +6,7 @@ Rowan's voice and memory: farming/fishing advice from the actual game state, one
 |---|---|
 | Code | `feature.py` (`Npc`); lines in `engine/config/npc.json` |
 | Pages | `npc_dialogue` ("Conversation"; unreachable since before the split: nothing sets it) |
-| Actions (before the night guard) | `npc:<npc_id>:<topic>` → `npc_action`, which ignores the topic and calls `talk_rowan()` (FOLLOWUPS F1) |
+| Actions (before the night guard) | `npc:<npc_id>:<topic>` → `npc_action`, which ignores the topic and calls `talk_rowan()` (follow-up F1) |
 | Object types | `npc_topic`, `npc_marker` (renderers) |
 | Owned engine attributes (save format) | `npc_visits`, `dialogue`, `activity_counts`, `activity_serial`, `recent_activity`, `npc_reactions`, `activity_history_complete` |
 | Shared attributes read | `day`, `current_location`, `current_page`, `sleep_until`, `day_ended`, `paused`, `resources`, `farm_plots`, `rowan_dialogue` |

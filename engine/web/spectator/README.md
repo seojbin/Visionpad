@@ -5,7 +5,7 @@ scene; clicking it never changes the game.
 
 > **`display.js`: do not regenerate until drift is resolved.**
 > `display.js` is a classic-script bundle built by `engine/tools/build_display.py` from `model.mjs` and
-> `viewer.js`, but it has drifted from those sources in both directions (FOLLOWUPS F5).
+> `viewer.js`, but it has drifted from those sources in both directions (follow-up F5).
 > Running `python engine/tools/build_display.py` now would drop hand edits that exist only in the bundle.
 > Reconcile the bundle and its sources by hand first, then make the build reproducible.
 

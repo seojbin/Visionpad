@@ -17,4 +17,4 @@ The F1 map: location nodes and the paths between them, compressed to fit the pad
 | Slots | none |
 | Client (web) | none (no `game/minimap/` folder; the game page shows its pages with the shared defaults) |
 | Tests | No dedicated tests. The F1 map is used by `engine/tests/python/audio/test_sound_events.py` (menus) and `engine/tests/python/audio/test_audio_flow.py` (travel). |
-| Note | `open()` was unused before the split too (docs/refactor/AUDIT.md §2.4); kept for parity. |
+| Note | `open()` was unused before the split too (follow-up F14); kept for parity. |

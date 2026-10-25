@@ -205,7 +205,7 @@ The companion is a separate, read-only window under `engine/web/spectator/`. It 
 
 Each plot and rock corresponds to a game object. Individual farm plots have fences. The shop places its catalog on the left and the merchant and counter on the right. Inventory and shop pages fit their items without scrolling.
 
-Backgrounds, facilities, and objects have separate asset entries so existing images can be reused. A page without a visual renderer falls back to the dot display. An unregistered item shows its name in a frame. `display.js` contains edits that are not in `viewer.js`/`model.mjs`, so rebuilding it would lose them (docs/refactor/FOLLOWUPS.md F5).
+Backgrounds, facilities, and objects have separate asset entries so existing images can be reused. A page without a visual renderer falls back to the dot display. An unregistered item shows its name in a frame. `display.js` contains edits that are not in `viewer.js`/`model.mjs`, so rebuilding it would lose them (follow-up F5.
 
 ## Saving and loading
 
@@ -329,7 +329,7 @@ User testing will examine game comprehension and enjoyment, the workload of tact
 
 User testing has not yet been conducted. Physical pad refresh speed, tracking under different lighting and camera positions, occlusion, and speech quality remain part of the planned evaluation. The current design assumes usable hearing and hand control.
 
-The update notes below are kept as written when each update was made. File paths are updated to the current layout; test files they cite that no longer exist are listed in docs/refactor/FOLLOWUPS.md (F6).
+The update notes below are kept as written when each update was made. File paths are updated to the current layout; test files they cite that no longer exist are listed in follow-up F6.
 
 ## Fishing update
 

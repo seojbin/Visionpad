@@ -20,4 +20,4 @@ Daily rocks at the mine, pickaxe wear and breakage, mineral loot (with mineral-d
 | Config | `engine/config/game.json` → `mine.*`, `research.mineral_luck.*`, `time.action_costs.mine` |
 | Client (web) | `game/mining/client.js` (mine task text); sounds `game/mining/audio/pickaxe.mp3`, `break.mp3` (`shine`, `destroy` are shared in `engine/web/audio/`) |
 | Tests | `engine/tests/python/audio/test_gameplay_audio.py` (rock guidance, tool break) |
-| Note | `draw_item` was unused before the split (docs/refactor/AUDIT.md §2.4); kept for parity. |
+| Note | `draw_item` was unused before the split (follow-up F14); kept for parity. |

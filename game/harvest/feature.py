@@ -149,7 +149,7 @@ class Harvest(Feature):
 
     def press(self, x, y):
         """Unreachable before the split as well: pointer_down sent harvest presses to the minigame
-        handler first (docs/refactor/AUDIT.md section 2.4). Kept for parity, including its speech line."""
+        handler first (follow-up F14). Kept for parity, including its speech line."""
         e = self.engine
         e.harvest_dragging = True
         before = len(e.harvest_collected_ids)

@@ -9,7 +9,7 @@ from engine.paths import GAME_DIR, WEB_DIR
 
 
 # The pad module must arrive as JavaScript. Windows machines whose registry maps .mjs to
-# text/plain would otherwise make the browser refuse it (FOLLOWUPS F17).
+# text/plain would otherwise make the browser refuse it (follow-up F17).
 mimetypes.add_type("text/javascript", ".mjs")
 
 router = APIRouter()
