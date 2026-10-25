@@ -19,6 +19,31 @@ class SpeechUnavailable(RuntimeError):
     pass
 
 
+def valid_model_file(path, expected=None):
+    """Check a voice file: present and non-empty, the pinned size and SHA-256 when given
+    (engine/config/speech.json "downloads"), and for .json files a usable Piper voice config."""
+    path = Path(path)
+    expected = expected or {}
+    try:
+        if not path.is_file() or not path.stat().st_size:
+            return False
+        if expected.get("size") and path.stat().st_size != expected["size"]:
+            return False
+        if expected.get("sha256"):
+            digest = sha256()
+            with path.open("rb") as source:
+                for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            if digest.hexdigest() != expected["sha256"]:
+                return False
+        if path.suffix == ".json":
+            values = json.loads(path.read_text(encoding="utf-8-sig"))
+            return values["audio"]["sample_rate"] > 0 and bool(values["phoneme_id_map"])
+        return True
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+
+
 def spoken_text(text):
     text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", str(text))
     text = re.sub(r"\s+", " ", text).strip()
@@ -77,7 +102,7 @@ class PiperSynthesizer:
 class SpeechService:
     def __init__(self, root, synthesizer=None, cache_dir=None):
         self.root = Path(root)
-        self.config = json.loads(config_path("speech", self.root).read_text(encoding="utf-8"))
+        self.config = json.loads(config_path("speech", self.root).read_text(encoding="utf-8-sig"))
         self.profiles = self.config["profiles"]
         self.synthesizer = synthesizer or PiperSynthesizer(self.root, self.profiles)
         self.cache_dir = Path(cache_dir) if cache_dir is not None else speech_cache_dir(self.root)

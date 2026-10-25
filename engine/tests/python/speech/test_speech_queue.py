@@ -1,6 +1,5 @@
 """Slow synthesis must not turn obsolete hover requests into a backlog."""
 import asyncio
-import sys
 from threading import Event
 import unittest
 
@@ -88,8 +87,6 @@ class QueueTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await next_job.future)["text"], "new")
         self.assertEqual(self.service.calls, ["block", "new"])
 
-    # F2: before Python 3.13, assertRaises clears the suspended queue worker's frame and the worker dies.
-    @(unittest.expectedFailure if sys.version_info < (3, 13) else (lambda test: test))
     async def test_failure_does_not_block_the_next_request(self):
         bad = self.queue.submit("bad")
         good = self.queue.submit("good")
@@ -101,6 +98,20 @@ class QueueTests(unittest.IsolatedAsyncioTestCase):
         except TimeoutError:
             self.fail("The next request did not finish within 5 seconds")
         self.assertEqual(result["text"], "good")
+
+    async def test_failed_request_does_not_expose_the_live_worker_frame(self):
+        bad = self.queue.submit("bad")
+        try:
+            await bad.future
+        except ValueError as error:
+            frame = error.__traceback__
+            while frame is not None:
+                self.assertIsNot(frame.tb_frame.f_code, SpeechQueue.run.__code__)
+                frame = frame.tb_next
+        else:
+            self.fail("Expected synthesis failure")
+        good = self.queue.submit("good")
+        self.assertEqual((await asyncio.wait_for(good.future, 1))["text"], "good")
 
     async def test_queue_capacity_is_bounded(self):
         await self.blocked()

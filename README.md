@@ -8,7 +8,7 @@ A browser simulator supports mouse and keyboard. A USB or Bluetooth Dot Pad and 
 
 ## Install
 
-Install Python 3.11 or newer, then open **install-windows.bat** (Windows) or **install-mac.command** (macOS) once. It creates `.venv/` in the project, installs `engine/requirements.txt` and downloads the two English voices into `.audio/voices/`; nothing is installed globally. Internet is needed for this step; no account or API key is used.
+Install Python 3.11 or newer (3.12 64-bit recommended; the Windows installer uses 3.12 when it is present), then open **install-windows.bat** (Windows) or **install-mac.command** (macOS) once. It creates `.venv/` in the project, installs `engine/requirements.txt` and downloads the two English voices into `.audio/voices/`, checking each file's size and SHA-256 (an interrupted or damaged download is fetched again; run the installer again after an error). Nothing is installed globally. Internet is needed for this step; no account or API key is used. For the Bluetooth Dot Pad, run the installer with `--with-pad` (for example `install-windows.bat --with-pad`) to also download Dot Inc.'s SDK; the game, the USB pad and hand tracking work without it.
 
 Manual install from the project folder:
 
@@ -19,7 +19,7 @@ python -m pip install -r engine/requirements.txt
 python engine/tools/prepare_speech.py --download
 ```
 
-`python engine/launcher/check_setup.py --synthesize` diagnoses packages, files, sounds and voices without starting a game.
+`python engine/launcher/check_setup.py --synthesize` diagnoses packages, files, sounds and voices without starting a game. Settings files are read as UTF-8 whether or not an editor saved them with a byte-order mark, and the Windows scripts run Python in UTF-8 mode, so a Korean (cp949) Windows code page does not matter.
 
 ## Start
 

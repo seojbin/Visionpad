@@ -8,6 +8,10 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from engine.services.speech import valid_model_file  # noqa: E402 (Piper itself is imported only for synthesis)
+from engine.launcher.prepare_pad import FILES as PAD_FILES, SDK_DIR  # noqa: E402
+
 DEPENDENCIES = {"fastapi": ((0, 110), (1,)), "uvicorn": ((0, 29), (1,)),
                 "piper-tts": ((1, 8, 0), (1, 8, 1)), "onnxruntime": (None, None)}
 ASSETS = ("water", "soil", "cut", "cook", "crop", "correct", "sleep", "door", "coin",
@@ -31,6 +35,11 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
     def add(name, ok, detail, fix=""):
         checks.append({"name": name, "ok": bool(ok), "detail": detail, "fix": "" if ok else fix})
 
+    def warn(name, present, detail, advice):
+        """An optional part: reported, but never makes the setup not ready."""
+        checks.append({"name": name, "ok": True, "warning": not present, "detail": detail,
+                       "fix": "" if present else advice})
+
     current = python_version or sys.version_info[:3]
     add("Python", current >= (3, 11), ".".join(map(str, current)),
         "Install Python 3.11 or newer, then run the setup file again.")
@@ -52,7 +61,11 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
                 "game/fishing/feature.py", "game/seafood/feature.py", "engine/display/dotpad.py",
                 "engine/spectator/state.py", "engine/config/game.json", "engine/config/npc.json", "engine/requirements.txt",
                 "engine/web/game.html", "engine/web/core/game-audio.js", "engine/web/core/game-speech.js", "engine/web/core/game-keys.js",
-                "engine/tools/prepare_demo.py", "engine/tools/prepare_speech.py")
+                "engine/tools/prepare_demo.py", "engine/tools/prepare_speech.py",
+                # Imported or loaded at start but missing from the list before (PR #2):
+                "engine/display/icons.py", "game/village/feature.py",
+                "engine/web/core/pad/hardware.mjs", "engine/web/core/pad/bluetooth-pad.mjs", "engine/web/core/pad/vendor/package.json",
+                "engine/tools/audio_flow.py", "engine/tools/speech_inventory.py")
     missing = [name for name in required if not (root / name).is_file()]
     add("Game files", not missing, "Complete" if not missing else ", ".join(missing),
         "Copy the complete project source, including web and tools folders.")
@@ -60,10 +73,15 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
                or not (root / sound_path(name)).stat().st_size]
     add("Game sounds", not missing, "18 files present" if not missing else ", ".join(missing),
         "Restore engine/web/audio and game/*/audio from the project source.")
+    sdk = root / SDK_DIR / "DotPadSDK-3.0.3.js"
+    sdk_ok = valid_model_file(sdk, PAD_FILES["DotPadSDK-3.0.3.js"])
+    warn("Bluetooth pad SDK (optional)", sdk_ok, "Installed" if sdk_ok else "Not installed or damaged: " + str(sdk),
+         "Only the Bluetooth pad needs it; the game, the USB pad and hand tracking work without it. "
+         "To add it, run install-windows.bat --with-pad or install-mac.command --with-pad.")
 
     config = None
     try:
-        config = json.loads((root / "engine/config/speech.json").read_text(encoding="utf-8"))
+        config = json.loads((root / "engine/config/speech.json").read_text(encoding="utf-8-sig"))
         if not isinstance(config, dict):
             raise ValueError("Invalid voice configuration")
         if not isinstance(config.get("profiles"), dict) or not config["profiles"] or not config.get("samples"):
@@ -73,16 +91,12 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
                 raise ValueError("Invalid voice model entry")
             model = root / ".audio/voices" / (entry["model"] + ".onnx")
             model_config = model.with_suffix(".onnx.json")
-            good = model.is_file() and model.stat().st_size > 0
-            reason = "Model missing or empty: " + str(model) if not good else ""
-            try:
-                values = json.loads(model_config.read_text(encoding="utf-8-sig"))
-                good = good and values["audio"]["sample_rate"] > 0 and bool(values["phoneme_id_map"])
-            except (OSError, ValueError, KeyError, TypeError) as error:
-                good = False
-                reason = f"Voice config {model_config}: {type(error).__name__}: {error}"
-            add("Voice: " + profile, good, entry["model"] if good else reason or "Invalid voice configuration: " + str(model_config),
-                "Run install-mac.command or install-windows.bat. If a damaged download remains, rename that model and its .onnx.json file before retrying setup.")
+            # Pinned size and SHA-256 from speech.json "downloads"; without them, presence and a valid config.
+            expected = config.get("downloads", {}).get(entry["model"], {}).get("files", {})
+            broken = [str(path) for path, extension in ((model, ".onnx"), (model_config, ".onnx.json"))
+                      if not valid_model_file(path, expected.get(extension))]
+            add("Voice: " + profile, not broken, entry["model"] if not broken else "Missing or damaged: " + ", ".join(broken),
+                "Run install-mac.command or install-windows.bat again. Missing and damaged voice files are downloaded automatically.")
     except (OSError, ValueError, KeyError, TypeError, AssertionError):
         add("Voice configuration", False, "engine/config/speech.json is missing or invalid", "Restore engine/config/speech.json.")
 
@@ -112,7 +126,7 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
                         "Generated valid WAV in temporary storage")
                 except Exception as error:
                     add("Voice synthesis: " + profile, False, str(error),
-                        "Check Python and audio package support. For an interrupted model download, rename its model/config pair in .audio/voices and run setup again.")
+                        "Run install-mac.command or install-windows.bat again and check the reported package or voice error.")
 
     return {"ready": all(check["ok"] for check in checks), "platform": platform.platform(),
             "python": sys.executable, "voice_synthesis_requested": synthesize, "checks": checks,
@@ -121,7 +135,8 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
 
 def show_report(report):
     for check in report["checks"]:
-        print(f"{'OK' if check['ok'] else 'FIX'}  {check['name']}: {check['detail']}")
+        label = "WARN" if check.get("warning") else "OK" if check["ok"] else "FIX"
+        print(f"{label}  {check['name']}: {check['detail']}")
         if check["fix"]:
             print("     " + check["fix"])
     print("Setup ready." if report["ready"] else "Setup needs attention. Follow the FIX messages above.")
@@ -136,7 +151,7 @@ def main():
     show_report(result)
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.report.write_text(json.dumps(result, indent=2) + "\n")
+        args.report.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     return 0 if result["ready"] else 1
 
 

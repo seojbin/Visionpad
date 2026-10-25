@@ -1,4 +1,7 @@
-"""One loader for the JSON files in engine/config/. Keys are read exactly as stored."""
+"""One loader for the JSON files in engine/config/. Keys are read exactly as stored.
+
+Files are read as utf-8-sig, so a file saved with a byte-order mark (some Windows editors add one)
+loads the same as plain UTF-8."""
 import json
 from pathlib import Path
 
@@ -13,4 +16,4 @@ def config_path(name, root=None):
 
 
 def load_config(name, root=None):
-    return json.loads(config_path(name, root).read_text(encoding="utf-8"))
+    return json.loads(config_path(name, root).read_text(encoding="utf-8-sig"))

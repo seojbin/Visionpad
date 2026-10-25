@@ -1,15 +1,15 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
-// F3 (known failure): needs the gitignored Dot Pad SDK, and hardware.mjs does not export BluetoothPad or cellsToHex.
-let BluetoothPad,forwardKey,packCells,cellsToHex,DataCodes,DotPadKey,loadError;
-try{
- ({BluetoothPad,forwardKey,packCells,cellsToHex}=await import('../../../web/core/pad/hardware.mjs'));
- ({DataCodes,DotPadKey}=await import('../../../web/core/pad/vendor/DotPadSDK-3.0.3.js'));
- if(!BluetoothPad||!cellsToHex)throw new SyntaxError('hardware.mjs does not export BluetoothPad and cellsToHex');
-}catch(error){loadError=error}
-if(loadError)test('test_hardware.mjs',{todo:'F3: Dot Pad SDK missing and BluetoothPad/cellsToHex not exported by hardware.mjs'},()=>{throw loadError});
+import {existsSync} from 'node:fs';
+// Needs Dot Inc.'s Dot Pad SDK, which is not committed: install it with the installer's --with-pad option
+// (engine/launcher/prepare_pad.py). bluetooth-pad.mjs imports the SDK, so it is loaded only when present.
+const sdkFile=new URL('../../../web/core/pad/vendor/DotPadSDK-3.0.3.js',import.meta.url);
+if(!existsSync(sdkFile))test('test_hardware.mjs',{skip:'Dot Pad SDK not installed (engine/web/core/pad/vendor/DotPadSDK-3.0.3.js); run the installer with --with-pad to test the Bluetooth pad'},()=>{});
 else{
+const {BluetoothPad,cellsToHex}=await import('../../../web/core/pad/bluetooth-pad.mjs');
+const {forwardKey,packCells}=await import('../../../web/core/pad/hardware.mjs');
+const {DataCodes,DotPadKey}=await import(sdkFile.href);
 const require=createRequire(import.meta.url);
 const {GameKeys}=require('../../../web/core/game-keys.js');
 Object.defineProperty(globalThis,'navigator',{value:{bluetooth:{}},configurable:true});
@@ -39,7 +39,7 @@ const frame=(on=false)=>({width:60,height:40,time_width:40,time_height:4,dots:Ar
 test('F3 release produces one load command',async()=>{const s=await setup();s.press(DotPadKey.KeyFunction3);s.release(DotPadKey.KeyFunction3);assert.deepEqual(s.commands,['load'])});
 test('holding F3 saves once, without a load on release',async()=>{const s=await setup();s.press(DotPadKey.KeyFunction3);s.advance(900);s.release(DotPadKey.KeyFunction3);assert.deepEqual(s.commands,['save'])});
 test('disconnect cancels an unfinished hold',async()=>{const s=await setup();s.press(DotPadKey.KeyFunction3);await s.pad.disconnect();s.advance(1000);assert.deepEqual(s.commands,[]);assert.equal(s.pad.connected,false)});
-test('F1 F2 F4 and panning use the current key mapping',async()=>{const s=await setup();for(const k of [DotPadKey.KeyFunction1,DotPadKey.KeyFunction2,DotPadKey.KeyFunction4,DotPadKey.PanningLeft,DotPadKey.PanningRight]){s.press(k);s.release(k)}assert.deepEqual(s.commands,['minimap','resources','pause','left','right'])});
+test('F1 F2 F4 and panning use the current key mapping',async()=>{const s=await setup();for(const k of [DotPadKey.KeyFunction1,DotPadKey.KeyFunction2,DotPadKey.KeyFunction4,DotPadKey.PanningLeft,DotPadKey.PanningRight]){s.press(k);s.release(k)}assert.deepEqual(s.commands,['minimap','resources','click','left','right'])});
 test('repeated key-down edges never toggle menus repeatedly',async()=>{const s=await setup();for(let i=0;i<3;i++)s.press(DotPadKey.KeyFunction2);s.release(DotPadKey.KeyFunction2);assert.deepEqual(s.commands,['resources'])});
 test('pan release does not release a held F3',async()=>{const s=await setup();s.press(DotPadKey.KeyFunction3);s.press(DotPadKey.PanningLeft);s.release(DotPadKey.PanningLeft);s.advance(800);assert.deepEqual(s.commands,['left','save']);s.release(DotPadKey.KeyFunction3);assert.deepEqual(s.commands,['left','save'])});
 test('a dropped Bluetooth link cancels held keys and pauses output',async()=>{const s=await setup();s.press(DotPadKey.KeyFunction3);s.ble.drop();s.advance(1000);assert.deepEqual(s.commands,[]);s.pad.update(frame(true));assert.deepEqual(s.sdk.output,[]);assert.equal(s.pad.pending.dots[0][0],1);s.pad.release()});

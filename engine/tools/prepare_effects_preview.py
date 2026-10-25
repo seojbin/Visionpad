@@ -78,7 +78,7 @@ def main():
         destination.writeframes((output*32767).astype('<i2').tobytes())
     (output_dir/'effects-preview.json').write_text(json.dumps({'seconds':round(len(output)/RATE,2),
         'peak':round(peak,4),'note':'Mono listening reel; does not reproduce fishing HRTF or live mixing.',
-        'examples':manifest},indent=2)+'\n')
+        'examples':manifest},indent=2)+'\n',encoding='utf-8')
     print(f'Ready: {target.relative_to(ROOT)} ({len(output)/RATE:.1f}s, peak {peak:.3f})')
 
 

@@ -28,6 +28,7 @@ class SetupChecks(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.touch()
         for name in ("engine/web/game.html", "engine/web/core/game-audio.js", "engine/web/core/game-speech.js", "engine/web/core/game-keys.js",
+                     "engine/web/core/pad/hardware.mjs", "engine/web/core/pad/bluetooth-pad.mjs", "engine/web/core/pad/vendor/package.json",
                      "engine/tools/prepare_demo.py", "engine/tools/prepare_speech.py", "engine/config/game.json", "engine/config/npc.json", "engine/requirements.txt"):
             target = self.root / name
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -51,6 +52,14 @@ class SetupChecks(unittest.TestCase):
         self.assertFalse((self.root / "saves").exists())
         self.assertFalse((self.root / ".audio/cache").exists())
 
+    def test_missing_pad_sdk_is_a_warning_and_the_setup_stays_ready(self):
+        report = self.report()
+        sdk = next(check for check in report["checks"] if check["name"].startswith("Bluetooth pad SDK"))
+        self.assertTrue(report["ready"])
+        self.assertTrue(sdk["ok"])
+        self.assertTrue(sdk["warning"])
+        self.assertIn("--with-pad", sdk["fix"])
+
     def test_missing_dependency_has_an_actionable_fix(self):
         def absent(name):
             raise PackageNotFoundError(name)
@@ -70,6 +79,32 @@ class SetupChecks(unittest.TestCase):
         failed = {check["name"] for check in self.report()["checks"] if not check["ok"]}
         self.assertEqual(failed, {"Game sounds", "Game files"})
 
+    def test_missing_new_game_modules_and_demo_helpers_are_reported(self):
+        for name in ("engine/display/icons.py", "game/village/feature.py",
+                     "engine/tools/audio_flow.py", "engine/tools/speech_inventory.py"):
+            with self.subTest(file=name):
+                path = self.root / name
+                path.unlink()
+                check = next(item for item in self.report()["checks"] if item["name"] == "Game files")
+                self.assertFalse(check["ok"])
+                self.assertIn(name, check["detail"])
+                path.touch()
+
+    def test_voice_settings_with_korean_and_utf8_bom_ignore_cp949_defaults(self):
+        config = self.root / "engine/config/speech.json"
+        values = json.loads(config.read_text(encoding="utf-8"))
+        values["profiles"]["system"]["label"] = "시스템 안내"
+        config.write_text(json.dumps(values, ensure_ascii=False), encoding="utf-8-sig")
+        settings = self.model.with_suffix(".onnx.json")
+        settings.write_text(json.dumps({"audio": {"sample_rate": 22050}, "phoneme_id_map": {"가": [1]}}, ensure_ascii=False), encoding="utf-8-sig")
+        read_text = Path.read_text
+
+        def windows_read(path, encoding=None, **kwargs):
+            return read_text(path, encoding=encoding or "cp949", **kwargs)
+
+        with patch.object(Path, "read_text", windows_read):
+            self.assertTrue(self.report()["ready"])
+
     def test_older_python_is_reported_before_starting_any_server(self):
         report = check_setup(self.root, get_version=VERSIONS.__getitem__, python_version=(3, 10, 9))
         self.assertFalse(report["ready"])
@@ -84,8 +119,17 @@ class StartupTests(unittest.TestCase):
         schema["paths"] = {}
         with patch("engine.launcher.launch_game.urlopen", return_value=io.BytesIO(json.dumps(schema).encode())):
             self.assertEqual(launch_game.server_status("http://127.0.0.1:8000"), "other")
-        with patch("engine.launcher.launch_game.urlopen", side_effect=URLError(ConnectionRefusedError())):
+        with patch("engine.launcher.launch_game.urlopen", side_effect=URLError(ConnectionRefusedError())), \
+                patch("engine.launcher.launch_game.port_is_available", return_value=True):
             self.assertEqual(launch_game.server_status("http://127.0.0.1:8000"), "free")
+
+    def test_windows_timeout_does_not_hide_a_free_port(self):
+        with patch("engine.launcher.launch_game.urlopen", side_effect=URLError(TimeoutError())), \
+                patch("engine.launcher.launch_game.port_is_available", return_value=True):
+            self.assertEqual(launch_game.server_status("http://127.0.0.1:8000"), "free")
+        with patch("engine.launcher.launch_game.urlopen", side_effect=URLError(TimeoutError())), \
+                patch("engine.launcher.launch_game.port_is_available", side_effect=OSError("busy")):
+            self.assertEqual(launch_game.server_status("http://127.0.0.1:8000"), "other")
 
     def test_existing_server_is_reused_without_launching_or_stopping_a_process(self):
         with patch("engine.launcher.launch_game.server_status", return_value="game"), patch("engine.launcher.launch_game.subprocess.Popen") as start:
@@ -169,6 +213,26 @@ class StartupTests(unittest.TestCase):
             self.assertTrue(all(command[0] == str(python) for command in commands[1:]))
             self.assertIn("--download", commands[-2])
             self.assertIn("--synthesize", commands[-1])
+
+    def test_pad_sdk_is_installed_only_on_request_and_its_failure_does_not_stop_setup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            python = root / ".venv/bin/python"
+            python.parent.mkdir(parents=True)
+            python.touch()
+            for with_pad in (False, True):
+                commands = []
+
+                def record(command, **kwargs):
+                    commands.append(command)
+                    failed = any(str(part).endswith("prepare_pad.py") for part in command)
+                    return subprocess.CompletedProcess(command, 1 if failed else 0)
+
+                with patch("engine.launcher.setup_game.environment_python", return_value=python):
+                    self.assertEqual(setup(root, run=record, with_pad=with_pad), python)
+                pad = [command for command in commands if str(command[-1]).endswith("prepare_pad.py")]
+                self.assertEqual(len(pad), 1 if with_pad else 0)
+                self.assertIn("--synthesize", commands[-1])
 
     def test_old_environment_python_is_rejected_before_installing(self):
         with tempfile.TemporaryDirectory() as directory:

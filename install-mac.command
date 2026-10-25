@@ -1,5 +1,6 @@
 #!/bin/zsh
 # First-time setup on macOS. The installer logic is engine/launcher/setup_game.py.
+# Options are passed through, e.g. ./install-mac.command --with-pad (also installs the Bluetooth pad SDK).
 set -eu
 VISIONPAD_DIR="${0:A:h}"
 cd "$VISIONPAD_DIR"
@@ -8,7 +9,7 @@ if ! command -v python3 >/dev/null 2>&1; then
     read -r "?엔터를 누르면 닫힙니다. "
     exit 1
 fi
-if ! python3 engine/launcher/setup_game.py; then
+if ! python3 engine/launcher/setup_game.py "$@"; then
     read -r "?위의 안내를 확인한 뒤 엔터를 누르세요. "
     exit 1
 fi
