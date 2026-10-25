@@ -1,7 +1,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {GameSpeech} = require('../../../engine/web/core/game-speech.js');
-const {GameAudio} = require('../../../engine/web/core/game-audio.js');
+const {GameSpeech} = require('../../../web/core/game-speech.js');
+const {GameAudio} = require('../../../web/core/game-audio.js');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function setup(fetcher) {
     const calls = [], sources = [], gains = [], ducks = [], statuses = [], captions = [];

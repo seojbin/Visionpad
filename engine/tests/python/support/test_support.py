@@ -2,7 +2,7 @@
 import copy, importlib.util, json, math, re, sys, types, unittest
 from pathlib import Path
 from unittest.mock import patch
-ROOT=Path(__file__).resolve().parents[3]
+ROOT=Path(__file__).resolve().parents[4]
 class Pad:
  def __init__(self,width,height):self.width=width;self.height=height;self.clear()
  def clear(self):self.dots=[[0]*self.width for _ in range(self.height)];self.outside=[]

@@ -1,6 +1,6 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {GameAudio,SOUND_CUES} = require('../../../engine/web/core/game-audio.js');
+const {GameAudio,SOUND_CUES} = require('../../../web/core/game-audio.js');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const param = () => ({value:0,setTargetAtTime(v){this.value=v;},setValueAtTime(v){this.value=v;},
     linearRampToValueAtTime(v){this.value=v;},exponentialRampToValueAtTime(v){this.value=v;}});

@@ -1,7 +1,7 @@
 """Every URL the game page and the companion window request must answer 200.
 
-    python tests/browser/url_check.py --record   # write tests/browser/recorded-urls.txt from the web tree
-    python tests/browser/url_check.py            # start a server, check recorded + currently referenced URLs
+    python engine/tests/browser/url_check.py --record   # write engine/tests/browser/recorded-urls.txt from the web tree
+    python engine/tests/browser/url_check.py            # start a server, check recorded + currently referenced URLs
 
 URLs come from a static scan of engine/web/ (HTML, JS, JSON, CSS): quoted asset paths, /static/ and /api/
 references, the GameAudio sound list and the texture paths in the companion's asset registry.
@@ -19,7 +19,7 @@ import urllib.request
 from pathlib import Path
 from posixpath import dirname, join, normpath
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 WEB = ROOT / "engine" / "web"
 GAME = ROOT / "game"
 RECORDED = Path(__file__).with_name("recorded-urls.txt")

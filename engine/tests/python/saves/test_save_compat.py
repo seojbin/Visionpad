@@ -10,7 +10,7 @@ from engine.core.engine import GameEngine
 from engine.paths import ROOT
 from engine.services.saves import decode
 
-FIXTURE = ROOT / "tests" / "fixtures" / "saves" / "v1_day1_farm_started.json"
+FIXTURE = ROOT / "engine" / "tests" / "fixtures" / "saves" / "v1_day1_farm_started.json"
 
 
 class SaveCompatibilityTests(unittest.TestCase):

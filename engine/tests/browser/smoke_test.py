@@ -1,7 +1,7 @@
 """Browser smoke test: game page and companion window load cleanly and travel works everywhere.
 
 Dev-only: pip install -r requirements-dev.txt && python -m playwright install chromium
-Run:      python tests/browser/smoke_test.py
+Run:      python engine/tests/browser/smoke_test.py
 
 Fails on any console error, page error, failed request or HTTP status >= 400 in either window.
 Allowed: the hand-downloaded Dot Pad SDK may be missing, and speech requests that the page itself

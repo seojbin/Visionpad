@@ -10,4 +10,4 @@ Self-contained: everything that talks to a physical Dot Pad lives in this folder
 
 The page talks to this folder only through `window.DotdewInput` (key and pointer input) and the `dotdew-state` event (frames to draw). The old URLs `/static/hardware.mjs`, `/static/bluetooth-pad.mjs` and `/static/vendor/…` still resolve (`engine/server/routes/static.py`).
 
-Tests: `tests/js/pad/` (both currently cannot load; see FOLLOWUPS F3/F4).
+Tests: `engine/tests/js/pad/` (both currently cannot load; see FOLLOWUPS F3/F4).

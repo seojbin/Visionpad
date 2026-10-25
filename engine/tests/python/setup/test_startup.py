@@ -14,7 +14,7 @@ import launch_game
 from tools.check_setup import ASSETS, check_setup, sound_path
 from tools.setup_game import environment_python, setup
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]
 VERSIONS = {"fastapi": "0.143.0", "uvicorn": "0.54.0", "piper-tts": "1.8.0", "onnxruntime": "1.31.0"}
 
 

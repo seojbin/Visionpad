@@ -16,5 +16,5 @@ Fish as cooking ingredients, graded seafood dishes, and the food effects they gr
 | Config | `engine/config/game.json` → seafood entries in `recipes` (`seafood`, `allowed_fish`, `fish_required`, `quality_effects`) |
 | Slots | none |
 | Client (web) | none (no `game/seafood/` folder; the game page shows its pages with the shared defaults); fish textures belong to fishing |
-| Tests | `tests/python/audio/test_gameplay_audio.py` (cooking reaction) |
+| Tests | `engine/tests/python/audio/test_gameplay_audio.py` (cooking reaction) |
 | Note | Seafood dishes grant food effects (rare finds, double loot, better sales); the modifiers that apply them are in `engine/core/effects.py`. |

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const {spawnSync} = require('node:child_process');
 const {existsSync} = require('node:fs');
 const {join} = require('node:path');
-const {GameAudio} = require('../../../engine/web/core/game-audio.js');
+const {GameAudio} = require('../../../web/core/game-audio.js');
 const tick = () => new Promise(resolve=>setImmediate(resolve));
 const param = () => ({value:0,setTargetAtTime(v){this.value=v;},setValueAtTime(v){this.value=v;},
     linearRampToValueAtTime(v){this.value=v;},exponentialRampToValueAtTime(v){this.value=v;}});
@@ -97,7 +97,7 @@ test('background music can recover from an initial asset failure',async t=>{
     assert.ok(s.audio.bgm);assert.equal(requests,2);
 });
 test('the full real-engine flow drives the audio module without leftover task loops',async t=>{
-    const root=join(__dirname,'..','..','..');
+    const root=join(__dirname,'..','..','..','..');
     const python=join(root,'.venv',process.platform==='win32'?'Scripts/python.exe':'bin/python');
     const run=spawnSync(existsSync(python)?python:'python',['tools/audio_flow.py','--stdout'],{cwd:root,encoding:'utf8',maxBuffer:64*1024*1024});
     assert.equal(run.status,0,run.stderr);

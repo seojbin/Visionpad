@@ -16,5 +16,5 @@ The shop counter (sell, buy, calendar), paged buy and sell lists, weekly market 
 | Engine API used | `market_price` (village); `consume_sale` (core effects) |
 | Config | `engine/config/game.json` → `seeds.*.seed_price/crop_price`, `fertilizer.*`, `shop.fertilizer_price`, `recipes.*.sell_price`; page names `pages.shop_*` |
 | Client (web) | `game/shop/client.js` (counter task text) |
-| Tests | `tests/python/audio/test_sound_events.py` (coin sounds, rejections), `tests/python/audio/test_team_audio.py` |
+| Tests | `engine/tests/python/audio/test_sound_events.py` (coin sounds, rejections), `engine/tests/python/audio/test_team_audio.py` |
 | Notes | The calendar button on the counter carries the village's `open_calendar` action. Core layout still positions arrows whose action starts with `shop_page:` and the keypad prefers paging arrows (`shop_page:`, `inventory_page:`). |

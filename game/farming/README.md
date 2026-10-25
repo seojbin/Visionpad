@@ -21,4 +21,4 @@ Farm plots: planting from the seed page, watering and fertilizing (care minigame
 | Engine API used | `clear_harvest`, `get_harvest_base_yield` (harvest, paired); `market_price` (village); `get_seed_config`, `get_seed_label`, `draw_icon_pattern`, `object_contains` (core) |
 | Config | `engine/config/game.json` → `farm.*`, `seeds.*`, `care_minigame.*`, `fertilizer.*`, `research.seed_return.*`, `time.action_costs.*` |
 | Client (web) | `game/farming/client.js` (farm task text, plot detail and care coverage text, hides `care_target`/`care_field` from the object list, status line); sounds `game/farming/audio/water.mp3`, `soil.mp3` |
-| Tests | `tests/python/audio/test_sound_events.py`, `tests/python/audio/test_team_audio.py`, `tests/python/audio/test_audio_flow.py`, `tests/python/saves/test_save_compat.py` (plot state) |
+| Tests | `engine/tests/python/audio/test_sound_events.py`, `engine/tests/python/audio/test_team_audio.py`, `engine/tests/python/audio/test_audio_flow.py`, `engine/tests/python/saves/test_save_compat.py` (plot state) |

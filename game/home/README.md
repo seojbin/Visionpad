@@ -15,4 +15,4 @@ The home page: bed, research chest and kitchen icons, the drawn home scene with 
 | Config | `engine/config/game.json` → `home.objects`; page name `pages.home` |
 | Events | none |
 | Client (web) | `game/home/client.js` (home task text) |
-| Tests | No dedicated tests. Covered through `tests/python/audio/test_audio_flow.py` and `tests/python/saves/test_save_compat.py`. |
+| Tests | No dedicated tests. Covered through `engine/tests/python/audio/test_audio_flow.py` and `engine/tests/python/saves/test_save_compat.py`. |

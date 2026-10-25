@@ -19,4 +19,4 @@ The F2 item pages: gold and food first, then everything else, twelve per page. F
 | Config | `engine/config/game.json` → `interaction.inventory.items_per_page`, `interaction.inventory.hide_zero_items`; page name `pages.inventory` |
 | Engine API used | none from other features (entries come through the `inventory.items` slot); core `_perform_action` (Left/Right paging), `leave_activities`, `set_page` |
 | Client (web) | `game/inventory/client.js` (page N/M task text) |
-| Tests | No dedicated tests. `tests/python/audio/test_team_audio.py` uses `open_inventory`. |
+| Tests | No dedicated tests. `engine/tests/python/audio/test_team_audio.py` uses `open_inventory`. |

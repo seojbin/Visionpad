@@ -8,7 +8,8 @@ Known failures are marked in the tests themselves (unittest.expectedFailure, nod
 their reason, and are listed at the end. The run passes when nothing else fails and no known
 failure starts passing (that is a behaviour change too: remove its marker).
 
-A feature's tests are the test files named in the Tests row of its README plus its tests folder.
+Tests live in engine/tests/ (shared) and game/<name>/tests/ (one feature). A feature's tests are its
+tests folder plus the shared test files named in the Tests row of its README.
 The registry and save-compatibility tests run with every feature. Browser checks run with
 --feature only when --browser is given.
 """
@@ -23,9 +24,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FEATURES = ROOT / "game"
-GUARDS = ("tests/python/core/test_registry.py", "tests/python/saves/test_save_compat.py")
-BROWSER = ("tests/browser/url_check.py", "tests/browser/smoke_test.py")
-TEST_FILE = re.compile(r"`(tests/[\w/]+\.(?:py|cjs|mjs))`")
+GUARDS = ("engine/tests/python/core/test_registry.py", "engine/tests/python/saves/test_save_compat.py")
+BROWSER = ("engine/tests/browser/url_check.py", "engine/tests/browser/smoke_test.py")
+TEST_FILE = re.compile(r"`((?:engine|game)/[\w/]*tests/[\w/]+\.(?:py|cjs|mjs))`")
 TAP = re.compile(r"\s*(not ok|ok) \d+ - (.*?)(?: # (TODO|SKIP)\b ?(.*))?\s*$")
 
 
@@ -35,9 +36,18 @@ def feature_tests(name):
         raise SystemExit(f"Unknown feature {name!r}: {readme.relative_to(ROOT)} does not exist.")
     row = next((line for line in readme.read_text(encoding="utf-8").splitlines() if line.startswith("| Tests |")), "")
     files = set(TEST_FILE.findall(row))
-    for folder in (ROOT / "tests/python" / name, ROOT / "tests/js" / name):
-        files.update(path.relative_to(ROOT).as_posix() for path in folder.rglob("test_*.*") if folder.is_dir())
+    files.update(test_files(FEATURES / name / "tests"))
     return sorted(files)
+
+
+def test_files(*folders):
+    """Every test_*.py / test_*.cjs / test_*.mjs under the folders, relative to the repository root."""
+    return sorted(path.relative_to(ROOT).as_posix() for folder in folders if folder.is_dir()
+                  for path in folder.rglob("test_*.*") if path.suffix in (".py", ".cjs", ".mjs"))
+
+
+def all_test_files():
+    return test_files(ROOT / "engine/tests", *sorted(FEATURES.glob("*/tests")))
 
 
 def run_python(files, report):
@@ -45,9 +55,8 @@ def run_python(files, report):
     sys.path.insert(0, str(ROOT))
     loader = unittest.TestLoader()
     if files is None:
-        suite = loader.discover(str(ROOT / "tests/python"), top_level_dir=str(ROOT))
-    else:
-        suite = loader.loadTestsFromNames([path.removesuffix(".py").replace("/", ".") for path in files])
+        files = [path for path in all_test_files() if path.endswith(".py")]
+    suite = loader.loadTestsFromNames([path.removesuffix(".py").replace("/", ".") for path in files])
     result = unittest.TextTestRunner(verbosity=2, stream=sys.stdout).run(suite)
     report["ok"] += result.testsRun - len(result.failures) - len(result.errors) - len(result.skipped) \
         - len(result.expectedFailures) - len(result.unexpectedSuccesses)
@@ -66,8 +75,7 @@ def run_node(files, report):
         report["problems"].append("node: Node.js is not installed; Node tests were not run")
         return
     if files is None:
-        files = sorted(path.relative_to(ROOT).as_posix() for path in (ROOT / "tests/js").rglob("test_*.*")
-                       if path.suffix in (".cjs", ".mjs"))
+        files = [path for path in all_test_files() if path.endswith((".cjs", ".mjs"))]
     if not files:
         return
     # Explicit file names instead of a glob: node --test globs need Node 21+.
