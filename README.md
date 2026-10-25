@@ -160,11 +160,11 @@ The server owns game state and action checks. The browser sends input and receiv
 
 ### Game and server
 
-Server code is the `visionpad/` package. Each activity is a feature folder that registers its pages, actions, drawings and state with the engine; its README lists what it owns and uses. The root `game_*.py`, `dotpad.py`, `speech_queue.py` and `spectator_state.py` modules are deprecated aliases kept for old imports.
+Server code is the `visionpad/` package. Each activity is a feature folder that registers its pages, actions, drawings and state with the engine; its README lists what it owns and uses.
 
 | Path | Responsibility |
 |---|---|
-| `visionpad/app/` | FastAPI app (`main.py`), shared runtime, routes for the game page, input and state API, speech and static files (`uvicorn game_app:app` still works) |
+| `visionpad/app/` | FastAPI app (`main.py`), shared runtime, routes for the game page, input and state API, speech and static files (`uvicorn visionpad.app.main:app`) |
 | `visionpad/core/` | `engine.py` (state, reset, page objects, responses), `registry.py` (feature hooks), `order.py` (run orders), `input.py`, `render.py`, `time.py`, `state.py`, `effects.py` (food effects) |
 | `visionpad/features/<name>/` | One folder per activity: cooking, farming, fishing, flowers, harvest, home, inventory, minimap, mining, npc, research, seafood, shop, village. Enabled in `visionpad/features/__init__.py` |
 | `visionpad/display/` | Dot matrices and drawing primitives (`dotpad.py`), icons (`icons.py`), keypad menus (`keypad.py`) |

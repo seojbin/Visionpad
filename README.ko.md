@@ -160,11 +160,11 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 
 ### 게임과 서버
 
-서버 코드는 `visionpad/` 패키지에 있다. 활동마다 기능 폴더가 있고, 각 기능은 화면·행동·그리기·상태를 엔진에 등록한다. 기능 폴더의 README에 그 기능이 소유하고 사용하는 항목이 정리되어 있다. 루트의 `game_*.py`, `dotpad.py`, `speech_queue.py`, `spectator_state.py`는 예전 import를 위한 호환용 별칭이다.
+서버 코드는 `visionpad/` 패키지에 있다. 활동마다 기능 폴더가 있고, 각 기능은 화면·행동·그리기·상태를 엔진에 등록한다. 기능 폴더의 README에 그 기능이 소유하고 사용하는 항목이 정리되어 있다.
 
 | 경로 | 역할 |
 |---|---|
-| `visionpad/app/` | FastAPI 앱(`main.py`), 공용 런타임, 게임 페이지·입력·상태 API·음성·정적 파일 라우트 (`uvicorn game_app:app`도 그대로 동작) |
+| `visionpad/app/` | FastAPI 앱(`main.py`), 공용 런타임, 게임 페이지·입력·상태 API·음성·정적 파일 라우트 (`uvicorn visionpad.app.main:app`) |
 | `visionpad/core/` | `engine.py`(상태, 초기화, 페이지 오브젝트, 응답), `registry.py`(기능 연결 지점), `order.py`(실행 순서), `input.py`, `render.py`, `time.py`, `state.py`, `effects.py`(음식 효과) |
 | `visionpad/features/<name>/` | 활동별 폴더: cooking, farming, fishing, flowers, harvest, home, inventory, minimap, mining, npc, research, seafood, shop, village. 사용 목록은 `visionpad/features/__init__.py` |
 | `visionpad/display/` | 도트 행렬과 기본 도형(`dotpad.py`), 아이콘(`icons.py`), 키패드 메뉴(`keypad.py`) |

@@ -33,7 +33,6 @@ Everything else needs **explicit approval** from the owner before it is changed:
 | `docs/refactor/BASELINE.md` | Expected results. Add an addendum for new tests; changing a known result needs approval. |
 | `tools/`, launchers (`launch_game.py`, `game.bat`, `setup-*`, `start-mac.command`), `requirements*.txt` | Setup and launch (Phase 6 will replace these). |
 | `tracking/`, `tracking_*` | Camera tracking; not installed or testable in the default setup. |
-| Root modules `game_*.py`, `dotpad.py`, `speech_queue.py`, `spectator_state.py` | Deprecated aliases of moved modules (`tests/python/core/test_root_aliases.py`). Add no code. |
 
 `.github/CODEOWNERS` mirrors this table for review requests.
 

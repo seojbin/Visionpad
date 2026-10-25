@@ -143,7 +143,7 @@ def run_flow():
                 flow.mark('mine')
                 flow.go('fishing')
                 for grade in ('high','miss'):
-                    with patch('game_fishing.random.choices',return_value=[grade]):
+                    with patch('visionpad.features.fishing.feature.random.choices',return_value=[grade]):
                         target=list(engine.fishing_target)
                         flow.pointer('down',*target);flow.pointer('up',*target)
                     flow.mark('fish_'+grade)

@@ -23,8 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FEATURES = ROOT / "visionpad/features"
-GUARDS = ("tests/python/core/test_registry.py", "tests/python/core/test_root_aliases.py",
-          "tests/python/saves/test_save_compat.py")
+GUARDS = ("tests/python/core/test_registry.py", "tests/python/saves/test_save_compat.py")
 BROWSER = ("tests/browser/url_check.py", "tests/browser/smoke_test.py")
 TEST_FILE = re.compile(r"`(tests/[\w/]+\.(?:py|cjs|mjs))`")
 TAP = re.compile(r"\s*(not ok|ok) \d+ - (.*?)(?: # (TODO|SKIP)\b ?(.*))?\s*$")
