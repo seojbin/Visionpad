@@ -92,5 +92,12 @@ desktop.ini
 # Local game saves
 /saves/
 
-# Dot Inc. DotPadSDK: download locally, not committed (see README)
-/web/vendor/DotPadSDK-*
+# Speech and audio runtime files: voices, speech cache, reports (engine/services/audio_files.py).
+# The old locations models/, .cache/ and output/ stay ignored below until they are migrated.
+/.audio/
+
+# Dot Inc. DotPadSDK: download locally, not committed (see engine/web/core/pad/README.md)
+/engine/web/core/pad/vendor/DotPadSDK-*
+
+# Claude Code per-user settings (the shared .claude/CLAUDE.md is committed)
+.claude/settings.local.json
