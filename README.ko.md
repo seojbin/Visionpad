@@ -24,7 +24,7 @@ Dot Pad를 사용하는 농장·생활 시뮬레이션 게임. 집, 농장, 마�
 
 ## 실행
 
-처음에는 Python 3.11 이상을 설치하고 Mac은 **install-mac.command**, Windows는 **install-windows.bat**를 연다. 프로젝트 안에 실행 환경을 만들고 패키지와 두 음성을 준비한다. 최초 설치에는 인터넷이 필요하다. 이후에는 **start-mac.command** 또는 **start-windows.bat**만 연다. 실행 준비 확인, 서버 연결 대기와 시연 음성 준비 후 게임을 열며, 같은 포트의 게임이 이미 켜져 있으면 재시작 없이 사용한다. [설치와 전달 안내](docs/audio/SETUP.md)를 참고한다.
+처음에는 Python 3.11 이상을 설치하고 Mac은 **install-mac.command**, Windows는 **install-windows.bat**를 연다. 프로젝트 안에 실행 환경을 만들고 패키지와 두 음성을 준비한다. 최초 설치에는 인터넷이 필요하다. 이후에는 **start-mac.command** 또는 **start-windows.bat**만 연다. 실행 준비 확인, 서버 연결 대기와 시연 음성 준비 후 게임을 열며, 같은 포트의 게임이 이미 켜져 있으면 재시작 없이 사용한다. [설치와 전달 안내](engine/README.md)를 참고한다.
 
 직접 설치하려면 프로젝트 루트에서 Python 가상환경을 준비하고 의존성을 설치한다.
 
@@ -53,7 +53,7 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 
 ## 영어 음성과 Rowan 대화
 
-10월 18일에는 서버의 오래된 음성 취소·우선순위, 최근 행동에 대한 Rowan의 일회성 반응, 농사·광산 목표 방향음을 추가했다. **Target cues on/off**로 새 목표음을 비교할 수 있고 낚시 탐색음은 유지한다. 반응은 실제 최근 결과를 기억하고 저장에도 포함되며, 기존 저장에서는 과거 최초 성취를 알 수 없으므로 일반 반응을 쓴다. [변경과 검증 결과](docs/audio/GAMEPLAY_UPDATE.md)를 참고한다.
+10월 18일에는 서버의 오래된 음성 취소·우선순위, 최근 행동에 대한 Rowan의 일회성 반응, 농사·광산 목표 방향음을 추가했다. **Target cues on/off**로 새 목표음을 비교할 수 있고 낚시 탐색음은 유지한다. 반응은 실제 최근 결과를 기억하고 저장에도 포함되며, 기존 저장에서는 과거 최초 성취를 알 수 없으므로 일반 반응을 쓴다. [변경과 검증 결과](engine/README.md)를 참고한다.
 
 음성은 Python 서버의 Piper와 고정 영어 모델로 생성한다. 브라우저나 운영체제의 목소리를 선택하지 않는다. 위의 음성 준비 명령은 모델 두 개를 `models/piper/`에 내려받고 샘플을 만든다. 모델과 생성 음원 `.cache/speech/`는 Git에서 제외한다. 현재 구현은 별도 음성 서비스 계정이나 API 키가 필요 없다. 새 문장은 처음 요청할 때 생성하고 이후 저장된 WAV를 재사용하므로, 첫 모델 로드와 새 문장은 저장된 문장보다 오래 걸릴 수 있다.
 
@@ -65,13 +65,13 @@ Mac 실행 파일과 직접 실행 명령의 기본 주소는 `http://127.0.0.1:
 - 게임 창을 떠나면 음성과 게임 소리를 멈추고 늦은 응답의 소리도 차단한다. 돌아오면 현재 화면의 배경음과 낚시 탐색음만 복구하며 음소거 설정은 유지한다. 이전 대사와 단발 효과음은 자동 재생하지 않는다. 늦게 도착한 문장은 자막과 **Replay**로 확인할 수 있다.
 - 장면을 이동하면 이전 작업·목표·거래 소리와 늦은 채굴 획득 안내를 취소한다. 수면 녹음은 기존처럼 다음 날까지 이어진다. 음원 로딩에 실패하면 1초 뒤 이후 행동이나 상태 갱신에서 다시 시도하며, 지나간 효과음을 뒤늦게 재생하지 않는다.
 
-목소리와 대표 문장은 `engine/config/speech.json`, NPC 대사는 `engine/config/npc.json`에서 관리한다. `python engine/tools/prepare_speech.py`는 `output/audio/`의 비교 음원을, `python engine/tools/speech_inventory.py`는 코드 내 문장 목록을 갱신한다. [사운드 목록과 모델 출처](docs/audio/SOUND_MAP.md), [팀 전달 안내](docs/audio/TEAM_HANDOFF.md)을 참고한다. 프로토타입 모델의 데이터셋 라이선스는 연결된 모델 카드에 기록된 CC BY NC SA 4.0이며 Piper는 GPL 3.0 이상이다.
+목소리와 대표 문장은 `engine/config/speech.json`, NPC 대사는 `engine/config/npc.json`에서 관리한다. `python engine/tools/prepare_speech.py`는 `output/audio/`의 비교 음원을, `python engine/tools/speech_inventory.py`는 코드 내 문장 목록을 갱신한다. [사운드 목록과 모델 출처](engine/README.md), [팀 전달 안내](engine/README.md)을 참고한다. 프로토타입 모델의 데이터셋 라이선스는 연결된 모델 카드에 기록된 CC BY NC SA 4.0이며 Piper는 GPL 3.0 이상이다.
 
-시연 전에는 게임 서버를 실행한 상태에서 다른 터미널에 `python engine/tools/prepare_demo.py`를 실행한다. 고정 안내, Rowan 튜토리얼·조언 대사와 대표 행동·대상·최근 반응 안내를 음성 API로 미리 준비하며 게임 진행은 바꾸지 않는다. 현재 기준 속도 1.0의 203문장이다. 다른 속도, 바뀌는 수량과 저장 시각 안내는 처음 생성할 수 있다. 결과는 `output/audio/demo-ready.json`에 저장한다. [시연 준비와 검증](docs/audio/DEMO_READY.md)을 참고한다.
+시연 전에는 게임 서버를 실행한 상태에서 다른 터미널에 `python engine/tools/prepare_demo.py`를 실행한다. 고정 안내, Rowan 튜토리얼·조언 대사와 대표 행동·대상·최근 반응 안내를 음성 API로 미리 준비하며 게임 진행은 바꾸지 않는다. 현재 기준 속도 1.0의 203문장이다. 다른 속도, 바뀌는 수량과 저장 시각 안내는 처음 생성할 수 있다. 결과는 `output/audio/demo-ready.json`에 저장한다. [시연 준비와 검증](engine/README.md)을 참고한다.
 
-소프트웨어 검증은 프로젝트 환경에서 `python engine/tools/run_tests.py`로 실행한다. Python 테스트(`engine/tests/python/`), 모든 Node 테스트 파일(`engine/tests/js/`, Node.js 20 이상), URL 점검과 브라우저 스모크 테스트(`engine/tests/browser/`, `pip install -r engine/requirements-dev.txt`와 `python -m playwright install chromium` 필요, `--no-browser`로 생략)를 실행한 뒤 모든 결과를 [BASELINE.md](docs/refactor/BASELINE.md)와 비교한다. 알려진 실패도 이 파일에 있다. `python engine/tools/run_tests.py --feature fishing`은 한 기능의 테스트(기능 README에 적힌 파일)와 registry·저장 호환 테스트만 실행한다. 폴더별 담당과 코드 변경 규칙은 [AGENTS.md](AGENTS.md)에 있다. `python engine/tools/audio_flow.py`는 임시 진행에서 농사·요리·NPC와 거래·채굴·낚시·저장과 로드를 기록한다. 별도 브라우저 검증은 `python engine/tools/audio_integration_lab.py` 실행 후 `http://127.0.0.1:8001/`에 접속한다. 임시 물 주기 장면에서 시작하며 실제 사용자의 게임 진행은 사용하지 않는다. 범위와 테스트 조건은 [통합 검증 결과](docs/audio/INTEGRATION_REPORT.md)에 기록했다.
+소프트웨어 검증은 프로젝트 환경에서 `python engine/tools/run_tests.py`로 실행한다. Python 테스트(`engine/tests/python/`), 모든 Node 테스트 파일(`engine/tests/js/`, Node.js 20 이상), URL 점검과 브라우저 스모크 테스트(`engine/tests/browser/`, `pip install -r engine/requirements-dev.txt`와 `python -m playwright install chromium` 필요, `--no-browser`로 생략)를 실행한 뒤 모든 결과를 [BASELINE.md](docs/refactor/BASELINE.md)와 비교한다. 알려진 실패도 이 파일에 있다. `python engine/tools/run_tests.py --feature fishing`은 한 기능의 테스트(기능 README에 적힌 파일)와 registry·저장 호환 테스트만 실행한다. 폴더별 담당과 코드 변경 규칙은 [AGENTS.md](AGENTS.md)에 있다. `python engine/tools/audio_flow.py`는 임시 진행에서 농사·요리·NPC와 거래·채굴·낚시·저장과 로드를 기록한다. 별도 브라우저 검증은 `python engine/tools/audio_integration_lab.py` 실행 후 `http://127.0.0.1:8001/`에 접속한다. 임시 물 주기 장면에서 시작하며 실제 사용자의 게임 진행은 사용하지 않는다. 범위와 테스트 조건은 [통합 검증 결과](engine/README.md)에 기록했다.
 
-사용자는 첫 음성과 방향감·효과음 균형을 긍정적으로 평가하고 음성을 조금 낮춰 달라고 했다. 기본 음성 85%는 이 의견을 반영한 값이다. 세부 방향별 청취, 발음, 다른 컴퓨터와 실물 Dot Pad는 [청취 확인 순서](docs/audio/LISTENING_CHECK.md)에 따라 추가로 확인한다.
+사용자는 첫 음성과 방향감·효과음 균형을 긍정적으로 평가하고 음성을 조금 낮춰 달라고 했다. 기본 음성 85%는 이 의견을 반영한 값이다. 세부 방향별 청취, 발음, 다른 컴퓨터와 실물 Dot Pad는 [청취 확인 순서](engine/README.md)에 따라 추가로 확인한다.
 
 ## 조작 가이드
 
