@@ -1,9 +1,15 @@
+import mimetypes
+
 from fastapi import APIRouter
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from visionpad.paths import WEB_DIR
 
+
+# The pad module must arrive as JavaScript. Windows machines whose registry maps .mjs to
+# text/plain would otherwise make the browser refuse it (FOLLOWUPS F17).
+mimetypes.add_type("text/javascript", ".mjs")
 
 router = APIRouter()
 
