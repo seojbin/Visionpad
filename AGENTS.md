@@ -8,11 +8,11 @@ The game is one `GameEngine` (`engine/core/engine.py`) with features plugged in 
 
 - **A task for feature X edits only `game/X/`**: its Python code, `client.js`, tests in `game/X/tests/` and its README.
 - **`engine/` needs explicit approval** from the owner before any change, including configuration values in `engine/config/`, the browser player, the companion window, launcher, tools and shared tests.
-- Also needs approval although it sits outside `engine/`: `game/__init__.py` (the `ENABLED` list and its order), sounds and images (`game/X/audio/`, `game/X/assets/`; binaries are committed without LFS), the root `install-*` and `start-*` files, `README.md`, `README.ko.md`, this file and `.github/`.
+- Also needs approval although it sits outside `engine/`: `game/__init__.py` (the `ENABLED` list and its order), sounds and images (`game/X/audio/`, `game/X/assets/`; binaries are committed without LFS), the root `install-*` and `start-*` files, `README.md`, `README.ko.md` and this file.
 - Never edit or regenerate `engine/web/spectator/display.js` (hand-edited bundle, follow-up F5) or the save fixtures in `engine/tests/fixtures/saves/`.
 - When a feature task needs an engine change (a new event, slot, script tag in `engine/web/game.html`, sound registration, config key), stop and ask; describe the smallest change.
 
-`.github/CODEOWNERS` assigns reviewers per folder.
+These rules are guidance for people and agents; nothing in the repository enforces them.
 
 ## Game state and saves
 
