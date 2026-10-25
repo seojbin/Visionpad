@@ -28,6 +28,7 @@ class SetupChecks(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.touch()
         for name in ("engine/web/game.html", "engine/web/core/game-audio.js", "engine/web/core/game-speech.js", "engine/web/core/game-keys.js",
+                     "engine/web/core/pad/hardware.mjs", "engine/web/core/pad/bluetooth-pad.mjs", "engine/web/core/pad/vendor/package.json",
                      "engine/tools/prepare_demo.py", "engine/tools/prepare_speech.py", "engine/config/game.json", "engine/config/npc.json", "engine/requirements.txt"):
             target = self.root / name
             target.parent.mkdir(parents=True, exist_ok=True)

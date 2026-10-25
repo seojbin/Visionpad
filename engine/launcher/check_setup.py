@@ -55,7 +55,11 @@ def check_setup(root=ROOT, get_version=version, python_version=None, synthesize=
                 "game/fishing/feature.py", "game/seafood/feature.py", "engine/display/dotpad.py",
                 "engine/spectator/state.py", "engine/config/game.json", "engine/config/npc.json", "engine/requirements.txt",
                 "engine/web/game.html", "engine/web/core/game-audio.js", "engine/web/core/game-speech.js", "engine/web/core/game-keys.js",
-                "engine/tools/prepare_demo.py", "engine/tools/prepare_speech.py")
+                "engine/tools/prepare_demo.py", "engine/tools/prepare_speech.py",
+                # Imported or loaded at start but missing from the list before (PR #2):
+                "engine/display/icons.py", "game/village/feature.py",
+                "engine/web/core/pad/hardware.mjs", "engine/web/core/pad/bluetooth-pad.mjs", "engine/web/core/pad/vendor/package.json",
+                "engine/tools/audio_flow.py", "engine/tools/speech_inventory.py")
     missing = [name for name in required if not (root / name).is_file()]
     add("Game files", not missing, "Complete" if not missing else ", ".join(missing),
         "Copy the complete project source, including web and tools folders.")
