@@ -92,5 +92,8 @@ desktop.ini
 # Local game saves
 /saves/
 
-# Dot Inc. DotPadSDK: download locally, not committed (see README)
+# Dot Inc. DotPadSDK: download locally, not committed (see engine/web/core/pad/README.md)
 /engine/web/core/pad/vendor/DotPadSDK-*
+
+# Claude Code per-user settings (the shared .claude/CLAUDE.md is committed)
+.claude/settings.local.json
