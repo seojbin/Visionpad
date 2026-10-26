@@ -41,6 +41,7 @@ Open **start-windows.bat** (http://127.0.0.1:8003) or **start-mac.command** (htt
 | Left / right arrows or pad buttons | Travel, go back or turn a page |
 | W A S D (Shift for larger steps) | Move the pointer |
 | Space | Toggle pressed/released |
+| Shift push | detail tts mode |
 
 Locations run Farm ↔ Home ↔ Village ↔ Mine ↔ Fishing lake. Exploring and travelling cost no game time; hovering never triggers an action.
 
