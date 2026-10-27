@@ -73,7 +73,7 @@ Travel runs Farm ↔ Home ↔ Village, with separate up/down controls in the vil
 
 ### Navigation and the lower panel
 
-Use Left and Right to travel along **Farm ↔ Home ↔ Village**. Arrival speech names the destination; an unavailable direction gives a short message. F1 opens the minimap: explore its nodes and select a destination. The filled node marks the current location. In the village, use the separate on-screen up/down controls to reach the mine and lake.
+Use Left and Right to travel along **Farm ↔ Home ↔ Village**. Arrival speech names the destination; an unavailable direction gives a short message. F1 opens the minimap: explore its nodes and select a destination. The filled node marks the current location. In the village, use the separate on-screen up/down controls to reach the **mine** and **lake**.
 
 F1 and F2 toggle their menus back to the current region, without nesting earlier menus. In the minimap, either arrow returns to the region. Inventory arrows turn pages and announce the first or last page at the ends; use F2 to leave. The save list can be closed with F3 or its back action to restore the previous screen. On menu screens without multiple pages, either arrow can act as Back. In the shop, paging takes precedence where a page exists; Left on the first buy/sell page returns to the shop counter, and leaving the counter returns to the village.
 
