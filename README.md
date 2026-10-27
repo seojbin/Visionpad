@@ -165,6 +165,7 @@ Rowan stands beside the shop. Select him to hear his dialogue without leaving th
 
 The first conversation gives **Rowan's soup**, with the stew's harvest effect. Eat it from F2 or sell it (base value 100 gold), then return to receive one seed of each crop. Talk again for the farming tutorial and vegetable request. Select any owned crop in the submission page to give one and receive 100 gold; either arrow cancels. Gifts, rewards and quest progress are saved. Later advice and reactions to recent activities use Rowan's voice.
 
+To fix the lock where users had zero gold or no crops to plant and could no longer earn money, Rowan was set to give out free carrot seeds if no seeds were held.
 ### Research
 
 Select the research station at home, inspect an upgrade and select it to pay its gold and material cost. The list uses three columns. Research consumes game time, and its progress is saved. More upgrades are planned.

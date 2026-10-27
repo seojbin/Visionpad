@@ -1,6 +1,6 @@
 # Village
 
-Rowan's sequential tutorial quest (soup → seeds → bring a vegetable → advice), the town square, and the weekly market that changes prices by weekday.
+Rowan's sequential tutorial quest (soup → seeds → bring a vegetable → advice), emergency crop seeds, the town square, and the weekly market that changes prices by weekday.
 
 | Item | Value |
 |---|---|
@@ -19,10 +19,14 @@ Rowan's sequential tutorial quest (soup → seeds → bring a vegetable → advi
 | Config | `engine/config/game.json` → `rowan.*`, `weekly_market.*`, `town.objects`, `seeds`; page name `pages.town` |
 | Slots | none |
 | Client (web) | `game/village/client.js` (town task text) |
-| Tests | `engine/tests/python/audio/test_team_audio.py`, `engine/tests/python/speech/test_speech.py` (5 of 8 known Rowan failures, follow-up F1) |
+| Tests | `game/village/tests/test_seed_help.py` (seed help, quest priority, speech channel, repeat prevention and save restore), `engine/tests/python/audio/test_team_audio.py`, `engine/tests/python/speech/test_speech.py` (5 of 8 known Rowan failures, follow-up F1) |
 | Note | The home/town icon sort in `engine/display/icons.py` still names the `town` page. |
 
 ## Gameplay
+
+If the player owns no plantable crop seeds, talking to Rowan first gives one carrot seed for free. He says he found it on the path and suggests planting and watering it. This takes priority at every tutorial stage, including after completion, without advancing the quest, consuming a pending activity reaction or spending time or gold. Talk again to continue the existing quest. Rowan's icon and scene target both announce that seeds are available; hovering or replaying dialogue never gives items.
+
+Any positive stock of a configured crop seed prevents another gift. Flower seeds do not block help because they cannot restart crop farming. There is no gold requirement or daily limit: if crop seeds run out again, Rowan can help again. If carrot is removed from the crop configuration, the first configured crop is used instead. The gift uses the existing seed inventory, quest speech channel and companion dialogue; no new save fields, voice model or audio files are required.
 
 Rowan stands beside the shop. Talking to him keeps the village page: the first talk gives one Rowan's soup (stew image and harvest effect, sells for 100, cannot be cooked); after you use or sell it he gives one seed of each crop (`rowan.seed_gift_each`); then the farming tutorial; bring any one crop and select it on the submission page (owned crops only) for 100 gold (`rowan.vegetable_reward_gold`). Gifts and rewards are given once; quest progress is saved, and older saves start the quest from the beginning. Either arrow cancels the submission page.
 

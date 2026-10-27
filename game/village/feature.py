@@ -129,9 +129,24 @@ class Village(Feature):
 
     def rowan_object(self):
         e = self.engine
+        seed_help = self.seed_help_seed() is not None
         return dict(id='town_rowan',type='rowan',x=22,y=6,width=12,height=10,hit_width=10,hit_height=8,
-                    label='Rowan',tts='Rowan. Quest available.' if e.rowan_stage!='done' else 'Rowan.',
-                    quest_available=e.rowan_stage!='done',action='talk_rowan')
+                    label='Rowan',tts=self.rowan_hover_text(),
+                    quest_available=seed_help or e.rowan_stage!='done',action='talk_rowan')
+
+    def seed_help_seed(self):
+        """Offer one plantable crop seed whenever the crop-seed bag is empty."""
+        e = self.engine
+        crops = e.config.get('seeds', {})
+        owned = e.resources.get('seeds', {})
+        if not crops or any(owned.get(seed, 0) > 0 for seed in crops):
+            return None
+        return 'carrot' if 'carrot' in crops else next(iter(crops))
+
+    def rowan_hover_text(self):
+        if self.seed_help_seed() is not None:
+            return 'Rowan. Seeds available. Talk to me.'
+        return 'Rowan. Quest available.' if self.engine.rowan_stage != 'done' else 'Rowan.'
 
     def town_nav_objects(self):
         e = self.engine
@@ -152,7 +167,7 @@ class Village(Feature):
                  label='Shop', tts='Shop. Buy or sell.', action='open_shop'),
             dict(id='town_scene_rowan', type='town_hitbox', skip_grid=True,
                  x=10, y=19, width=7, height=7, hit_width=9, hit_height=9,
-                 label='Rowan', tts='Rowan. Quest available.' if e.rowan_stage != 'done' else 'Rowan.',
+                 label='Rowan', tts=self.rowan_hover_text(),
                  action='talk_rowan'),
             dict(id='town_road_mine', type='town_hitbox', skip_grid=True,
                  x=20, y=16, width=9, height=5, hit_width=11, hit_height=7,
@@ -254,10 +269,10 @@ class Village(Feature):
                 pad.set_dot(x, y, 0)
         pad.set_dot(44, 30, 1)
 
-    def show_rowan(self, text, page='rowan_dialogue', events=None):
+    def show_rowan(self, text, page='rowan_dialogue', events=None, include_reaction=True):
         """Rowan speaks a quest line: the NPC feature adds a one-time reaction and Rowan's voice."""
         e = self.engine
-        reaction = e.recent_reaction("shopkeeper")
+        reaction = e.recent_reaction("shopkeeper") if include_reaction else None
         if reaction:
             text += " " + reaction
         e.rowan_dialogue=text
@@ -276,6 +291,16 @@ class Village(Feature):
     def talk(self):
         e = self.engine
         if e.current_location != 'town': return e.response(tts='Rowan is in the village.')
+        seed = self.seed_help_seed()
+        if seed is not None:
+            # No new quest/save state: owning the gift prevents repeat grants.
+            e.resources.setdefault('seeds', {}).setdefault(seed, 0)
+            e.add_resource('seeds', 1, item=seed)
+            label = e.get_seed_label(seed).lower()
+            return self.show_rowan(
+                f"Out of seeds? I found a {label} seed on the path. Here, take it. "
+                "Plant it on your farm and water it. Come talk to me again when you're ready.",
+                include_reaction=False)
         cfg=e.config['rowan']
         if e.rowan_stage=='new':
             e.resources['foods']['rowan_soup']=e.resources['foods'].get('rowan_soup',0)+1
