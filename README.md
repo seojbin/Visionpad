@@ -163,7 +163,7 @@ Day 1 is Monday. Prices are rounded down after each applicable multiplier; food 
 
 ### Rowan and tutorial quests
 
-Rowan stands beside the shop. Select him to hear his dialogue without leaving the village; only vegetable submission opens a separate selection page. The companion overlays his portrait and text. Hover speech does not replace an active quest line; a new dialogue replaces the previous dialogue.
+Rowan stands beside the shop. Select him to hear his dialogue without leaving the village; only quest item submission opens a separate selection page. The companion overlays his portrait and text. Hover speech does not replace an active quest line; a new dialogue replaces the previous dialogue.
 
 The first conversation gives **Rowan's soup**, with the stew's harvest effect. Eat it from F2 or sell it (base value 100 gold), then return to receive one seed of each crop. Talk again for the farming tutorial and vegetable request. Select any owned crop in the submission page to give one and receive 100 gold; either arrow cancels. Gifts, rewards and quest progress are saved. Later advice and reactions to recent activities use Rowan's voice.
 
