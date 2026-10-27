@@ -141,7 +141,7 @@ Each broken rock yields stone, copper, iron or diamonds according to its drop pr
 
 ### Fishing
 
-The fishing lake is beside the mine. Entry is free without equipment, but casting requires a fishing rod (base price 100 gold, one owned at a time). Use stereo headphones and move towards the looping water sound. It is positioned relative to the pointer and becomes louder near the hidden target. The tactile outline marks the lake; the companion does not reveal the accuracy zones. Moving closer to the target improves the chance of a rare fish and reduces the chance of a miss compared with casting far away.
+Entry is free without equipment, but casting requires a fishing rod (base price 100 gold, one owned at a time). Use stereo headphones and move towards the looping water sound. It is positioned relative to the pointer and becomes louder near the hidden target. The tactile outline marks the lake; the companion does not reveal the accuracy zones. Moving closer to the target improves the chance of a rare fish and reduces the chance of a miss compared with casting far away.
 
 Click, Enter or F4 casts once inside the lake. Both a catch and a miss use 2 ticks and move the target; holding does not cast repeatedly. Input outside the circular lake boundary is ignored. A catch plays splash, with shine added for a rare fish. The lake keeps basic music at a reduced level; speech does not lower the exploration water sound. Rod use is counted only on successful catches. Starting with the fifth successful catch, its break chance increases by 10 percentage points per catch.
 
