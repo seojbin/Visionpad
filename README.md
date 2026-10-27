@@ -370,7 +370,7 @@ A failed launch does not always mean the port is occupied. Check the preceding s
 
 Planned work includes additional plants and pets, ranching, more recipes and quests, music and crafting. Shared work includes reconciling the companion bundle with its sources and reducing remaining cross-feature dependencies.
 
-User evaluation should record task success, completion time, accidental input, understanding of tactile/audio information and workload. Compare pointer delay on older laptops, camera calibration and occlusion, tactile legibility, voice pronunciation and stereo guidance with actual hardware. An initial study of roughly 6–8 blind or low-vision participants can use planting, watering, cooking, travel, fishing and save/load tasks. This is a proposed evaluation plan, not a claim that these checks or a user study have been completed.
+User evaluation should record task success, completion time, accidental input, understanding of tactile/audio information and workload. Compare pointer delay on older laptops, camera calibration and occlusion, tactile legibility, voice pronunciation and stereo guidance with actual hardware.
 
 ## Add a feature
 
