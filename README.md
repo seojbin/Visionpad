@@ -77,6 +77,8 @@ Use Left and Right to travel along **Farm ↔ Home ↔ Village**. Arrival speech
 
 F1 and F2 toggle their menus back to the current region, without nesting earlier menus. In the minimap, either arrow returns to the region. Inventory arrows turn pages and announce the first or last page at the ends; use F2 to leave. The save list can be closed with F3 or its back action to restore the previous screen. On menu screens without multiple pages, either arrow can act as Back. In the shop, paging takes precedence where a page exists; Left on the first buy/sell page returns to the shop counter, and leaving the counter returns to the village.
 
+For screens with few icons, such as villages and houses, create a detailed display at the bottom. On the display, you can select objects just like with the buttons, and move them using arrow indicators. At this time, the objects selectable on the display were rendered as fully filled recessed shapes, unlike the road and detail parts, to distinguish them from the general background.
+
 The lower 20-cell panel normally shows activity time. On a multi-page list it becomes a page-position strip: the width is divided by the page count and the current segment is raised. On a single-page shop screen it displays Braille **shop**, **buy** or **sell** to indicate the current menu depth. Pagination takes priority over that label; sleep blanks the panel.
 
 Hold Shift in the demo, or use the pointing gesture with hand tracking, to hear detailed speech about the current location and the object under the pointer.
