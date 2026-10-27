@@ -65,7 +65,7 @@ Open **start-windows.bat** (http://127.0.0.1:8003) or **start-mac.command** (htt
 | Left / right arrows or pad buttons | Travel, go back or turn a page |
 | W A S D | Move the pointer one dot at a time while the canvas has focus |
 | Space | One selection at the pointer, like F4 (outside focused form controls) |
-| Hold Shift | Read-only detail mode; release to return to normal movement |
+| Hold Shift | detailed TTS mode; release to return to normal movement |
 
 Travel runs Farm ↔ Home ↔ Village, with separate up/down controls in the village for the mine and lake. Travelling costs no game time. Hovering over an ordinary object reads its information; inside a movement-based minigame, moving over a target advances the task. Hold Shift to inspect without advancing it. F4 currently acts as a click substitute. The original pause route remains in the code for use when gesture-based selection becomes available.
 
