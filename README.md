@@ -131,6 +131,8 @@ The first stage depends on the ingredient: a horizontal preparation path for fis
 
 Fish dishes are named **Simple**, **Ordinary** or **Luxurious** according to the rarity of the fish used, which also determines the strength of the effect. Descriptions show duration or remaining sales, without exposing the probability or multiplier. Eat food from F2 to apply it. Only one food effect is active; eating another replaces it. Timed effects decrease with consumed game time, while a sale effect loses a charge only after a successful sale.
 
+If a dish is successful, the price of the base ingredients rises by about 1.5 times, enabling efficient acquisition of goods.
+
 ### Mining
 
 Enter the mine and select a rock to strike it. A pickaxe is required to hit, but not to enter. The shop sells one at a time; buy a replacement when it breaks. Up to seven spaced rocks appear per day, normally taking three hits each. Their interiors lose dots in fixed damage patterns while their borders remain readable. After the ninth strike, the pickaxe’s break chance increases by 5 percentage points per strike.
