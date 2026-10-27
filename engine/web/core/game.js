@@ -174,6 +174,33 @@ function paintPointerCursor() {
     ctx.ellipse((pointerX+.5)*pitchX,(pointerY+.5)*pitchY,pitchX*.85,pitchY*.85,0,0,Math.PI*2);
     ctx.stroke();
 }
+// Scene hitboxes and menu icons represent the same companion object.
+// Normalize only the observer snapshot; never alter gameplay or audio state.
+function companionState(source, hover = source?.hover_object) {
+    if (!source) return source;
+    const aliases = {
+        home_scene_bed: "home_bed", home_scene_chest: "home_chest",
+        home_scene_stove: "home_stove", home_scene_flower: "houseplant",
+        town_scene_shop: "town_shop", town_scene_rowan: "town_rowan",
+        town_road_mine: "town_nav_mine", town_road_fishing: "town_nav_fishing",
+        shop_scene_sell: "shop_sell_choice", shop_scene_buy: "shop_buy_choice",
+        shop_scene_calendar: "shop_calendar"
+    };
+    return {...source, hover_object: aliases[hover] || hover || null};
+}
+function currentCompanionState(source) {
+    const inspecting = detailMode && source === currentState && (pointerInside || document.activeElement === canvas)
+        && !source?.sleeping && !source?.paused;
+    return companionState(source, inspecting
+        ? findInspectObject(source, pointerX, pointerY)?.id ?? null
+        : source?.hover_object);
+}
+function publishCompanionState() {
+    if (currentState) window.dispatchEvent(new CustomEvent("dotdew-state", {
+        detail: currentCompanionState(currentState)
+    }));
+}
+
 function inspectPointer() {
     if (!detailMode || !currentState || currentState.sleeping || currentState.paused) return;
     const obj = findInspectObject(currentState,pointerX,pointerY);
@@ -183,6 +210,7 @@ function inspectPointer() {
         lastDetailAnnouncement = key;
         announce(description,"hover");
     }
+    publishCompanionState();
     // The pointer is drawn locally because inspect mode never sends game movement.
     drawDotMatrix(canvas,ctx,currentState.dots,currentState.width,currentState.height);
     paintPointerCursor();
@@ -199,6 +227,7 @@ function setDetailMode(enabled) {
     } else if (currentState) {
         drawDotMatrix(canvas,ctx,currentState.dots,currentState.width,currentState.height);
         paintPointerCursor();
+        publishCompanionState();
     }
 }
 
@@ -282,7 +311,7 @@ function drawState(state) {
         });
     }
     paintPointerCursor();
-    window.dispatchEvent(new CustomEvent("dotdew-state", {detail:state}));
+    window.dispatchEvent(new CustomEvent("dotdew-state", {detail:currentCompanionState(state)}));
     updateStatus();
     if (detailMode && (pointerInside || document.activeElement === canvas)) inspectPointer();
 }
@@ -298,7 +327,7 @@ async function handleResponse(response, audioToken) {
     }
 
     // Passive visual observer: no input or game logic depends on this listener.
-    try { window.dispatchEvent(new CustomEvent("dotdew-observer", {detail: {state:data.state, events:data.sound_events || [], message:data.tts, priority:data.priority, sfx:data.sfx}})); } catch (error) { console.warn("Observer unavailable", error); }
+    try { window.dispatchEvent(new CustomEvent("dotdew-observer", {detail: {state:currentCompanionState(data.state), events:data.sound_events || [], message:data.tts, priority:data.priority, sfx:data.sfx}})); } catch (error) { console.warn("Observer unavailable", error); }
 
     if (data.tts && playAudio) gameAudio.miningNarrationToken++;
     gameAudio.handle(data.state, playAudio ? data.sound_events || [] : [], playAudio ? data.sfx : null);
@@ -416,7 +445,7 @@ async function loadState() {
     } catch(error) { connection(false,"Connection error · Check the server"); }
 }
 canvas.addEventListener("pointerenter", event=>{mouseContact=true;pointerInside=true; eventToLogical(event);sendMoveIfPossible(true)});
-canvas.addEventListener("pointerleave", ()=>{mouseContact=false;pointerInside=false;lastDetailAnnouncement=null;clearTimeout(hoverTimer)});
+canvas.addEventListener("pointerleave", ()=>{mouseContact=false;pointerInside=false;lastDetailAnnouncement=null;clearTimeout(hoverTimer);if(detailMode)window.dispatchEvent(new CustomEvent("dotdew-state",{detail:companionState(currentState,null)}))});
 canvas.addEventListener("pointermove", event=>{
     if (!event.isPrimary) return;
     mouseContact=true;

@@ -19,8 +19,8 @@ The F2 item pages: gold and food first, then everything else, twelve per page. F
 | Config | `engine/config/game.json` → `interaction.inventory.items_per_page`, `interaction.inventory.hide_zero_items`; page name `pages.inventory` |
 | Engine API used | none from other features (entries come through the `inventory.items` slot); core `_perform_action` (Left/Right paging), `leave_activities`, `set_page` |
 | Client (web) | `game/inventory/client.js` (page N/M task text) |
-| Tests | No dedicated tests. `engine/tests/python/audio/test_team_audio.py` uses `open_inventory`. |
+| Tests | `game/inventory/tests/test_navigation.py` covers paging and returning at both edges. `engine/tests/python/audio/test_team_audio.py` uses `open_inventory`. |
 
 ## Gameplay
 
-The first page holds gold and usable food; materials, seeds, crops, fish and tools follow. With more than eleven foods, extra food pages come before the other items; nothing is dropped. Left and right turn pages, F2 closes the inventory and F1 switches to the map.
+The first page holds gold and usable food; materials, seeds, crops, fish and tools follow. With more than eleven foods, extra food pages come before the other items; nothing is dropped. Left and right turn pages when a page exists in that direction. Left at the first page and Right at the last page return to the current region; with one page, both arrows return. F2 also closes the inventory and F1 switches to the map.

@@ -105,13 +105,13 @@ class Inventory(Feature):
         return e.response(tts="Next page" if delta > 0 else "Previous page", sfx="open_page")
 
     def navigate(self, direction):
-        """Left/Right turn pages; past the first or last page it says so."""
+        """Turn pages when available; either outer edge returns to the region."""
         e = self.engine
         if e.paused: return e.response(tts='Resume first.')
         self.page_objects()
         delta = -1 if direction=='left' else 1
         if not 0 <= e.inventory_page+delta < e.inventory_page_count:
-            return e.response(tts='First page.' if delta<0 else 'Last page.')
+            return e._perform_action('return_scene', {})
         return e._perform_action(f'inventory_page:{delta}', {})
 
     def open(self):
