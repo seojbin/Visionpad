@@ -109,7 +109,7 @@ Care dots and cooking traces remain briefly after contact, then disappear. The c
 
 ### Cooking and food effects
 
-Choose a recipe in the kitchen, then select its ingredients. Selecting every required ingredient starts cooking automatically. Trace from the start marker through both stages in order, without holding a click. If progress stops, a marker shows where to resume. Ingredients and cooking time are consumed after the completed dish, not after the first stage; no time limit is imposed.
+Choose a recipe in the kitchen, then select its ingredients. Selecting every required ingredient starts cooking automatically. Trace from the start marker through both stages in order. If progress stops, a 4x4 square marker shows where to resume. Ingredients and cooking time are consumed after the completed dish, not after the first stage; no time limit is imposed.
 
 The first stage depends on the ingredient: a horizontal preparation path for fish or a vertical chopping path for vegetables. The second stage depends on the cooking method. Frying, grilling and stirring soup are currently implemented.
 
