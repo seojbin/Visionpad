@@ -395,4 +395,4 @@ macOS/Linux에서는 `.venv/bin/python engine/tools/run_tests.py`를 쓴다. Pyt
 
 ## 라이선스 안내
 
-음성은 [Piper](https://pypi.org/project/piper-tts/)(GPL-3.0 이상)와 `en_US-hfc_female-medium`, `en_US-hfc_male-medium` 음성 모델을 사용한다. 모델의 학습 데이터는 CC BY-NC-SA 4.0이므로 **비상업적 용도로만** 사용할 수 있다. 모델은 설치할 때 내려받으며 저장소에 포함되지 않는다. 출처: [engine/README.md](engine/README.md#voices-and-their-sources).
+음성은 [Piper](https://pypi.org/project/piper-tts/)(GPL-3.0 이상)와 `en_US-hfc_female-medium`, `en_US-hfc_male-medium` 음성 모델을 사용한다. 모델의 학습 데이터는 CC BY-NC-SA 4.0이므로 비상업적 용도로만 사용할 수 있다. 모델은 설치할 때 내려받으며 저장소에 포함되지 않는다. 출처: [engine/README.md](engine/README.md#voices-and-their-sources).
