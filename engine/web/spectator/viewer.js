@@ -27,8 +27,8 @@ ctx.imageSmoothingEnabled = false;
 const sheets = {};
 let sceneDefinitions={scenes:{}}, assetCatalog={backgrounds:{},facilities:{},objects:{},pages:{}};
 const assetsReady=Promise.all([
- fetch(new URL('scene-objects.json?v=rowan-2',base)).then(r=>{if(!r.ok)throw new Error('Scene registry unavailable');return r.json();}).then(d=>{sceneDefinitions=d;}),
- fetch(new URL('visual-assets.json?v=flowers-1',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
+ fetch(new URL('scene-objects.json?v=town-layout-3',base)).then(r=>{if(!r.ok)throw new Error('Scene registry unavailable');return r.json();}).then(d=>{sceneDefinitions=d;}),
+ fetch(new URL('visual-assets.json?v=shared-assets-2',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
 ]).catch(error=>{console.warn(error);}).then(()=>{menuKey='';if(state)updateUI();});
 let animationFrame = 0;
 let state = null,
@@ -232,16 +232,12 @@ function map() {
     (o) => o.type === "node",
   );
   if (!nodes.length) return;
-  const xs = nodes.map((n) => n.x),
-    ys = nodes.map((n) => n.y),
-    minX = Math.min(...xs),
-    minY = Math.min(...ys),
-    dx = Math.max(...xs) - minX || 1,
-    dy = Math.max(...ys) - minY || 1;
-  // 가로 T자(농장-집-마을 + 마을 상하 광산/낚시터) 3행 3열이 겹치지 않도록 배치
+  const home = nodes.find(n => n.id === "map_home") || nodes[0];
+  const extentX = Math.max(1, ...nodes.map(n => Math.abs(n.x - home.x)));
+  const extentY = Math.max(1, ...nodes.map(n => Math.abs(n.y - home.y)));
   const at = (x, y) => [
-    185 + ((x - minX) / dx) * 560,
-    155 + ((y - minY) / dy) * 290,
+    WORLD.width / 2 + (x - home.x) * 280 / extentX,
+    WORLD.height / 2 + (y - home.y) * 145 / extentY,
   ];
   ctx.strokeStyle = "#8e8558";
   ctx.lineWidth = 7;

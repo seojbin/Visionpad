@@ -32,11 +32,15 @@ class Minimap(Feature):
         if not locations: return []
         tx = e.compress_axis([(o["x"]-3,o["x"]+3) for o in locations])
         ty = e.compress_axis([(o["y"]-3,o["y"]+3) for o in locations])
+        # Keep the compressed topology, but anchor Home at the pad centre.
+        home = next((o for o in locations if o.get("location") == "home"), locations[0])
+        offset_x = e.dotpad.width // 2 - round(tx(home["x"]))
+        offset_y = e.dotpad.height // 2 - round(ty(home["y"]))
         objects = []
         for route in cfg.get("routes", []):
             obj = dict(route)
-            obj.update(type="route", x1=round(tx(route["x1"])), x2=round(tx(route["x2"])),
-                       y1=round(ty(route["y1"])), y2=round(ty(route["y2"])),
+            obj.update(type="route", x1=round(tx(route["x1"])) + offset_x, x2=round(tx(route["x2"])) + offset_x,
+                       y1=round(ty(route["y1"])) + offset_y, y2=round(ty(route["y2"])) + offset_y,
                        label="Path", tts="Path", hit_radius=1)
             objects.append(obj)
         current = next((o for o in locations if o.get("location")==e.current_location), None)
@@ -46,7 +50,7 @@ class Minimap(Feature):
             label = e.get_page_name(location)
             here = location == e.current_location
             direction = e.get_relative_direction(current, source) if current and not here else ""
-            obj.update(type="node", x=round(tx(source["x"])), y=round(ty(source["y"])),
+            obj.update(type="node", x=round(tx(source["x"])) + offset_x, y=round(ty(source["y"])) + offset_y,
                        width=7, height=7, hit_width=7, hit_height=7, current=here,
                        label=label, tts=label+(". You are here." if here else (f". {direction}." if direction else ".")),
                        action=f"travel:{location}")

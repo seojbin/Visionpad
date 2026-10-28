@@ -17,5 +17,5 @@ Rowan's voice and memory: farming/fishing advice from the actual game state, one
 | Engine API used | `talk_rowan` (village), `draw_shop_npc` (shop, core) |
 | Config | `engine/config/npc.json` → `shopkeeper.*` |
 | Slots | none |
-| Client (web) | `game/npc/client.js` (task text for the unreachable `npc_dialogue` page); texture `game/npc/assets/rowan.png` (Rowan, portrait, equipped rod) |
+| Client (web) | `game/npc/client.js` (task text for the unreachable `npc_dialogue` page); texture `engine/web/spectator/assets/rowan.png` (Rowan, portrait, equipped rod) |
 | Tests | `engine/tests/python/audio/test_gameplay_audio.py`, `engine/tests/python/speech/test_speech.py`, `engine/tests/python/speech/test_demo_speech.py` |

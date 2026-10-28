@@ -54,8 +54,8 @@
           "game_type": "shop_npc",
           "art": "store",
           "bounds": [
-            145,
-            60,
+            563,
+            185,
             250,
             245
           ],
@@ -67,8 +67,8 @@
           "game_type": "rowan",
           "art": "rowan",
           "bounds": [
-            440,
-            140,
+            105,
+            90,
             110,
             205
           ],

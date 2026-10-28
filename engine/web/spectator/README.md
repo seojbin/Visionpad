@@ -19,8 +19,13 @@ scene; clicking it never changes the game.
 | `fixtures.json` | Sample states for `demo.html` |
 | `assets/` | Shared texture sheets (scenes, items, facilities) |
 
-Feature-only sheets live next to their feature and are referenced from `visual-assets.json`
-with `../features/<name>/assets/...` (the server maps `/static/features/<name>/` to `game/<name>/`): flower sheets in `game/flowers/assets/`, fish and
-fish dishes (`items2.png`) in `game/fishing/assets/`, and the Rowan atlas (`rowan.png`)
-in `game/npc/assets/`. Their old `/static/spectator/assets/...` URLs still resolve
-(`LEGACY_STATIC` in `engine/server/routes/static.py`).
+All image sheets live in `engine/web/spectator/assets/`, including fish, fish dishes,
+Rowan and flower sheets. `visual-assets.json` references their `assets/` paths.
+Old `/static/features/<name>/assets/...` URLs remain available through
+`LEGACY_STATIC` in `engine/server/routes/static.py` for cached clients.
+
+The game page retains the frozen `display.js` relay. The detached window loads
+`viewer.js` directly as a module, using the same BroadcastChannel snapshots.
+No regeneration of `display.js` is needed. Home anchors both minimaps at their
+screen centre; village artwork places Rowan to the left and the shop to the right,
+matching the lower tactile scene. Artwork dimensions are unchanged.

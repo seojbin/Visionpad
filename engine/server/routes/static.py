@@ -31,11 +31,11 @@ LEGACY_STATIC = {
     "audio/pickaxe.mp3": "features/mining/audio/pickaxe.mp3",
     "audio/break.mp3": "features/mining/audio/break.mp3",
     "audio/splash.mp3": "features/fishing/audio/splash.mp3",
-    "spectator/assets/items2.png": "features/fishing/assets/items2.png",
-    "spectator/assets/rowan.png": "features/npc/assets/rowan.png",
-    "spectator/assets/flower-items.png": "features/flowers/assets/flower-items.png",
-    "spectator/assets/flower-stages.png": "features/flowers/assets/flower-stages.png",
-    "spectator/assets/flower-backgrounds.png": "features/flowers/assets/flower-backgrounds.png",
+    "features/fishing/assets/items2.png": "spectator/assets/items2.png",
+    "features/npc/assets/rowan.png": "spectator/assets/rowan.png",
+    "features/flowers/assets/flower-items.png": "spectator/assets/flower-items.png",
+    "features/flowers/assets/flower-stages.png": "spectator/assets/flower-stages.png",
+    "features/flowers/assets/flower-backgrounds.png": "spectator/assets/flower-backgrounds.png",
 }
 
 
