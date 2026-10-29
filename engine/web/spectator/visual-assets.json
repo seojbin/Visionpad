@@ -12,7 +12,8 @@
     "items3": "assets/items3.png",
     "flower-items": "assets/flower-items.png",
     "flower-stages": "assets/flower-stages.png",
-    "flower-backgrounds": "assets/flower-backgrounds.png"
+    "flower-backgrounds": "assets/flower-backgrounds.png",
+    "pasture-items": "assets/pasture-items.png"
   },
   "backgrounds": {
     "home": {
@@ -139,6 +140,15 @@
         512,
         768,
         512
+      ]
+    },
+    "pasture": {
+      "texture": "scene3",
+      "source": [
+        770,
+        0,
+        766,
+        486
       ]
     }
   },
@@ -713,12 +723,12 @@
       ]
     },
     "animal_feed": {
-      "texture": "items3",
+      "texture": "pasture-items",
       "source": [
-        0,
         836,
+        450,
         418,
-        418
+        386
       ]
     },
     "kitchen_knife": {
@@ -837,6 +847,96 @@
         634,
         620
       ]
+    },
+    "chicken": {
+      "texture": "pasture-items",
+      "source": [
+        0,
+        0,
+        418,
+        418
+      ]
+    },
+    "sheep": {
+      "texture": "pasture-items",
+      "source": [
+        418,
+        0,
+        418,
+        418
+      ]
+    },
+    "shorn": {
+      "texture": "pasture-items",
+      "source": [
+        836,
+        0,
+        418,
+        418
+      ]
+    },
+    "egg": {
+      "texture": "pasture-items",
+      "source": [
+        0,
+        450,
+        418,
+        386
+      ]
+    },
+    "wool": {
+      "texture": "pasture-items",
+      "source": [
+        418,
+        418,
+        418,
+        418
+      ]
+    },
+    "steamed_egg": {
+      "texture": "pasture-items",
+      "source": [
+        0,
+        836,
+        418,
+        418
+      ]
+    },
+    "fish_egg_pancake": {
+      "texture": "pasture-items",
+      "source": [
+        418,
+        836,
+        418,
+        418
+      ]
+    },
+    "fried_egg": {
+      "texture": "pasture-items",
+      "source": [
+        836,
+        836,
+        418,
+        418
+      ]
+    },
+    "chicken_feed": {
+      "texture": "pasture-items",
+      "source": [
+        836,
+        450,
+        418,
+        386
+      ]
+    },
+    "sheep_feed": {
+      "texture": "pasture-items",
+      "source": [
+        836,
+        450,
+        418,
+        386
+      ]
     }
   },
   "pages": {
@@ -908,6 +1008,21 @@
     },
     "shop_calendar": {
       "renderer": "shop_calendar"
+    },
+    "pasture": {
+      "renderer": "pasture"
+    },
+    "animal_detail": {
+      "renderer": "animal_detail"
+    },
+    "shearing": {
+      "renderer": "shearing"
+    },
+    "egg_collect": {
+      "renderer": "egg_collect"
+    },
+    "shop_tools": {
+      "renderer": "shop_buy"
     }
   }
 }

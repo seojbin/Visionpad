@@ -18,3 +18,5 @@ The F1 map: location nodes and the paths between them, compressed to fit the pad
 | Client (web) | none (no `game/minimap/` folder; the game page shows its pages with the shared defaults) |
 | Tests | `game/minimap/tests/test_layout.py` checks centring, bounds and topology. The F1 map is used by `engine/tests/python/audio/test_sound_events.py` (menus) and `engine/tests/python/audio/test_audio_flow.py` (travel). |
 | Note | `open()` was unused before the split too (follow-up F14); kept for parity. |
+
+Location frames and the filled current location use exact 7×7 bounds. Nodes clear underlying path pixels so routes never pass through the interior.

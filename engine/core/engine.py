@@ -84,7 +84,7 @@ class GameEngine(InputDispatch, KeypadUI, SaveMixin, SharedState, FoodEffects, T
                  "plot_detail": "Plot", "seed_select": "Seeds", "water_minigame": "Watering",
                  "fertilizer_minigame": "Fertilizing", "harvest": "Harvest",
                  "recipe_select": "Recipes", "ingredient_select": "Ingredients", "cooking": "Cooking",
-                 "shop_choice": "Shop", "shop_buy": "Buy", "shop_sell": "Sell"}
+                 "shop_choice": "Shop", "shop_buy": "General goods", "shop_sell": "Sell"}
         for key, label in names.items():
             page = config.setdefault("pages", {}).get(key)
             if isinstance(page, dict):
@@ -98,9 +98,9 @@ class GameEngine(InputDispatch, KeypadUI, SaveMixin, SharedState, FoodEffects, T
             recipe["label"] = {"tomato_carrot_stew": "Tomato carrot stew", "potato_tomato_soup": "Potato tomato soup",
                                "vegetable_fritters": "Vegetable fritters", "rowan_soup": "Rowan's soup"}.get(key, key.replace("_", " ").title())
             recipe["buff_label"] = {"harvest_multiplier": "Harvest boost", "pickaxe_protection": "Pickaxe protection",
-                                    "time_slow": "Time saving"}.get(recipe.get("buff_kind"), "Food effect")
+                                    "research_discount": "Research discount", "time_slow": "Time saving"}.get(recipe.get("buff_kind"), "Food effect")
             for stage in recipe.get("gesture_steps", []):
-                stage["label"] = ("Trace eight petals" if key == "vegetable_fritters" else "Stir") if stage.get("kind") == "stir" else "Chop"
+                stage["label"] = "Crack eggs" if stage.get("kind") == "crack" else ("Trace eight petals" if key in ("vegetable_fritters", "fried_egg") else "Stir") if stage.get("kind") == "stir" else "Chop"
         for i, plot in enumerate(config.get("farm", {}).get("plots", [])):
             plot["label"] = f"Plot {i + 1}"
         for scene in ("home", "farm", "town"):

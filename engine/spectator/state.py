@@ -28,7 +28,7 @@ def spectator_snapshot(engine, objects):
         elif kind == 'recipe':
             ingredients = engine.get_recipe_config(public.get('recipe_id')).get('ingredients', {})
             public['display_quantities'] = [dict(item=key, label=engine.get_seed_label(key),
-                required=int(count), owned=int(engine.resources['crops'].get(key, 0))) for key, count in ingredients.items()]
+                required=int(count), owned=int((engine.pasture_goods if key == 'egg' else engine.resources['crops']).get(key, 0))) for key, count in ingredients.items()]
             if recipe.get('seafood'):
                 public['display_quantities'].append(dict(item=recipe.get('allowed_fish',['salmon'])[0],label='Fish',required=recipe.get('fish_required',1),owned=sum(engine.resources.get('fish',{}).get(k,0) for k in recipe.get('allowed_fish',[]))))
         elif public.get('id') == 'plot_detail_fertilizer':

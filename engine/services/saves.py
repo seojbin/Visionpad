@@ -48,6 +48,7 @@ SAVE_KEY_ORDER = (
     "fishing_attempts", "rod_casts", "rod_catches", "fishing_target", "npc_visits", "dialogue",
     "activity_counts", "activity_serial", "recent_activity", "npc_reactions", "activity_history_complete",
     "flower_seeds", "houseplant", "flower_watering", "flower_contact_at",
+    "pasture_animals", "pasture_goods", "pasture_selected", "pasture_sheared", "pasture_morning_id", "pasture_move_at", "pasture_stroke",
 )
 
 

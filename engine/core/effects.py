@@ -12,6 +12,7 @@ class FoodEffects:
     NO_EFFECT = {"kind": None, "source": None, "multiplier": 1.0, "remaining_ticks": 0}
 
     def recipe_effect_text(self, recipe):
+        if recipe.get('buff_kind') == 'research_discount': return 'Research discount, next research'
         if recipe.get('buff_kind') == 'sale_boost':
             return f"{recipe.get('buff_label', 'Better sales')}, {recipe.get('sale_uses', 3)} sales"
         return f"{recipe.get('buff_label', 'Food effect')}, {float(recipe.get('buff_ticks', 0)):g} hours"
@@ -35,6 +36,7 @@ class FoodEffects:
     def buff_text(self):
         if self.active_buff.get('kind')=='sale_boost' and self.active_buff.get('remaining_sales',0)>0:
             return f"Better sales, {self.active_buff['remaining_sales']} sales left"
+        if self.active_buff.get('kind') == 'research_discount': return 'Research discount, next research'
         remaining = float(self.active_buff.get("remaining_ticks", 0))
         if remaining <= 0:
             return "No food effect"
@@ -42,7 +44,7 @@ class FoodEffects:
         return f"{recipe.get('buff_label', 'Food effect')}, {remaining:g} hours left"
 
     def tick_buff(self, cost):
-        if self.active_buff.get("kind") == "sale_boost": return
+        if self.active_buff.get("kind") in ("sale_boost", "research_discount"): return
         remaining = float(self.active_buff.get("remaining_ticks", 0))
         remaining = max(0, remaining - max(0, float(cost)))
         self.active_buff["remaining_ticks"] = remaining
@@ -71,3 +73,9 @@ class FoodEffects:
             self.active_buff['remaining_sales']-=1
             if not self.active_buff['remaining_sales']:
                 self.active_buff={'kind':None,'source':None,'multiplier':1,'remaining_ticks':0}
+
+    def research_price(self, price):
+        return int(price * self.active_buff.get('multiplier', 1)) if self.active_buff.get('kind') == 'research_discount' else int(price)
+
+    def consume_research_discount(self):
+        if self.active_buff.get('kind') == 'research_discount': self.active_buff = dict(self.NO_EFFECT)

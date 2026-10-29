@@ -1,6 +1,7 @@
 export const WORLD = { width: 960, height: 600 };
-export const SCENES = ["home", "farm", "town", "mine", "fishing"];
+export const SCENES = ["home", "farm", "town", "mine", "fishing", "pasture"];
 export const TITLES = {
+  shop_tools:"Tools", egg_collect:"Collect eggs", pasture:"Pasture", animal_detail:"Animal care", shearing:"Shearing",
   rowan_dialogue: "Rowan", rowan_submit: "Give a vegetable", shop_calendar: "Weekly offers",
   home: "Home",
   farm: "The farm",
@@ -19,7 +20,7 @@ export const TITLES = {
   fertilizer_minigame: "Fertilizing",
   harvest: "Harvest time",
   shop_choice: "The village shop",
-  shop_buy: "Buying supplies",
+  shop_buy: "General goods",
   shop_sell: "Selling produce",
   load_game: "Saved adventures",
 };

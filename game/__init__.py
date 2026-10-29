@@ -7,6 +7,7 @@ this order; hooks that share an `order` value run in this order too.
 from importlib import import_module
 
 ENABLED = (
+    "pasture",
     "flowers",
     "research",
     "minimap",

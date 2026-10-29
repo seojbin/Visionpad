@@ -20,9 +20,11 @@ class Shop(Feature):
                                    "the weekly market unless the kind is registered with market_price=False.")
         reg.slot("shop.sell_items", "Sell rows: (kind, item_id, label, owned_count, base_price), owned items only.")
         reg.page("shop_choice", objects=self.choice_objects, scene=self.draw_scene, icon_grid=True,
-                 detail=lambda: "Shop. Sell, Buy, Calendar, or Ask Rowan for advice.",
+                 detail=lambda: "Shop. Sell, General goods, Tools, Calendar.",
                  panel=lambda: (0, 1, "shop"))
-        reg.page("shop_buy", objects=lambda: self.build_objects(self.engine.registry.collect("shop.buy_items"), "buy"),
+        reg.page("shop_buy", objects=lambda: self.build_objects(self.purchase_rows(False), "buy"),
+                 icon_grid=True, panel=lambda: (self.engine.shop_page, self.engine.shop_page_count, "buy"))
+        reg.page("shop_tools", name="Tools", objects=lambda: self.build_objects(self.purchase_rows(True), "buy"),
                  icon_grid=True, panel=lambda: (self.engine.shop_page, self.engine.shop_page_count, "buy"))
         reg.page("shop_sell", objects=lambda: self.build_objects(self.engine.registry.collect("shop.sell_items"), "sell"),
                  icon_grid=True, panel=lambda: (self.engine.shop_page, self.engine.shop_page_count, "sell"))
@@ -34,7 +36,7 @@ class Shop(Feature):
         reg.action("sell:", lambda arg, obj: self.sell(*arg.split(":", 1)))
         reg.icon("shop_npc", layout_order=0)
         reg.icon("shop_choice", symbol=lambda obj: obj.get('choice'))
-        reg.icon("shop_item", symbol=lambda obj: self.engine.icons.category(obj.get('shop_kind')))
+        reg.icon("shop_item", pattern=self.item_pattern, symbol=lambda obj: self.engine.icons.category(obj.get('shop_kind')))
         reg.object_tts("shop_item", self.item_tts)
         reg.object_tts("shop_hitbox", lambda obj: str(obj.get("label") or "Object").strip())
         reg.hover_sfx("shop_npc", "hover_shop")
@@ -44,6 +46,12 @@ class Shop(Feature):
         reg.expose("open_shop", self.open)
         reg.expose("buy_shop_item", self.buy)
         reg.expose("sell_shop_item", self.sell)
+
+    def item_pattern(self,obj):
+        if obj.get('shop_kind')=='animal':
+            pattern=self.engine.registry.icon_patterns.get('animal_icon')
+            if pattern:return pattern({'animal':obj['item_id']})
+        return ()
 
     def reset(self):
         e = self.engine
@@ -65,7 +73,7 @@ class Shop(Feature):
 
     def turn_page(self, arg, obj):
         e = self.engine
-        if e.current_page not in ("shop_buy", "shop_sell"):
+        if e.current_page not in ("shop_buy", "shop_tools", "shop_sell"):
             return e.response()
         e.shop_page += int(arg)
         e.clear_hover()
@@ -107,8 +115,11 @@ class Shop(Feature):
             {
                 "id": "shop_buy_choice", "type": "shop_choice", "choice": "buy",
                 "x": 30, "y": 6, "width": 12, "height": 10, "hit_width": 10, "hit_height": 8,
-                "label": "Buy", "tts": "Buy.", "action": "shop_mode:buy"
+                "label": "General goods", "tts": "General goods.", "action": "shop_mode:buy"
             },
+            {"id":"shop_tools_choice", "type":"shop_choice", "choice":"buy", "x":38,"y":6,
+             "width":12,"height":10,"hit_width":10,"hit_height":8,
+             "label":"Tools", "tts":"Tools.", "action":"shop_mode:tools"},
             {
                 "id": "shop_calendar", "type": "calendar_button",
                 "x": 45, "y": 6, "width": 12, "height": 10, "hit_width": 10, "hit_height": 8,
@@ -125,13 +136,16 @@ class Shop(Feature):
                  label='Calendar', tts='Calendar. Weekly offers.', action='open_calendar'),
             dict(id='shop_scene_keeper', type='shop_hitbox', skip_grid=True,
                  x=30, y=19, width=9, height=8, hit_width=11, hit_height=9,
-                 label='Shopkeeper', tts='Shopkeeper. Select Sell, Buy, or Calendar.', action='open_calendar'),
+                 label='Shopkeeper', tts='Shopkeeper. Select Sell, General goods, Tools, or Calendar.', action='open_calendar'),
             dict(id='shop_scene_sell', type='shop_hitbox', skip_grid=True,
-                 x=20, y=30, width=13, height=9, hit_width=15, hit_height=11,
-                 label='Sell counter', tts='Sell.', action='shop_mode:sell'),
+                 x=20, y=30, width=12, height=11, hit_width=12, hit_height=11,
+                 label='Sell', tts='Sell.', action='shop_mode:sell'),
             dict(id='shop_scene_buy', type='shop_hitbox', skip_grid=True,
-                 x=40, y=30, width=13, height=9, hit_width=15, hit_height=11,
-                 label='Buy counter', tts='Buy.', action='shop_mode:buy'),
+                 x=33, y=30, width=10, height=11, hit_width=10, hit_height=11,
+                 label='General goods', tts='General goods.', action='shop_mode:buy'),
+            dict(id='shop_scene_tools', type='shop_hitbox', skip_grid=True,
+                 x=45,y=30,width=10,height=11,hit_width=10,hit_height=11,
+                 label='Tools',tts='Tools.',action='shop_mode:tools'),
             dict(id='shop_scene_exit', type='shop_hitbox', skip_grid=True,
                  x=2, y=26, width=5, height=7, hit_width=7, hit_height=9,
                  label='Back to village', tts='Back to village.', action='return_scene'),
@@ -183,31 +197,15 @@ class Shop(Feature):
             '111111111',
         ))
 
-        for y in range(25, 36):
-            for x in range(13, 48):
-                pad.set_dot(x, y, 1)
-        for x in range(14, 47):
-            pad.set_dot(x, 26, 0)
-        for y in range(26, 35):
-            pad.set_dot(30, y, 0)
-
-        draw_solid_pattern(21, 30, (
-            '11000011',
-            '10111101',
-            '11000111',
-            '11110011',
-            '10111011',
-            '11000111',
-        ))
-
-        draw_solid_pattern(39, 30, (
-            '10000111',
-            '10110011',
-            '10000111',
-            '10110011',
-            '10000111',
-            '11111111',
-        ))
+        # Three disjoint counters; their bounds match the lower hit regions.
+        for cx,width,letter in [(20,12,'sell'),(33,10,'buy'),(45,10,'buy')]:
+            left=cx-width//2
+            for y in range(25,36):
+                for x in range(left,left+width):pad.set_dot(x,y)
+            for x in range(left+1,left+width-1):pad.set_dot(x,26,0)
+            rows=self.engine.icons.PATTERNS[letter]
+            for dy,row in enumerate(rows):
+                for dx,pixel in enumerate(row):pad.set_dot(cx-len(row)//2+dx,28+dy,0 if pixel=='1' else 1)
 
     def open(self):
         e = self.engine
@@ -233,12 +231,19 @@ class Shop(Feature):
         if mode == "sell":
             e.set_page("shop_sell")
             text = "Sell."
+        elif mode == "tools":
+            e.set_page("shop_tools")
+            text = "Tools."
         else:
             e.set_page("shop_buy")
-            text = "Buy."
+            text = "General goods."
         e.clear_hover()
         e.render()
         return e.response(tts=text, sfx="open_page")
+
+    def purchase_rows(self, tools):
+        kinds={'pickaxe','fishing_rod','animal','flower_seed'}
+        return [row for row in self.engine.registry.collect('shop.buy_items') if (row[0] in kinds)==tools]
 
     def build_objects(self, entries, mode):
         e = self.engine

@@ -23,3 +23,14 @@ class MapLayoutTests(unittest.TestCase):
                 self.assertTrue(node['action'].startswith('travel:'))
             for route in (o for o in objects if o['type'] == 'route'):
                 self.assertTrue(route['x1'] == route['x2'] or route['y1'] == route['y2'])
+
+    def test_frames_have_exact_bounds_and_clear_crossing_paths(self):
+        with tempfile.TemporaryDirectory() as saves:
+            engine=GameEngine(load_config('game'),save_dir=saves)
+            engine.set_page('minimap');engine.render()
+            nodes=[o for o in engine.get_objects() if o['type']=='node']
+            for node in nodes:
+                for dy in range(-3,4):
+                    for dx in range(-3,4):
+                        expected=int(node['current'] or abs(dx)==3 or abs(dy)==3)
+                        self.assertEqual(engine.dotpad.matrix[node['y']+dy][node['x']+dx],expected,(node['id'],dx,dy))

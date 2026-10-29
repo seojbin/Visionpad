@@ -246,7 +246,7 @@ class InputDispatch:
         self.registry.run("before_navigation")
         if self.day_ended:
             return self.night_only_response()
-        if location not in ("home", "farm", "town", "mine", "fishing"):
+        if location not in ("home", "farm", "town", "mine", "fishing", "pasture"):
             return self.response(tts="Location unavailable.")
         self._menu_stack.clear()
         self.registry.run("close_dialogue")

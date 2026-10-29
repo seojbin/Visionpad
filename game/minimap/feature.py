@@ -30,7 +30,7 @@ class Minimap(Feature):
         cfg = e.config.get("minimap", {})
         locations = [dict(o) for o in cfg.get("locations", [])]
         if not locations: return []
-        tx = e.compress_axis([(o["x"]-3,o["x"]+3) for o in locations])
+        tx = e.compress_axis([(o["x"]-3,o["x"]+3) for o in locations], max_gap=6)
         ty = e.compress_axis([(o["y"]-3,o["y"]+3) for o in locations])
         # Keep the compressed topology, but anchor Home at the pad centre.
         home = next((o for o in locations if o.get("location") == "home"), locations[0])
@@ -67,10 +67,13 @@ class Minimap(Feature):
 
     def draw_node(self, obj):
         e = self.engine
-        if obj.get("current"):
-            e.draw_filled_square(obj["x"], obj["y"], 7)
-        else:
-            e.dotpad.draw_box(obj["x"], obj["y"], 7, 7)
+        # Exact seven-dot bounds for both empty and filled nodes. Clear paths
+        # beneath the node, leaving connections outside its frame intact.
+        left, top = round(obj['x'])-3, round(obj['y'])-3
+        for dy in range(7):
+            for dx in range(7):
+                raised = obj.get('current') or dx in (0,6) or dy in (0,6)
+                e.dotpad.set_dot(left+dx,top+dy,int(bool(raised)))
 
     def route_contains(self, obj, x, y):
         distance = self.engine.point_to_segment_distance(x, y, obj["x1"], obj["y1"], obj["x2"], obj["y2"])

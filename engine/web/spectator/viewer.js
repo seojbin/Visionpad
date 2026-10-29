@@ -28,7 +28,7 @@ const sheets = {};
 let sceneDefinitions={scenes:{}}, assetCatalog={backgrounds:{},facilities:{},objects:{},pages:{}};
 const assetsReady=Promise.all([
  fetch(new URL('scene-objects.json?v=town-layout-3',base)).then(r=>{if(!r.ok)throw new Error('Scene registry unavailable');return r.json();}).then(d=>{sceneDefinitions=d;}),
- fetch(new URL('visual-assets.json?v=shared-assets-2',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
+ fetch(new URL('visual-assets.json?v=pasture-5',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
 ]).catch(error=>{console.warn(error);}).then(()=>{menuKey='';if(state)updateUI();});
 let animationFrame = 0;
 let state = null,
@@ -79,6 +79,7 @@ const HOVER_GROUPS = [
   ["town_nav_fishing", "town_road_fishing"],
   ["shop_sell_choice", "shop_scene_sell"],
   ["shop_buy_choice", "shop_scene_buy"],
+  ["shop_tools_choice", "shop_scene_tools"],
   ["shop_calendar", "shop_scene_calendar"],
 ];
 
@@ -252,8 +253,8 @@ function map() {
     const name = node.id.replace("map_", ""),
       [x, y] = at(node.x, node.y),
       i = sheets.scenes;
-    if (name === "fishing") {
-      drawAsset(assetCatalog.backgrounds.fishing, x - cw / 2, y - ch / 2, cw, ch, ctx, false);
+    if (["fishing","pasture"].includes(name)) {
+      drawAsset(assetCatalog.backgrounds[name], x - cw / 2, y - ch / 2, cw, ch, ctx, false);
     } else if (i) {
       const n = SCENES.indexOf(name),
         seam = i.height * 0.46875;
@@ -374,7 +375,7 @@ function detail() {
   text(`${p?.watered?'Watered':'Needs water'} · ${p?.fertilized?'Fertilized':'No fertilizer'}`,95,580,'#baff91',18);
 }
 
-const renderers=new Set([...Object.keys(TITLES),"background"]);
+const renderers=new Set([...Object.keys(TITLES),"background","pasture","animal_detail","egg_collect","shearing"]);
 function fallbackPage() {
  const spec=assetCatalog.pages?.[state.page];
  if(!spec||!renderers.has(spec.renderer))return true;
@@ -406,6 +407,7 @@ function itemFrame(o) {
  return 'rectangle';
 }
 function itemSprite(o) {
+ if(o.id==='shop_tools_choice')return 'pickaxe';
  const key=itemKey(o);if(assetCatalog.objects[key])return key;
  // Only existing non-item controls retain their fixed interface images.
  if(['research','care_button','save_slot','shop_choice'].includes(o.type))return spriteFor(o);
@@ -428,6 +430,7 @@ function render() {
     outline(20,355,160,180,'houseplant');
   }
   if (state.page.startsWith('shop_')) sceneObjects('shop');
+  if (["pasture","animal_detail","egg_collect","shearing"].includes(state.page)) pastureView();
   const ph = phase(state);
   ctx.fillStyle = ph.color;
   ctx.globalAlpha = ph.alpha;
@@ -511,6 +514,7 @@ function menus() {
   const show =
     !fallbackPage() && (renderers.has(state.page)||assetCatalog.pages[state.page]?.items===true) && (!SCENES.includes(state.page) || state.rowan_submission) &&
     ![
+      "animal_detail", "egg_collect", "shearing",
       "minimap",
       "rowan_dialogue",
       "cooking",
@@ -560,7 +564,7 @@ function menus() {
     card.dataset.objectId = o.id;
     if(Number.isInteger(o.grid_slot)){
       card.style.gridColumn=String(o.grid_column+1);card.style.gridRow=String(o.grid_row+1);
-    } else if(['research','inventory','shop_buy','shop_sell','plot_detail'].includes(state.page)&&xs.length&&ys.length){
+    } else if(['research','inventory','shop_buy','shop_tools','shop_sell','plot_detail'].includes(state.page)&&xs.length&&ys.length){
       card.style.gridColumn=String(xs.indexOf(o.x)+1);card.style.gridRow=String(ys.indexOf(o.y)+1);
     }
     card.dataset.category=itemFrame(o);
@@ -571,7 +575,7 @@ function menus() {
     if(hasArt){
       const top=document.createElement('div');top.className='dv-item-top';top.append(c);card.append(top,title);
       appendQuantities(card,o);
-      const description = ['shop_buy','shop_sell','ingredient_select'].includes(state.page) ? '' : (o.effect_description || '');
+      const description = ['shop_buy','shop_tools','shop_sell','ingredient_select'].includes(state.page) ? '' : (o.effect_description || '');
       if(description){const small=document.createElement('small');small.textContent=description;card.append(small);}
     }
     else {card.classList.add('dv-placeholder');card.append(title);}
@@ -615,6 +619,7 @@ function dialogueUI() {
 function updateUI() {
   root.dataset.page=state.page;
   root.dataset.submission=state.rowan_submission?'true':'false';
+  if (["pasture","animal_detail","egg_collect","shearing"].includes(state.page)) pastureView();
   const ph = phase(state);
   q("[data-place]").textContent =
     TITLES[state.page] || state.page_name || "Dotdew Valley";
@@ -721,4 +726,36 @@ function flowerDetail() {
  });
  if(f.watering)text('Hold over the pot · '+Math.round(f.water_progress*100)+'%',300,570,'#baff91',24);
  else text(f.watered?'Watered':f.stage==='withered'?'Withered':f.stage==='empty'?'Empty pot':'Flower pot · '+f.stage,300,570,'#baff91',24);
+}
+function pastureView() {
+ const p=state.pasture;if(!p)return;
+ environment('pasture');
+ if(!['shearing','egg_collect'].includes(state.page)) {
+  const buttons=(state.objects||[]).filter(o=>['animal_icon','animal_care'].includes(o.type));
+  buttons.forEach((o,i)=>{const x=28+i*190;ctx.fillStyle='#253d31';ctx.fillRect(x,62,175,70);outline(x,62,175,70,focused(o.id));sprite(o.type==='animal_icon'?o.id.replace('animal_',''):o.id==='animal_feed'?'animal_feed':o.id==='animal_shear'?'wool':o.id==='animal_gather'?'egg':p.selected,x+5,65,55,55);text(o.label,x+65,105);});
+ }
+ const kinds=state.page==='pasture'?['chicken','sheep']:[p.selected];
+ for(const k of kinds){const a=p.animals[k];if(!a?.owned)continue;
+ const detail=state.page!=='pasture',x=detail?330:a.x*16-70,y=(detail?160:(a.y-13)*18+110)+(p.breath_offset||0)*15;
+ ctx.save();
+ if(!detail&&a.facing_left){ctx.translate(2*x+140,0);ctx.scale(-1,1);}
+ sprite(k==='sheep'&&!a.ready?'shorn':k,x,y,detail?300:140,detail?260:130);
+ ctx.restore();
+ if(focused('animal_'+k)||focused('pasture_'+k)||focused('animal_body'))outline(x,y,detail?300:140,detail?260:130,true);
+ text(k+' · '+a.status+(a.ready?' · '+(k==='chicken'?'Eggs ready':'Wool ready'):''),detail?300:x,detail?550:y+145);
+ if(detail&&a.ready&&k==='chicken'){sprite('egg',430,420,80,80);outline(430,420,80,80,'animal_egg');}
+ }
+ if(state.page==='shearing'){
+ const fleece=document.createElement('canvas');fleece.width=WORLD.width;fleece.height=WORLD.height;
+ const wool=fleece.getContext('2d');
+ // Build fleece on its own layer, then erase individual dot footprints.
+ for(let y=3;y<38;y+=5)for(let x=4;x<57;x+=5){
+  wool.fillStyle='#f5eedc';wool.fillRect(x*16-32,y*15-30,80,75);
+  drawAsset(assetCatalog.objects.wool,x*16-40,y*15-38,96,91,wool,false);
+ }
+ const width=p.shear_dot_width||60;
+ for(const dot of p.sheared||[])wool.clearRect((dot%width)*16,Math.floor(dot/width)*15,16,15);
+ ctx.drawImage(fleece,0,0);
+ if(state.pointer?.x!=null&&state.pointer?.y!=null)sprite('scissors',state.pointer.x*16-30,state.pointer.y*15-30,60,60);
+ }
 }

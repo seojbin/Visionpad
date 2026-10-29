@@ -13,7 +13,7 @@ const SOUND_CUES = {
     morning: [[392,0,0.1,0.06],[523,0.13,0.16,0.055]]
 };
 // Feature sounds live next to their feature; shared sounds stay in engine/web/audio/.
-const FEATURE_SOUND_URLS = {'water':'/static/features/farming/audio/water.mp3', 'soil':'/static/features/farming/audio/soil.mp3', 'crop':'/static/features/harvest/audio/crop.mp3', 'cut':'/static/features/cooking/audio/cut.mp3', 'cook':'/static/features/cooking/audio/cook.mp3', 'pickaxe':'/static/features/mining/audio/pickaxe.mp3', 'break':'/static/features/mining/audio/break.mp3', 'splash':'/static/features/fishing/audio/splash.mp3'};
+const FEATURE_SOUND_URLS = {'feed':'/static/features/pasture/audio/feed.mp3','brush':'/static/features/pasture/audio/brush.mp3?v=2','shear':'/static/features/pasture/audio/cut.mp3','chicken_main':'/static/features/pasture/audio/chicken_main.mp3','chicken_routine':'/static/features/pasture/audio/chicken_routine.mp3','chicken_morning':'/static/features/pasture/audio/chicken_morning.mp3','sheep_main':'/static/features/pasture/audio/sheep_main.mp3','sheep_routine':'/static/features/pasture/audio/sheep_routine.mp3','crack':'/static/features/cook/audio/crack.mp3','water':'/static/features/farming/audio/water.mp3', 'soil':'/static/features/farming/audio/soil.mp3', 'crop':'/static/features/harvest/audio/crop.mp3', 'cut':'/static/features/cooking/audio/cut.mp3', 'cook':'/static/features/cooking/audio/cook.mp3', 'pickaxe':'/static/features/mining/audio/pickaxe.mp3', 'break':'/static/features/mining/audio/break.mp3', 'splash':'/static/features/fishing/audio/splash.mp3'};
 class GameAudio {
     constructor(options = {}) {
         this.contextFactory = options.contextFactory || (() => new (window.AudioContext || window.webkitAudioContext)());
@@ -32,12 +32,12 @@ class GameAudio {
             bgm_gain:{basic:0.30,minigame:0.20,shop:0.45},
             bgm_during_tts:0.25,
             one_shot_during_tts:0.65,hover_interval_ms:220,
-            one_shot_gain:{splash:0.85,sleep:0.8,door:0.7,coin:0.65,pickaxe:0.8,break:0.8,shine:3.0,destroy:0.8},
+            one_shot_gain:{feed:1.8,splash:0.85,sleep:0.8,door:0.7,coin:0.65,pickaxe:0.8,break:0.8,shine:3.0,destroy:0.8},
             one_shot_gain_links:{step:'door'},
             bgm_minigame_pages:['seed_select','water_minigame','fertilizer_minigame','harvest','recipe_select','ingredient_select','cooking'],
             bgm_shop_pages:['shop_choice','shop_buy','shop_sell'],
-            work_gain:{water:0.60,soil:0.35,crop:1.4,cut:0.45,cook:0.70},
-            work_gain_during_tts:{water:0.40,soil:0.25,crop:0.8,cut:0.30,cook:0.55},
+            work_gain:{brush:2.5,shear:0.8,crack:0.9,water:0.60,soil:0.35,crop:1.4,cut:0.45,cook:0.70},
+            work_gain_during_tts:{brush:2.5,shear:0.6,crack:0.7,water:0.40,soil:0.25,crop:0.8,cut:0.30,cook:0.55},
             reward_gain:0.42,reward_gain_during_tts:0.25,
             cooking_correct_interval_ms:650,other_correct_interval_ms:90,
             click_duration_ms:650,motion_idle_ms:450,motion_check_interval_ms:120,
@@ -56,6 +56,7 @@ class GameAudio {
         this.guidanceEnabled=true;this.guidancePosition=null;this.guidanceTargetId=null;
         this.guidanceSources=new Set();this.guidanceTimer=null;this.lastGuidanceAt=-Infinity;
         this.urls = Object.fromEntries(['water','soil','cut','cook','crop','correct','sleep','door','coin','background-basic','background-minigame','background-shop','step','pickaxe','break','shine','destroy','splash'].map(n => [n, FEATURE_SOUND_URLS[n] || `/static/audio/${n}.mp3`]));
+        Object.assign(this.urls, FEATURE_SOUND_URLS);
     }
     configure(settings = {}) {
         this.settings = {
@@ -296,8 +297,10 @@ class GameAudio {
     }
     inputUp() {this.held = false; if(!this.motionActive)this.stopWork();}
     move(x,y) {
-        if (!this.lastPosition || Math.hypot(x-this.lastPosition[0],y-this.lastPosition[1])>0.05) {this.motionActive=true;this.pulse();this.syncWork(this.latestState);}
+        const previous=this.lastPosition;
         this.lastPosition=[x,y];
+        if (!previous || Math.hypot(x-previous[0],y-previous[1])>0.05) {this.motionActive=true;this.pulse();this.syncWork(this.latestState);}
+        this.syncWork(this.latestState);
         this.updateTaskPosition();
         this.guidancePosition=[x,y];
         if (this.guidanceTimer) this.pulseGuidance();
@@ -309,7 +312,7 @@ class GameAudio {
         if (this.workGain) this.setDucked(this.ducked);
     }
     async startWork(name) {
-        if (!this.enabled || this.suspended || !(this.held || this.motionActive) || !['water','soil','cut','cook','crop'].includes(name)) return;
+        if (!this.enabled || this.suspended || !(this.held || this.motionActive) || !['water','soil','cut','cook','crop','crack','shear','brush'].includes(name)) return;
         if (this.workName === name) return;
         this.stopWork();this.workName=name;
         const token=this.workToken;
@@ -324,7 +327,7 @@ class GameAudio {
         const source=this.context.createBufferSource();source.buffer=buffer;source.loop=true;
         source.connect(this.workGain);this.work=source;this.setDucked(this.ducked);source.start();
         source.onended=()=>source.disconnect();
-        this.onStatus(({water:'Watering',soil:'Fertilizing',cut:'Chopping',cook:'Stirring',crop:'Harvesting'})[name]);
+        if(name!=='brush') this.onStatus(({water:'Watering',soil:'Fertilizing',cut:'Chopping',cook:'Stirring',crop:'Harvesting',crack:'Cracking eggs',shear:'Shearing wool'})[name]);
         // Cutting/stirring only remains audible while the pointer is moving.
         this.motionTimer=setInterval(()=>{
             if (this.now()-this.lastMotion>this.settings.motion_idle_ms) {
@@ -333,7 +336,7 @@ class GameAudio {
         },this.settings.motion_check_interval_ms);
     }
     stopWork() {
-        const wasWorking = !!this.workName;
+        const wasWorking = !!this.workName && this.workName!=='brush';
         this.workToken++;this.workName=null;clearInterval(this.motionTimer);
         if(wasWorking)this.onStatus(this.enabled?"Task and reward sounds ready":"Sound off");
         if (this.work) {try{this.work.stop();}catch{}this.work=null;}
@@ -342,8 +345,11 @@ class GameAudio {
         if (!this.enabled || this.suspended || count<=0) return;
         this.unlock();if(!this.context)return;
         const at=this.now(), token=this.effectToken;
-        // One cue per scoring response; dense checkpoints cannot build a queue.
-        if (at-this.lastCorrectAt<(cooking ? this.settings.cooking_correct_interval_ms : this.settings.other_correct_interval_ms)) return;
+        const isShearing = this.latestState?.page === 'shearing' || this.workName === 'shear';
+        const interval = (cooking || isShearing) ? this.settings.cooking_correct_interval_ms : this.settings.other_correct_interval_ms;
+        
+        if (at-this.lastCorrectAt < interval) return;
+        
         this.lastCorrectAt=at;
         const buffer=await this.load('correct');
         if (!buffer || !this.enabled || this.suspended || token!==this.effectToken || this.now()-at>this.settings.correct_max_load_age_ms) return;
@@ -364,6 +370,14 @@ class GameAudio {
             if (this.held || this.workName || this.clickSources.size || this.rewardSources.size) this.stopTasks();
             return;
         }
+        if(state.page==='animal_detail') {
+            const region=state.pasture?.brush_region, point=this.lastPosition;
+            const owned=state.pasture?.animals?.[state.pasture?.selected]?.owned;
+            const inside=region && point && point[0]>=region.x && point[0]<region.x+region.width && point[1]>=region.y && point[1]<region.y+region.height;
+            if(owned && inside && this.motionActive && this.now()-this.lastMotion<=this.settings.motion_idle_ms) this.startWork('brush');
+            else this.stopWork();
+            return;
+        }
         if(state.page==='flower_detail') {
             if(state.flowers?.contact) {this.motionActive=true;this.lastMotion=this.now();this.startWork('water');}
             else this.stopWork();
@@ -371,9 +385,9 @@ class GameAudio {
         }
         const carePage = ['water_minigame','fertilizer_minigame','harvest'].includes(state.page);
         // The evaluation build performs work while moving, without a held press.
-        const active = (this.held || this.motionActive) && this.now()-this.lastMotion<=this.settings.motion_idle_ms && (carePage || (state.page==='cooking' && state.cooking?.dragging));
+        const active = (this.held || this.motionActive) && this.now()-this.lastMotion<=this.settings.motion_idle_ms && (carePage || state.page==='shearing' || (state.page==='cooking' && state.cooking?.dragging));
         if (!active) {this.stopWork();return;}
-        const desired=state.page==='water_minigame'?'water':state.page==='fertilizer_minigame'?'soil':state.page==='harvest'?'crop':state.cooking.gesture_kind==='stir'?'cook':'cut';
+        const desired=state.page==='shearing'?'shear':state.page==='water_minigame'?'water':state.page==='fertilizer_minigame'?'soil':state.page==='harvest'?'crop':state.cooking.gesture_kind==='crack'?'crack':state.cooking.gesture_kind==='stir'?'cook':'cut';
         if(this.workName!==desired)this.startWork(desired);
     }
     handle(state,events=[],feedback=null) {
@@ -386,6 +400,7 @@ class GameAudio {
         this.updateTaskPosition();
         if (this.suspended || state?.paused) { this.stopAll(); return; }
         this.syncWork(state);
+        this.syncAnimals(state,feedback);
         this.syncBackground(state);
         this.syncFishing(state);
         this.syncGuidance(state);
@@ -403,13 +418,86 @@ class GameAudio {
                     const w=this.latestState?.width||60,h=this.latestState?.height||40;
                     position=[event.direction==='left'?0:event.direction==='right'?w-1:(w-1)/2,(h-1)/2];
                 }
-                const spatial=event.sound!=='door' && !(event.sound==='coin' && ['shop_buy','shop_sell'].includes(state?.page));
+                const spatial=event.sound!=='door' && !(event.sound==='coin' && ['shop_buy','shop_tools','shop_sell'].includes(state?.page));
                 this.oneShot(event.sound,position,spatial,event.progress);
             }
             if(event.kind==='one_shot_group') this.oneShotGroup(event.sounds,eventPosition);
             if(event.kind==='correct' && event.count>0) this.correct(event.count, event.activity === 'cooking' || state?.page === 'cooking' || ['cut','cook'].includes(this.workName));
         }
         this.feedback(feedback,events);
+    }
+syncAnimals(state,feedback=null) {
+        const p=state?.pasture; if(!p)return;
+        const cfg=p.audio||{};
+        for(const [source,name] of this.oneShotNames){
+            const kind=name.startsWith('chicken_')?'chicken':name.startsWith('sheep_')?'sheep':null;
+            if(kind&&!p.animals[kind]?.owned){try{source.stop();}catch{}this.oneShotSources.delete(source);this.oneShotNames.delete(source);}
+        }
+        for(const k of ['chicken','sheep']) {
+            this.settings.one_shot_gain[k+'_routine']=(cfg.routine_gain??0.25)*(state.page==='shearing'?2:1);
+            this.settings.one_shot_gain[k+'_main']=cfg.main_gain??0.9;
+        }
+        this.settings.one_shot_gain.chicken_morning=cfg.main_gain??0.9;
+
+        if(this.animalMorning!==p.morning_id){
+            const woke=feedback==='morning' && this.animalMorning!==undefined && p.morning_id===this.animalMorning+1;
+            this.animalMorning=p.morning_id;
+            if(woke && p.animals.chicken?.owned){
+                clearTimeout(this.morningTimer);
+                this.morningTimer=setTimeout(()=>{
+                    this.morningTimer=null;
+                    if(this.enabled&&!this.suspended&&!this.latestState?.paused&&this.latestState?.pasture?.animals.chicken?.owned)
+                        this.oneShot('chicken_morning',null,false);
+                },cfg.morning_delay_ms??2500);
+                this.morningTimer?.unref?.();
+            }
+        }
+        
+        const group=!state.sleeping&&!state.day_ended&&['pasture','animal_detail','egg_collect','shearing'].includes(state.page)
+            ? (state.page==='pasture'?'all':p.selected):'';
+        
+        if(group!==this.animalGroup){
+            // 기존 단일 타이머 대신 동물별 타이머 클리어
+            clearTimeout(this.chickenTimer); this.chickenTimer = null;
+            clearTimeout(this.sheepTimer); this.sheepTimer = null;
+            this.animalGroup=group;
+        }
+        
+        if(!group||!this.enabled)return;
+
+        const minMs = cfg.routine_interval_min_ms ?? 3000;
+        const maxMs = cfg.routine_interval_max_ms ?? 6000;
+
+        const scheduleAnimal = (kind) => {
+            const timerName = kind + 'Timer';
+            // 이미 예약된 타이머가 있으면 무시
+            if (this[timerName]) return;
+            
+            const randomInterval = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+            
+            this[timerName] = setTimeout(() => {
+                this[timerName] = null;
+                const current = this.latestState;
+                
+                if(!this.enabled||this.suspended||current?.paused||!this.animalGroup) return;
+                
+                const name = kind + '_routine';
+                // 해당 동물이 존재하고 조건에 맞으며 현재 동일 사운드가 재생 중이 아닐 때만 재생
+                if(current.pasture?.animals[kind]?.owned && (this.animalGroup==='all'||current.pasture.selected===kind)
+                    && ![...this.oneShotNames.values()].includes(name)) {
+                    this.oneShot(name, null, false);
+                }
+                
+                // 해당 동물만 다시 다음 랜덤 타이머를 돔
+                this.syncAnimals(current);
+            }, randomInterval);
+            
+            this[timerName]?.unref?.();
+        };
+
+        // 닭과 양을 각각 독립적으로 스케줄링
+        scheduleAnimal('chicken');
+        scheduleAnimal('sheep');
     }
     backgroundFor(state) {
         if (state.page === "fishing") return "basic";
@@ -454,7 +542,7 @@ class GameAudio {
         // Capture the action point before decoding; later pointer moves must not move this sound.
         position=position ? [...position] : null;
         if (!this.enabled || this.suspended) return;
-        names=[...new Set(names)].filter(n=>['sleep','door','coin','step','pickaxe','break','shine','destroy','splash'].includes(n));
+        names=[...new Set(names)].filter(n=>['sleep','door','coin','step','pickaxe','break','shine','destroy','splash','chicken_main','chicken_routine','chicken_morning','sheep_main','sheep_routine','feed'].includes(n));
         if (!names.length) return;
         this.unlock();
         if (!this.context) return;
@@ -531,6 +619,9 @@ class GameAudio {
         if (this.fishingSource) {try{this.fishingSource.stop();}catch{}this.fishingSource=null;}
     }
     stopAll() {
+        // animalTimer 대신 chickenTimer와 sheepTimer를 지웁니다.
+        clearTimeout(this.chickenTimer); clearTimeout(this.sheepTimer); clearTimeout(this.morningTimer);
+        this.chickenTimer=null; this.sheepTimer=null; this.morningTimer=null; this.animalGroup=null;
         this.motionActive=false;
         this.stopGuidance();
         this.stopFishing();

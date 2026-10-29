@@ -1,3 +1,4 @@
+from game.cook.ingredients import bucket, label
 """Cooking: recipes, ingredient selection, the traced cutting/stirring minigame, and eating food.
 
 Engine attributes (save format): selected_recipe_id, selected_ingredients, cooking_dragging,
@@ -183,7 +184,7 @@ class Cooking(Feature):
         if len(ingredients) < 2:
             return False
         for seed_id, needed in ingredients.items():
-            if int(e.resources["crops"].get(seed_id, 0)) < int(needed):
+            if int(bucket(e, seed_id).get(seed_id, 0)) < int(needed):
                 return False
         return True
 
@@ -217,14 +218,14 @@ class Cooking(Feature):
                 break
             x, y = positions[index]
             selected = seed_id in e.selected_ingredients
-            count = int(e.resources["crops"].get(seed_id, 0))
-            label = e.get_seed_label(seed_id)
+            count = int(bucket(e, seed_id).get(seed_id, 0))
+            ingredient_label = label(e, seed_id)
             status = "Selected" if selected else "Not selected"
             objects.append({
                 "id": f"ingredient_{seed_id}", "type": "ingredient", "ingredient_id": seed_id,
                 "count": count, "required_count": int(needed), "selected": selected, "x": x, "y": y, "width": 12, "height": 9,
-                "hit_width": 14, "hit_height": 11, "label": f"{label} ingredient",
-                "tts": f"{label}. Need {needed}, stock {count}. {status}",
+                "hit_width": 14, "hit_height": 11, "label": f"{ingredient_label} ingredient",
+                "tts": f"{ingredient_label}. Need {needed}, stock {count}. {status}",
                 "action": f"toggle_ingredient:{seed_id}"
             })
 
@@ -239,7 +240,7 @@ class Cooking(Feature):
         recipe = e.get_recipe_config(recipe_id)
         parts = []
         for seed_id, count in recipe.get("ingredients", {}).items():
-            parts.append(f"{e.get_seed_label(seed_id)} {count} ")
+            parts.append(f"{label(e, seed_id)} {count} ")
         if recipe.get("seafood"): parts.append("Choose one fish")
         return ", ".join(parts)
 
@@ -321,11 +322,11 @@ class Cooking(Feature):
             return e.response(tts="Ingredient not required.", sfx="error")
         if seed_id in e.selected_ingredients:
             e.selected_ingredients.remove(seed_id)
-            text = f"{e.get_seed_label(seed_id)} deselected."
+            text = f"{label(e, seed_id)} deselected."
         else:
             e.selected_ingredients.add(seed_id)
-            label = e.get_seed_label(seed_id)
-            text = f"{label} selected."
+            ingredient_label = label(e, seed_id)
+            text = f"{ingredient_label} selected."
         e.clear_hover()
         e.render()
         required = set(recipe.get("ingredients", {}).keys())
@@ -373,6 +374,7 @@ class Cooking(Feature):
         return gesture
 
     def kind(self):
+        if self.gesture().get("kind") == "crack": return "crack"
         return "stir" if self.gesture().get("kind") in ("stir", "grill", "fry") else "cut"
 
     def stage_label(self):
@@ -444,7 +446,7 @@ class Cooking(Feature):
         e.cooking_last_progress_at = time.monotonic()
         e.cooking_resume_marker = False
         e.render()
-        return e.response(sfx="tool_pickup", sound_events=[{"kind": "work_start", "sound": "cook" if self.kind() == "stir" else "cut"}])
+        return e.response(sfx="tool_pickup", sound_events=[{"kind": "work_start", "sound": "crack" if self.kind() == "crack" else "cook" if self.kind() == "stir" else "cut"}])
 
     def advance_trace(self, x1, y1, x2, y2):
         e = self.engine
@@ -497,7 +499,7 @@ class Cooking(Feature):
             e.render()
             return e.response(tts="Not enough ingredients.", sfx="error")
         for seed_id, count in recipe.get("ingredients", {}).items():
-            e.add_resource("crops", -int(count), item=seed_id)
+            bucket(e, seed_id)[seed_id] -= int(count)
         food_count = e.loot_amount(1)
         e.resources["foods"][recipe_id] = int(e.resources["foods"].get(recipe_id, 0)) + food_count
         label = e.get_recipe_label(recipe_id)

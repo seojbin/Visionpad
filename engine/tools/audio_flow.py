@@ -124,7 +124,7 @@ def run_flow():
                 flow.click('open_shop')
                 flow.click('shop_mode:sell')
                 flow.click('sell:crop:tomato');flow.mark('sell')
-                flow.command('left');flow.click('shop_mode:buy')
+                flow.command('left');flow.click('shop_mode:tools')
                 for action in ('buy:pickaxe:pickaxe','buy:fishing_rod:fishing_rod'):
                     for _ in range(5):
                         if any(obj.get('action')==action for obj in engine.get_objects()): break

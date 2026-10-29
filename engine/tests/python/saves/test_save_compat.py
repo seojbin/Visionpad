@@ -22,6 +22,8 @@ class SaveCompatibilityTests(unittest.TestCase):
         config = load_config("game")
         self.engine = GameEngine(config, save_dir=self.temp.name)
         self.saved = decode(json.loads(FIXTURE.read_text(encoding="utf-8"))["state"])
+        for key, value in self.engine.snapshot().items():
+            if key.startswith("pasture_"): self.saved[key] = value
 
     def load(self, slot):
         self.engine.open_load_game()

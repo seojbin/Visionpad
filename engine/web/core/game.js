@@ -665,9 +665,10 @@ window.DotdewInput = {
 loadState();
 // Serialize visual refreshes with pointer input to avoid stale snapshots.
 let visualPollPending = false;
+let lastPastureVisualPoll = 0;
 let visualPollTimer = null;
 let clientSettingsSignature = "";
-const delayedVisualPages = ["cooking", "water_minigame", "fertilizer_minigame"];
+const delayedVisualPages = ["pasture", "animal_detail","cooking", "water_minigame", "fertilizer_minigame"];
 function applyClientSettings(settings = {}) {
     const signature = JSON.stringify(settings);
     if (signature === clientSettingsSignature) return;
@@ -680,6 +681,10 @@ function applyClientSettings(settings = {}) {
     visualPollTimer = setInterval(refreshDelayedVisuals, visualRefreshIntervalMs);
 }
 function refreshDelayedVisuals() {
+    if (["pasture", "animal_detail"].includes(currentState?.page)) {
+        if (performance.now()-lastPastureVisualPoll < 500) return;
+        lastPastureVisualPoll=performance.now();
+    }
     if (visualPollPending || document.hidden || (!delayedVisualPages.includes(currentState?.page) && !currentState?.sleeping) || currentState.paused) return;
     visualPollPending = true;
     const audioToken = captureAudioRequest();

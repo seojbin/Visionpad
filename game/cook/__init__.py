@@ -1,0 +1,1 @@
+"""Egg cooking ingredient helpers."""

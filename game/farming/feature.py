@@ -252,6 +252,7 @@ class Farming(CareMinigame, FarmMarket, FarmDrawing, Feature):
                 obj["action"] = f"open_plot_detail:{plot['id']}"
             objects.append(obj)
 
+        objects.append(dict(id="farm_pasture",type="arrow",direction="left",x=3,y=35,label="Pasture",action="travel:pasture"))
         for obj in farm.get("objects", []):
             objects.append(dict(obj))
         return objects

@@ -373,3 +373,8 @@
 
 .dotdew-observer[data-page="rowan_submit"] .dv-menu,
 .dotdew-observer[data-submission="true"] .dv-menu{inset:9% 7% 5%;max-height:none;}
+
+.dotdew-observer[data-page="shop_tools"] .dv-cards {flex:1;align-content:stretch;}
+.dotdew-observer[data-page="shop_tools"] .dv-card {gap:.35cqw;padding:.65cqw;}
+.dotdew-observer[data-page="shop_tools"] .dv-item-top canvas {width:6.5cqw;height:6.5cqw;}
+.dotdew-observer[data-page="shop_tools"] .dv-card strong {font-size:1.35cqw;}

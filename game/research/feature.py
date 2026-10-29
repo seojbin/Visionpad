@@ -59,7 +59,7 @@ class Research(Feature):
             seed_tts = f"Seed recovery. Level {level}. Maximum level."
             seed_action = ""
         else:
-            cost = int(costs[level]) if level < len(costs) else 999999
+            cost = e.research_price(int(costs[level]) if level < len(costs) else 999999)
             copper_cost = int(seed_cfg.get("copper_costs", [3, 6])[level])
             seed_tts = f"Seed recovery, level {level}. Next level:  {cost} gold, Copper {copper_cost} required"
             seed_action = "research:seed_return"
@@ -79,7 +79,7 @@ class Research(Feature):
             expand_tts = f"Farm expansion. Plots: {e.unlocked_plot_count} "
             expand_action = ""
         else:
-            cost = int(costs[expansion_index]) if expansion_index < len(costs) else 999999
+            cost = e.research_price(int(costs[expansion_index]) if expansion_index < len(costs) else 999999)
             material_cost = int(expand_cfg.get("stone_costs", [5, 10])[expansion_index])
             expand_tts = f"Plot {e.unlocked_plot_count}. {cost} gold, Stone {material_cost} to add a plot. Gold: {coin} gold"
             expand_action = "research:field_expand"
@@ -93,7 +93,7 @@ class Research(Feature):
             cfg = e.config.get("research", {}).get(kind, {})
             level = e.research_levels.get(kind, 0)
             action = "" if level >= int(cfg.get("max_level", 2)) else f"research:{kind}"
-            text = f"{label}. Level {level}. Maximum level." if not action else f"{label}. Level {level + 1}. Requires {cfg.get('costs', [20, 40])[level]} gold, {e.MINERAL_LABELS[mineral]} {cfg.get(mineral + '_costs', [3, 6])[level]} required"
+            text = f"{label}. Level {level}. Maximum level." if not action else f"{label}. Level {level + 1}. Requires {e.research_price(cfg.get('costs', [20, 40])[level])} gold, {e.MINERAL_LABELS[mineral]} {cfg.get(mineral + '_costs', [3, 6])[level]} required"
             objects.append({"id": f"research_{kind}", "type": "research", "research_kind": kind, "label": label, "tts": text, "action": action})
         for i, obj in enumerate(objects):
             obj.update(x=8+15*(i%3), y=6+12*(i//3), width=12, height=8, hit_width=12, hit_height=8)
@@ -109,7 +109,7 @@ class Research(Feature):
                 for resource, required in [("coin", costs[index] if index < len(costs) else 999999),
                                            (material, materials[index])]:
                     obj["display_quantities"].append({"item": resource, "label": "Gold" if resource == "coin" else resource.title(),
-                                                    "required": int(required), "owned": int(e.resources.get(resource, 0))})
+                                                    "required": e.research_price(required) if resource == "coin" else int(required), "owned": int(e.resources.get(resource, 0))})
         objects.append(e.back_arrow("research_back", "Back home", "return_scene"))
         return objects
 
@@ -133,13 +133,14 @@ class Research(Feature):
             costs = list(cfg.get("costs", []))
             if level >= max_level:
                 return e.response(tts="Seed recovery at maximum level.", sfx="error")
-            cost = int(costs[level]) if level < len(costs) else 999999
+            cost = e.research_price(int(costs[level]) if level < len(costs) else 999999)
             copper_cost = int(cfg.get("copper_costs", [3, 6])[level])
             if e.resources["copper"] < copper_cost:
                 return e.response(tts=f"Copper {copper_cost} required", sfx="error")
             if int(e.resources.get("coin", 0)) < cost:
                 return e.response(tts=f"Not enough gold. Need {cost}.", sfx="error")
             e.add_resource("coin", -cost)
+            e.consume_research_discount()
             e.add_resource("copper", -copper_cost)
             e.research_levels["seed_return"] = level + 1
             result = e.consume_time("research")
@@ -157,13 +158,14 @@ class Research(Feature):
             if e.unlocked_plot_count >= len(plots):
                 return e.response(tts="All plots unlocked.", sfx="error")
             index = max(0, e.unlocked_plot_count - initial)
-            cost = int(costs[index]) if index < len(costs) else 999999
+            cost = e.research_price(int(costs[index]) if index < len(costs) else 999999)
             material_cost = int(cfg.get("stone_costs", [5, 10])[index])
             if e.resources["stone"] < material_cost:
                 return e.response(tts=f"Stone {material_cost} required", sfx="error")
             if int(e.resources.get("coin", 0)) < cost:
                 return e.response(tts=f"Not enough gold. Need {cost}.", sfx="error")
             e.add_resource("coin", -cost)
+            e.consume_research_discount()
             e.add_resource("stone", -material_cost)
             e.unlocked_plot_count += 1
             result = e.consume_time("research")
@@ -185,10 +187,11 @@ class Research(Feature):
             return e.response(tts="Maximum research level.", sfx="error")
         mineral = "iron"
         costs, materials = cfg.get("costs", [20, 40]), cfg.get(f"{mineral}_costs", [3, 6])
-        cost, material_cost = int(costs[level]), int(materials[level])
+        cost, material_cost = e.research_price(costs[level]), int(materials[level])
         if e.resources["coin"] < cost or e.resources[mineral] < material_cost:
             return e.response(tts=f"Not enough materials. Need {cost} gold, {e.MINERAL_LABELS[mineral]} {material_cost} required", sfx="error")
         e.add_resource("coin", -cost)
+        e.consume_research_discount()
         e.add_resource(mineral, -material_cost)
         e.research_levels[kind] = level + 1
         text = f"Mineral discovery level {level + 1} complete."
