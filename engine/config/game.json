@@ -3550,7 +3550,7 @@
       "chicken": {
         "days": 2,
         "product": "egg",
-        "price": 70,
+        "price": 50,
         "buy_price": 100,
         "wait_days": [
           1,
