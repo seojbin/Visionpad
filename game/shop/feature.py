@@ -83,8 +83,16 @@ class Shop(Feature):
     def buy(self, kind, item_id):
         buyer = self.engine.registry.shop_buyers.get(kind)
         if buyer:
+            e = self.engine
+            before = e.resource('coin')
             result = buyer(item_id)
-            if result is not None: return result
+            if result is not None:
+                if e.resource('coin') < before:
+                    e.consume_purchase()
+                    # Buyers build a response before the successful-use counter changes.
+                    e.render()
+                    result["state"] = e.get_state()
+                return result
         return self.engine.response(tts="Item unavailable.", sfx="error")
 
     def sell(self, kind, item_id):
@@ -253,7 +261,7 @@ class Shop(Feature):
         e.shop_page = max(0, min(e.shop_page, pages - 1))
         objects = []
         for i, (kind, item_id, label, count, price) in enumerate(entries[e.shop_page * page_size:(e.shop_page + 1) * page_size]):
-            price = price if kind in e.registry.fixed_price_kinds else e.market_price(price, kind, mode)
+            price = e.purchase_price(price) if kind in e.registry.fixed_price_kinds and mode == "buy" else price if kind in e.registry.fixed_price_kinds else e.market_price(price, kind, mode)
             x, y = (9, 23, 37, 51)[i % 4], (5, 15, 25)[i // 4]
             text = f"{label}, {price} gold. stock {count} " if mode == "buy" else f"{label}, stock {count}. Sell {price} gold"
             owned_text = e.registry.shop_owned_texts.get(kind)

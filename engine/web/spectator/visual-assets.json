@@ -937,6 +937,33 @@
         418,
         386
       ]
+    },
+    "rowan_special_red": {
+      "texture": "items",
+      "source": [
+        760,
+        516,
+        212,
+        178
+      ]
+    },
+    "rowan_special_yellow": {
+      "texture": "items",
+      "source": [
+        1012,
+        516,
+        208,
+        179
+      ]
+    },
+    "rowan_special_fish": {
+      "texture": "items2",
+      "source": [
+        330,
+        925,
+        288,
+        246
+      ]
     }
   },
   "pages": {

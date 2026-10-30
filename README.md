@@ -30,7 +30,7 @@ Dotdew Valley adapts everyday farming-game activities, inspired by Stardew Valle
 | Buttons | Travel, menus, selection and saves |
 | Pointer or tracked hand | Explore, sweep targets, trace paths and select objects |
 
-Farming, cooking, mining, fishing, trading, research, Rowan's tutorial quests and a houseplant are implemented. Ranching, pets, music, crafting and additional NPCs are planned, and artwork for these expansions has been prepared.
+Farming, cooking, mining, fishing, trading, research, Rowan's tutorial quests and a houseplant are implemented. Ranching is also implemented. Pets, music, crafting and additional NPCs are planned, and artwork for these expansions has been prepared.
 
 ## Install
 
@@ -174,6 +174,25 @@ Rowan stands beside the shop. Select him to hear his dialogue without leaving th
 The first conversation gives **Rowan's soup**, with the stew's harvest effect. Eat it from F2 or sell it (base value 100 gold), then return to receive one seed of each crop. Talk again for the farming tutorial and vegetable request. Select any owned crop in the submission page to give one and receive 100 gold; either arrow cancels. Gifts, rewards and quest progress are saved. Later advice and reactions to recent activities use Rowan's voice.
 
 To fix the lock where users had zero gold or no crops to plant and could no longer earn money, Rowan was set to give out free carrot seeds if no seeds were held.
+### Pasture
+
+The pasture is west of the farm. It starts empty: buy a chicken for 100 gold or a sheep for 250 gold from the shop's **Tools** counter. One of each can be kept. Upper icons open the animal's detail page; the lower scene shows the owned animals moving and changing direction. Their detail drawings also move slightly as they breathe.
+
+The detail page has **Feed** and **Collect eggs** or **Shear wool** controls. Animals graze without feed, but feeding helps shorten production cycles and keeps them from leaving. Buy the shared **Animal feed** item from General goods; its current base price is 80 gold. Feed can be given once per animal per day. If a product is ready or due the next day, the feed bonus is carried forward to the next cycle rather than producing it immediately.
+
+Petting is a hidden interaction: move the pointer back and forth over the animal's body. Brushing plays while moving, and three accumulated seconds award affection once per day with the animal's main call. There is no petting button or percentage display. Status changes from **Indifferent** to **Recognizes you** and **Seems happy**. Not petting does not itself reduce affection; prolonged lack of feed or leaving products uncollected does. Animals may leave if they go too long without feed, with more familiar animals staying longer. On entering the pasture, a short message identifies an animal that has left. Exact affection and escape rules are not spoken during play.
+
+| Animal | Product and timing | Collection |
+|---|---|---|
+| Chicken | A new batch after 1–2 days; usually one egg, occasionally two. Eggs accumulate to a maximum of three. | Select the egg below the chicken directly, or choose Collect eggs and select it on the collection screen. |
+| Sheep | Wool becomes ready after 2–4 days and stays ready until collected; it does not stack across cycles. | Select the ready sheep or Shear wool to open the fleece screen. Sweep across it without holding a click. A round eraser removes individual dots until enough fleece has been cut. |
+
+Readiness is announced as **Eggs ready** or **Wool ready**, without a quantity. The collection result states the actual amount. Wool normally gives 2–5 bundles; animal-shelter research can add bonus eggs or wool. Collecting eggs or finishing shearing costs 3 ticks. Base sale values are 70 gold per egg and 100 per wool.
+
+Only owned animals make routine calls in the pasture; the detail page plays calls for its selected animal. Entry and completed interactions use the main call. Brushing and calls can overlap. Feeding has its own sound, and shearing uses its own cut sound. A chicken also gives a morning call after sleep. Ownership, production, affection, feed history and unfinished shearing are saved.
+
+Eggs can be cooked with a carrot to make **Fried egg**. The two stages are a bouncing egg-cracking path and the frying path. Eating it discounts the gold cost of the next successful research purchase by 20%; material requirements are unchanged.
+
 ### Research
 
 Select the research station at home, inspect an upgrade and select it to pay its gold and material cost. The list uses three columns. Research consumes game time, and its progress is saved. More upgrades are planned.
@@ -183,8 +202,13 @@ Select the research station at home, inspect an upgrade and select it to pay its
 | Seed recovery | Gold and copper | Better seed recovery, up to two levels |
 | Farm expansion | Gold and stone | Two initial plots, up to six |
 | Mineral luck | Gold and iron | Better mineral rolls and bonus quantities, up to two levels |
+| Animal shelter | Level 1: 150 gold + 2 wool; level 2: 250 gold + 4 wool | Additional eggs and wool at collection, up to two levels |
 
 Gameplay descriptions report research levels rather than exact probabilities.
+
+Animal shelter checks each original product separately when eggs or wool are collected: a 15% bonus chance per item at level 1, or 30% at level 2. For two eggs at level 2, two independent checks each have a 30% chance to add one egg. Bonus items do not trigger further checks. This keeps the chance per product the same for chickens and sheep. The nest still holds at most three eggs before collection; research bonuses are added when collected.
+
+Short research speech lists the name and next-level gold/material cost. Detailed speech includes the next level, requirements and effect; Animal shelter uses “Increased yield.” At the limit it reports maximum level and no longer offers a purchase. The research level is saved, and older saves without it start at level zero.
 
 ### Flower pot
 
@@ -242,7 +266,9 @@ Each folder's README documents its pages, actions, state, events, configuration 
 | `mining/`, `fishing/` | Rocks, catches, tool wear and resource prices |
 | `flowers/` | Pot interaction, daily plant state and bloom contribution |
 | `inventory/`, `shop/` | Item lists, pagination and transactions |
-| `research/` | Upgrade costs, levels and plot expansion |
+| `research/` | Upgrade costs, levels, plot expansion and animal-shelter research |
+| `pasture/` | Animal ownership, movement, feed, hidden petting, production, escape and collection |
+| `cook/` | Shared ingredient access for eggs and the existing cooking system |
 | `village/`, `npc/` | Village, tutorial progression, submission, weekly prices, dialogue and reactions |
 
 Features register with `engine/core/registry.py`; `game/__init__.py` selects the enabled features. They contribute items and drawings through slots and react through events. Save compatibility depends on existing engine attribute names: renaming one can change the save format.
@@ -313,6 +339,7 @@ Edit **`engine/config/game.json`**, not the former root `game_config.json`, then
 | `research.seed_return` | Gold `[20,40]`, copper `[3,6]`, recovery `[0.3,0.6]`, maximum level 2 |
 | `research.field_expansion` | Initial 2 plots; gold `[30,50,70,90]`, stone `[5,10,15,20]` |
 | `research.mineral_luck` | Gold `[20,40]`, iron `[3,6]`; diamond weight +1 and double-drop chance +0.15 per level |
+| `research.animal_shelter` | Maximum level 2; gold `[150,250]`, wool `[2,4]`, independent per-product bonus chances `[0.15,0.30]` |
 | `recipes.<id>` | Ingredients, effects, duration, sale price and `gesture_steps`; hidden quest recipes stay out of kitchen lists |
 | `recipes.<id>.allowed_fish`, `.quality_effects` | Fish eligibility; grill multipliers 1.5/2/3, stew 1.25/1.5/1.8 for 3/4/5 sales, frying double chance 0.3/0.6 |
 | `cooking_methods.gestures` | Shared fish-cleaning, grilling, stirring and frying paths and tolerances |
@@ -330,6 +357,13 @@ Edit **`engine/config/game.json`**, not the former root `game_config.json`, then
 | `fishing.near_radius`, `.middle_area_fraction` | Near radius 4; middle circle area 1/6 of the display |
 | `fishing.zone_weights` | Miss/low/medium/high: far 30/40/20/10, middle 10/30/40/20, near 10/20/30/40 |
 | `fishing.fish`, `.fish_sell_prices` | Species, internal grades, base prices 24/27/36 |
+| `pasture.animals.<id>` | Animal purchase/product prices, `wait_days`, `wait_weights`, egg `double_egg_chance` (0.2) and `ready_capacity` (3), wool `yield_range` ([2,5]) |
+| `pasture.feed_price`, `.pet_seconds` | Shared feed base price 80 gold; petting reward after 3 seconds of movement, once per day |
+| `pasture.escape_grace_days`, `.escape_increment` | Affection-tier grace periods `[1,2,3]`; daily escape chance is excess unfed days × 0.1, clamped to 0–1 |
+| `pasture.move_interval_seconds`, `.flip_interval_multipliers`, `.breath_seconds` | Movement every 3–5 seconds; independent flips after 3–5 times a sampled interval; breathing step 1.5 seconds |
+| `pasture.shear_radius`, `.shear_success_ratio` | Eraser radius 5.5 dots; complete at 75% of fleece dots removed |
+| `pasture.audio` | Routine interval/gain, main-call gain and morning-call delay |
+| `time.action_costs.animal_collect`, `recipes.fried_egg` | Collection costs 3 ticks; egg-and-carrot recipe with one-use research discount |
 | `flowers.seed_price`, `.watering_seconds`, `.contact_gap_seconds` | 150 gold; 3 seconds contact; maximum contact-sample gap 0.5 seconds |
 | `flowers.sprout_days`, `.stem_days`, `.bloom_cycle_days` | 2 watered days per early stage; 3-day bloom-age cycles |
 | `flowers.bloom_wilt_increment`, `.dry_wilt_increment`, `.harvest_bonus` | Hidden wilt increments 0.1 per bloom cycle and 0.3 per dry day; blooming crop bonus +1 |

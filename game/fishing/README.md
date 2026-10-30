@@ -35,3 +35,7 @@ Zones: near (`near_radius` 4), middle (a circle of 1/6 of the pad area, `middle_
 | high (Luxurious) | Salmon, Rainbow trout | 36 |
 
 Rarity is never spoken. A catch plays splash; a high-grade catch plays splash and shine together; a miss plays neither. Four successful catches are safe, then the break chance rises by 10 points per catch (`rod_safe_catches`, `rod_break_increment`); misses do not wear the rod, a doubled catch counts once, and the breaking cast keeps its catch (plus the destroy sound). The companion shows the lake from `scene3.png`, fish from `assets/items2.png` and the equipped rod while one is owned. Saves from before fishing get an empty fish bag, no rod and zero rod use.
+
+## Rowan and shelter update
+
+`loot_amount(..., activity="fishing")` scopes Rowan's fish-soup double yield to fishing and mining.

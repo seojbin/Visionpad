@@ -85,6 +85,8 @@ class Npc(Feature):
     def rowan_advice(self, topic):
         e = self.engine
         npc = NPCS["shopkeeper"]
+        if topic == "pasture":
+            return "Buy chickens and sheep at the Tools counter. Visit the pasture to feed them and gently stroke their bodies. Collect eggs when ready, or sweep the sheep's fleece to shear it. Animals graze, but keep feeding them so they stay with you."
         if topic == "fishing":
             return npc["fishing"]["with_rod" if e.resources.get("fishing_rod") else "without_rod"]
         plots = [plot for plot in e.farm_plots.values() if plot.get("seed_id")]

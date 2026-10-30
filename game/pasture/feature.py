@@ -399,6 +399,10 @@ class Pasture(Feature):
         if not a['owned'] or not a['ready']:return e.response(tts='Not ready.')
         cfg=self.cfg()['animals'][k]
         quantity=min(3,max(1,a['quantity'])) if k=='chicken' else max(cfg.get('yield_range',[2,5])[0],min(cfg.get('yield_range',[2,5])[1],a['quantity']))
+        level = min(2, max(0, e.research_levels.get('animal_shelter', 0)))
+        chances = e.config.get('research', {}).get('animal_shelter', {}).get('bonus_chances', [0.15, 0.30])
+        if level:
+            quantity += sum(random.random() < chances[level - 1] for _ in range(quantity))
         e.pasture_goods[cfg['product']]+=quantity
         a['friendship']=min(299,a['friendship']+self.cfg()['collect_points'])
         a.update(ready=False,ready_day=None,quantity=0,remaining=max(1,self.cycle_days(k)-int(a['next_boost'])),next_boost=False)

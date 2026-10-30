@@ -96,9 +96,9 @@ class GameEngine(InputDispatch, KeypadUI, SaveMixin, SharedState, FoodEffects, T
         for key, recipe in config.get("recipes", {}).items():
             if recipe.get("seafood"): continue
             recipe["label"] = {"tomato_carrot_stew": "Tomato carrot stew", "potato_tomato_soup": "Potato tomato soup",
-                               "vegetable_fritters": "Vegetable fritters", "rowan_soup": "Rowan's soup"}.get(key, key.replace("_", " ").title())
+                               "vegetable_fritters": "Vegetable fritters", "rowan_soup": "Rowan's soup"}.get(key, recipe.get("label", key.replace("_", " ").title()))
             recipe["buff_label"] = {"harvest_multiplier": "Harvest boost", "pickaxe_protection": "Pickaxe protection",
-                                    "research_discount": "Research discount", "time_slow": "Time saving"}.get(recipe.get("buff_kind"), "Food effect")
+                                    "research_discount": "Research discount", "time_slow": "Time saving"}.get(recipe.get("buff_kind"), recipe.get("buff_label", "Food effect"))
             for stage in recipe.get("gesture_steps", []):
                 stage["label"] = "Crack eggs" if stage.get("kind") == "crack" else ("Trace eight petals" if key in ("vegetable_fritters", "fried_egg") else "Stir") if stage.get("kind") == "stir" else "Chop"
         for i, plot in enumerate(config.get("farm", {}).get("plots", [])):

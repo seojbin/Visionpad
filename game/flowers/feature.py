@@ -222,7 +222,7 @@ class Flowers(Feature):
     def buy_seed(self, item_id):
         if item_id != "morning_glory": return None
         e = self.engine
-        price = int(self.config().get('seed_price',150))
+        price = e.purchase_price(int(self.config().get('seed_price',150)))
         if e.resource('coin') < price: return e.response(tts=f'Not enough gold. Morning glory seeds cost {price} gold.',sfx='error')
         e.add_resource('coin', -price)
         e.flower_seeds += 1

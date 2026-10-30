@@ -155,6 +155,21 @@
         "0001000",
         "0000000"
       ]
+    },
+    "animal_shelter": {
+      "max_level": 2,
+      "costs": [
+        150,
+        250
+      ],
+      "wool_costs": [
+        2,
+        4
+      ],
+      "bonus_chances": [
+        0.15,
+        0.3
+      ]
     }
   },
   "seeds": {
@@ -2053,6 +2068,40 @@
         }
       ],
       "sell_price": 96
+    },
+    "rowan_special_red": {
+      "label": "Rowan's red soup",
+      "quest_only": true,
+      "hidden_recipe": true,
+      "ingredients": {},
+      "buff_kind": "sale_boost",
+      "buff_ticks": 0,
+      "sell_price": 200,
+      "buff_multiplier": 2,
+      "sale_uses": 3,
+      "buff_label": "Better sales"
+    },
+    "rowan_special_yellow": {
+      "label": "Rowan's yellow soup",
+      "quest_only": true,
+      "hidden_recipe": true,
+      "ingredients": {},
+      "buff_kind": "purchase_discount",
+      "buff_ticks": 0,
+      "sell_price": 200,
+      "buff_multiplier": 0.5,
+      "purchase_uses": 3,
+      "buff_label": "Shopping discount"
+    },
+    "rowan_special_fish": {
+      "label": "Rowan's fish soup",
+      "quest_only": true,
+      "hidden_recipe": true,
+      "ingredients": {},
+      "buff_kind": "gather_double",
+      "buff_ticks": 10,
+      "sell_price": 200,
+      "buff_label": "Mining and fishing boost"
     }
   },
   "home": {
@@ -3397,7 +3446,36 @@
   },
   "rowan": {
     "seed_gift_each": 1,
-    "vegetable_reward_gold": 100
+    "vegetable_reward_gold": 100,
+    "daily_quests": {
+      "reward_multiplier": 1.5,
+      "prize_weights": {
+        "low": [
+          50,
+          25,
+          15,
+          7,
+          2,
+          1
+        ],
+        "medium": [
+          30,
+          25,
+          21,
+          17,
+          5,
+          2
+        ],
+        "high": [
+          20,
+          25,
+          21,
+          20,
+          10,
+          4
+        ]
+      }
+    }
   },
   "weekly_market": {
     "discount_percent": 20,

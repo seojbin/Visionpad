@@ -166,7 +166,7 @@ class Fishing(Feature):
             candidates = [key for key, fish in cfg['fish'].items() if fish['grade'] == grade]
             fish_id = random.choice(candidates)
             label = cfg['fish'][fish_id]['label']
-            amount = e.loot_amount(1)
+            amount = e.loot_amount(1, activity="fishing")
             e.resources['fish'][fish_id] = e.resources['fish'].get(fish_id, 0)+amount
             e.registry.run('activity', 'fishing', label, amount)
             e.fishing_last_catch = {'id': fish_id, 'label': label, 'attempt': e.fishing_attempts}

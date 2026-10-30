@@ -183,7 +183,7 @@ class Mining(Feature):
             weights = e.boost_rare_weights(weights, ("iron", "diamond"))
             mineral = random.choices(list(weights), weights=list(weights.values()), k=1)[0]
             doubled = random.random() < min(1, level * float(research.get("double_drop_chance_per_level", .15)))
-            amount = e.loot_amount(2 if doubled else 1)
+            amount = e.loot_amount(2 if doubled else 1, activity="mining")
             doubled = amount > 1
             e.add_resource(mineral, amount)
             e.registry.run("activity", "mining", e.MINERAL_LABELS[mineral], amount)

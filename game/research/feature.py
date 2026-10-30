@@ -7,7 +7,7 @@ from engine.core import order
 from engine.core.registry import Feature
 from engine.display.icons import IconRenderer
 
-RESEARCH_SYMBOLS = {'seed_return': 'seed', 'field_expand': 'tool', 'mineral_luck': 'mineral'}
+RESEARCH_SYMBOLS = {'seed_return': 'seed', 'field_expand': 'tool', 'mineral_luck': 'mineral', 'animal_shelter': 'tool'}
 
 
 class Research(Feature):
@@ -29,7 +29,7 @@ class Research(Feature):
         e = self.engine
         research = e.config.get("research", {})
         expansion = research.get("field_expansion", {})
-        e.research_levels = {"seed_return": 0, "mineral_luck": 0}
+        e.research_levels = {"seed_return": 0, "mineral_luck": 0, "animal_shelter": 0}
         e.unlocked_plot_count = int(expansion.get("initial_plot_count", 2))
 
     @staticmethod
@@ -95,13 +95,21 @@ class Research(Feature):
             action = "" if level >= int(cfg.get("max_level", 2)) else f"research:{kind}"
             text = f"{label}. Level {level}. Maximum level." if not action else f"{label}. Level {level + 1}. Requires {e.research_price(cfg.get('costs', [20, 40])[level])} gold, {e.MINERAL_LABELS[mineral]} {cfg.get(mineral + '_costs', [3, 6])[level]} required"
             objects.append({"id": f"research_{kind}", "type": "research", "research_kind": kind, "label": label, "tts": text, "action": action})
+        level = e.research_levels.get('animal_shelter', 0)
+        shelter_cfg = e.config.get('research', {}).get('animal_shelter', {})
+        shelter_text = f'Animal shelter. Level {level}. Maximum level. Increased yield.' if level >= 2 else (
+            f"Animal shelter. Level {level + 1}. Requires {e.research_price(shelter_cfg.get('costs', [150, 250])[level])} gold, "
+            f"Wool {shelter_cfg.get('wool_costs', [2, 4])[level]} required. Increased yield.")
+        objects.append(dict(id='research_animal_shelter', type='research', research_kind='animal_shelter',
+                            label='Animal shelter', tts=shelter_text,
+                            action='research:animal_shelter' if level < 2 else ''))
         for i, obj in enumerate(objects):
             obj.update(x=8+15*(i%3), y=6+12*(i//3), width=12, height=8, hit_width=12, hit_height=8)
             kind = obj["research_kind"]
             key = "field_expansion" if kind == "field_expand" else kind
             cfg = e.config.get("research", {}).get(key, {})
             index = expansion_index if kind == "field_expand" else e.research_levels.get(kind, 0)
-            material = {"seed_return": "copper", "field_expand": "stone", "mineral_luck": "iron"}[kind]
+            material = {"seed_return": "copper", "field_expand": "stone", "mineral_luck": "iron", "animal_shelter": "wool"}[kind]
             obj["display_quantities"] = []
             if obj.get("action"):
                 costs = cfg.get("costs", [])
@@ -109,7 +117,7 @@ class Research(Feature):
                 for resource, required in [("coin", costs[index] if index < len(costs) else 999999),
                                            (material, materials[index])]:
                     obj["display_quantities"].append({"item": resource, "label": "Gold" if resource == "coin" else resource.title(),
-                                                    "required": e.research_price(required) if resource == "coin" else int(required), "owned": int(e.resources.get(resource, 0))})
+                                                    "required": e.research_price(required) if resource == "coin" else int(required), "owned": int(e.pasture_goods.get(resource, 0) if resource == "wool" else e.resources.get(resource, 0))})
         objects.append(e.back_arrow("research_back", "Back home", "return_scene"))
         return objects
 
@@ -124,6 +132,8 @@ class Research(Feature):
 
     def buy(self, research_kind, obj=None):
         e = self.engine
+        if research_kind == "animal_shelter":
+            return self.buy_shelter()
         if research_kind == "mineral_luck":
             return self.buy_mineral(research_kind)
         if research_kind == "seed_return":
@@ -201,4 +211,24 @@ class Research(Feature):
             return e.night_response(text, sound_events=events)
         e.clear_hover()
         e.render()
+        return e.response(tts=text, sound_events=events)
+
+    def buy_shelter(self):
+        e = self.engine
+        cfg = e.config['research']['animal_shelter']
+        level = e.research_levels.get('animal_shelter', 0)
+        if level >= 2:
+            return e.response(tts='Maximum research level.', sfx='error')
+        cost, wool = e.research_price(cfg['costs'][level]), cfg['wool_costs'][level]
+        if e.resources['coin'] < cost or e.pasture_goods.get('wool', 0) < wool:
+            return e.response(tts=f'Need {cost} gold and {wool} wool.', sfx='error')
+        e.add_resource('coin', -cost)
+        e.pasture_goods['wool'] -= wool
+        e.consume_research_discount()
+        e.research_levels['animal_shelter'] = level + 1
+        result = e.consume_time('research')
+        text = f'Animal shelter level {level + 1} complete. Increased yield.'
+        events = [{'kind':'one_shot', 'sound':'coin'}]
+        if result['night']: return e.night_response(text, sound_events=events)
+        e.clear_hover(); e.render()
         return e.response(tts=text, sound_events=events)

@@ -28,7 +28,7 @@ const sheets = {};
 let sceneDefinitions={scenes:{}}, assetCatalog={backgrounds:{},facilities:{},objects:{},pages:{}};
 const assetsReady=Promise.all([
  fetch(new URL('scene-objects.json?v=town-layout-3',base)).then(r=>{if(!r.ok)throw new Error('Scene registry unavailable');return r.json();}).then(d=>{sceneDefinitions=d;}),
- fetch(new URL('visual-assets.json?v=pasture-5',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
+ fetch(new URL('visual-assets.json?v=rowan-quests-1',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
 ]).catch(error=>{console.warn(error);}).then(()=>{menuKey='';if(state)updateUI();});
 let animationFrame = 0;
 let state = null,
@@ -408,6 +408,7 @@ function itemFrame(o) {
 }
 function itemSprite(o) {
  if(o.id==='shop_tools_choice')return 'pickaxe';
+ if(o.research_kind==='animal_shelter')return 'wool';
  const key=itemKey(o);if(assetCatalog.objects[key])return key;
  // Only existing non-item controls retain their fixed interface images.
  if(['research','care_button','save_slot','shop_choice'].includes(o.type))return spriteFor(o);

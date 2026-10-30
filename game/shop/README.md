@@ -24,3 +24,7 @@ The shop counter (sell, buy, calendar), paged buy and sell lists, weekly market 
 The counter order is Sell → General goods → Tools → Calendar. `shop_buy` lists general goods, including chicken and sheep feed. `shop_tools` lists pickaxes, fishing rods, chickens, sheep and flower seeds. Both purchase pages keep the tactile buy panel and item category frames; both return to the shop choice screen. Prices and ownership counts use the same shared shop renderer. The demo speech preparation flow now buys tools from `shop_mode:tools`.
 
 The lower shop graphic has three separate counter hit regions: Sell, General goods and Tools. Each hover label and click destination matches the corresponding upper choice. Animal cards use the registered pasture animal icon.
+
+## Rowan and shelter update
+
+Successful purchases consume one yellow-soup use; failed purchases do not. Prices displayed and charged use the same purchase multiplier, after weekly discounts. Fixed-price flower seeds keep their weekday exemption but receive the soup discount.

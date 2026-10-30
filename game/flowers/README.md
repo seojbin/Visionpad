@@ -19,3 +19,7 @@ The houseplant at home: buying morning glory seeds, planting, watering by keepin
 | Engine API used | none from other features; core helpers `add_resource`, `resource`, `set_page`, `back_arrow`, `draw_solid_pattern`, `night_only_response` |
 | Client (web) | `game/flowers/client.js` (100 ms pointer re-send while the mouse rests on the pot during watering); textures `engine/web/spectator/assets/flower-backgrounds.png`, `flower-items.png`, `flower-stages.png` |
 | Tests | No dedicated tests yet. Covered by `engine/tests/python/saves/test_save_compat.py` (owned attributes) and `engine/tests/python/core/test_registry.py`. |
+
+## Rowan and shelter update
+
+Flower-seed purchases apply the core purchase-food discount, while remaining exempt from weekly market changes.

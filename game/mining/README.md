@@ -21,3 +21,7 @@ Daily rocks at the mine, pickaxe wear and breakage, mineral loot (with mineral-d
 | Client (web) | `game/mining/client.js` (mine task text); sounds `game/mining/audio/pickaxe.mp3`, `break.mp3` (`shine`, `destroy` are shared in `engine/web/audio/`) |
 | Tests | `engine/tests/python/audio/test_gameplay_audio.py` (rock guidance, tool break) |
 | Note | `draw_item` was unused before the split (follow-up F14); kept for parity. |
+
+## Rowan and shelter update
+
+`loot_amount(..., activity="mining")` scopes Rowan's fish-soup double yield to mining and fishing.

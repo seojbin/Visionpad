@@ -12,6 +12,7 @@ class FoodEffects:
     NO_EFFECT = {"kind": None, "source": None, "multiplier": 1.0, "remaining_ticks": 0}
 
     def recipe_effect_text(self, recipe):
+        if recipe.get('buff_kind') == 'purchase_discount': return f"Shopping discount, {recipe.get('purchase_uses', 3)} purchases"
         if recipe.get('buff_kind') == 'research_discount': return 'Research discount, next research'
         if recipe.get('buff_kind') == 'sale_boost':
             return f"{recipe.get('buff_label', 'Better sales')}, {recipe.get('sale_uses', 3)} sales"
@@ -24,6 +25,7 @@ class FoodEffects:
             "multiplier": float(recipe.get("buff_multiplier", 1.0)),
             "remaining_ticks": float(recipe.get("buff_ticks", 0)),
             "remaining_sales": int(recipe.get("sale_uses", 0)),
+            "remaining_purchases": int(recipe.get("purchase_uses", 0)),
             "rare_weight_multiplier": float(recipe.get("rare_weight_multiplier", 1)),
             "double_chance": float(recipe.get("double_chance", 0))
         }
@@ -34,6 +36,8 @@ class FoodEffects:
         return 1.0
 
     def buff_text(self):
+        if self.active_buff.get("kind") == "purchase_discount":
+            return f"Shopping discount, {self.active_buff.get('remaining_purchases', 0)} purchases left"
         if self.active_buff.get('kind')=='sale_boost' and self.active_buff.get('remaining_sales',0)>0:
             return f"Better sales, {self.active_buff['remaining_sales']} sales left"
         if self.active_buff.get('kind') == 'research_discount': return 'Research discount, next research'
@@ -44,7 +48,7 @@ class FoodEffects:
         return f"{recipe.get('buff_label', 'Food effect')}, {remaining:g} hours left"
 
     def tick_buff(self, cost):
-        if self.active_buff.get("kind") in ("sale_boost", "research_discount"): return
+        if self.active_buff.get("kind") in ("sale_boost", "purchase_discount", "research_discount"): return
         remaining = float(self.active_buff.get("remaining_ticks", 0))
         remaining = max(0, remaining - max(0, float(cost)))
         self.active_buff["remaining_ticks"] = remaining
@@ -58,7 +62,9 @@ class FoodEffects:
             for key in rare_keys:result[key]=result.get(key,0)*multiplier
         return result
 
-    def loot_amount(self, amount):
+    def loot_amount(self, amount, activity=None):
+        if activity in ("mining", "fishing") and self.active_buff.get("kind") == "gather_double" and self.active_buff.get("remaining_ticks", 0) > 0:
+            return amount * 2
         if self.active_buff.get('kind')=='double_loot' and self.active_buff.get('remaining_ticks',0)>0:
             if random.random()<self.active_buff.get('double_chance',0):return amount*2
         return amount
@@ -79,3 +85,14 @@ class FoodEffects:
 
     def consume_research_discount(self):
         if self.active_buff.get('kind') == 'research_discount': self.active_buff = dict(self.NO_EFFECT)
+
+    def purchase_price(self, price):
+        if self.active_buff.get('kind') == 'purchase_discount' and self.active_buff.get('remaining_purchases', 0) > 0:
+            return math.floor(price * self.active_buff.get('multiplier', 1))
+        return int(price)
+
+    def consume_purchase(self):
+        if self.active_buff.get('kind') == 'purchase_discount' and self.active_buff.get('remaining_purchases', 0) > 0:
+            self.active_buff['remaining_purchases'] -= 1
+            if not self.active_buff['remaining_purchases']:
+                self.active_buff = dict(self.NO_EFFECT)

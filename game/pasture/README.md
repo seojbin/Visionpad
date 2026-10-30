@@ -40,3 +40,7 @@ Owned animals move independently at random 3–5 second intervals. Their facing 
 The ready egg in animal care can also be collected directly with one click. Legacy chicken/sheep feed counts merge into animal_feed on load. Escaped animals are named in the short pasture arrival message until repurchased. Animal care graphics bob upward by one dot every 1.5 seconds, matching the companion; buttons and the egg stay fixed. Shop animal icons reuse the same padded chicken/sheep patterns as pasture icons.
 
 Shearing erases individual raised dots within a circular swept brush, not 5×5 tiles. Completion counts erased fleece dots only; progress uses the existing pasture_sheared save field with a dots_v1 marker in sheep state. Old tile progress is converted on load. The companion uses the same per-dot mask. Ready counts are hidden from short/detailed speech and companion status; collection announces the actual awarded quantity without appending mood. Successful feeding plays feed.mp3 at one_shot_gain.feed=1.8 alongside the animal main call.
+
+## Rowan and shelter update
+
+Animal shelter research independently rolls an extra unit for every base egg/wool collected. The configuration is `research.animal_shelter.bonus_chances`; stored ready quantities and the three-egg cap are unchanged.

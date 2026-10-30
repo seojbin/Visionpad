@@ -22,6 +22,7 @@ class SaveCompatibilityTests(unittest.TestCase):
         config = load_config("game")
         self.engine = GameEngine(config, save_dir=self.temp.name)
         self.saved = decode(json.loads(FIXTURE.read_text(encoding="utf-8"))["state"])
+        self.saved["rowan_daily"] = {}  # New daily requests are absent in old saves.
         for key, value in self.engine.snapshot().items():
             if key.startswith("pasture_"): self.saved[key] = value
 

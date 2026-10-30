@@ -5,6 +5,7 @@ Shared state written: resources (rowan_soup, seeds, crops, coin), current_page, 
 Uses the NPC feature's engine API: recent_reaction, npc_voice_profile, rowan_advice, next_rowan_advice.
 Provides engine.market_price() for every priced item and engine.talk_rowan()/submit_rowan_crop().
 """
+from .quests import RowanQuests
 from engine.core import order
 from engine.core.registry import Feature
 from engine.display.icons import IconRenderer
@@ -16,7 +17,7 @@ class Village(Feature):
     name = "village"
 
     def register(self, reg):
-        reg.owns("rowan_stage", "rowan_greeted", "rowan_dialogue", "rowan_submit_open")
+        reg.owns("rowan_daily", "rowan_stage", "rowan_greeted", "rowan_dialogue", "rowan_submit_open")
         reg.page("town", objects=self.town_objects, scene=self.draw_town_scene, icon_grid=True, arrival=self.arrival,
                  detail=lambda: "Village. Shop and Rowan.")
         reg.page("shop_calendar", objects=self.calendar_objects, icon_grid=True)
@@ -36,7 +37,8 @@ class Village(Feature):
         reg.state("calendar", lambda: {"weekday":self.calendar_days()[self.weekday_index()]['name'], "offer":self.calendar_text()})
         reg.on("reset", self.reset, order=order.Reset.VILLAGE)
         reg.on("close_dialogue", self.close_dialogue)
-        reg.save_fields(defaults=("rowan_stage", "rowan_greeted", "rowan_dialogue", "rowan_submit_open"),
+        reg.on("start_of_day", lambda: RowanQuests(self).refresh_daily())
+        reg.save_fields(defaults=("rowan_daily", "rowan_stage", "rowan_greeted", "rowan_dialogue", "rowan_submit_open"),
                         migrate=self.migrate)
         reg.expose("talk_rowan", self.talk)
         reg.expose("submit_rowan_crop", self.submit_crop)
@@ -80,6 +82,7 @@ class Village(Feature):
 
     def reset(self):
         e = self.engine
+        e.rowan_daily = {}
         e.rowan_stage = 'new'
         e.rowan_greeted = False
         e.rowan_dialogue = ''
@@ -100,7 +103,7 @@ class Village(Feature):
         if 'all' in categories or kind in categories:
             percentage = e.config['weekly_market']['bonus_percent' if mode == 'sell' else 'discount_percent']
             price = int(price) * (100 + percentage if mode == 'sell' else 100 - percentage) // 100
-        return e.sale_price(price) if mode == 'sell' else int(price)
+        return e.sale_price(price) if mode == 'sell' else e.purchase_price(price)
 
     def calendar_text(self, index=None):
         e = self.engine
@@ -132,7 +135,7 @@ class Village(Feature):
         seed_help = self.seed_help_seed() is not None
         return dict(id='town_rowan',type='rowan',x=22,y=6,width=12,height=10,hit_width=10,hit_height=8,
                     label='Rowan',tts=self.rowan_hover_text(),
-                    quest_available=seed_help or e.rowan_stage!='done',action='talk_rowan')
+                    quest_available=seed_help or RowanQuests(self).available(),action='talk_rowan')
 
     def seed_help_seed(self):
         """Offer one plantable crop seed whenever the crop-seed bag is empty."""
@@ -146,7 +149,7 @@ class Village(Feature):
     def rowan_hover_text(self):
         if self.seed_help_seed() is not None:
             return 'Rowan. Seeds available. Talk to me.'
-        return 'Rowan. Quest available.' if self.engine.rowan_stage != 'done' else 'Rowan.'
+        return 'Rowan. Quest available.' if RowanQuests(self).available() else 'Rowan.'
 
     def town_nav_objects(self):
         e = self.engine
@@ -319,12 +322,14 @@ class Village(Feature):
         if e.rowan_stage=='vegetable_requested':
             text = 'Choose one vegetable to give me. You can leave and come back anytime.' if any(e.resources['crops'].values()) else 'You have no vegetables yet. Plant a seed, water it each day, and sleep until it grows. Come back after harvesting.'
             return self.show_rowan(text, 'rowan_submit')
-        return self.show_rowan(e.next_rowan_advice())
+        return RowanQuests(self).talk() or self.show_rowan(e.next_rowan_advice())
 
     def rowan_objects(self):
         e = self.engine
         result=[]
         if e.current_page!='rowan_submit': return result
+        if e.rowan_stage != 'vegetable_requested':
+            return RowanQuests(self).objects() + [e.back_arrow('rowan_back','Back to village','return_scene')]
         for key in e.config['seeds']:
             count=e.resources['crops'].get(key,0)
             if count:
@@ -337,7 +342,8 @@ class Village(Feature):
 
     def submit_crop(self, seed):
         e = self.engine
-        if e.current_page!='rowan_submit' or not e.rowan_submit_open or e.rowan_stage!='vegetable_requested':return e.response()
+        if e.current_page!='rowan_submit' or not e.rowan_submit_open :return e.response()
+        if e.rowan_stage != 'vegetable_requested': return RowanQuests(self).submit(seed)
         if seed not in e.config['seeds'] or e.resources['crops'].get(seed,0)<1:
             return e.response(tts='No vegetable to give.')
         e.add_resource('crops', -1, item=seed)

@@ -18,7 +18,7 @@ class Inventory(Feature):
                                     "entries only when count > 0.")
         reg.contribute("inventory.items", self.core_resource_items, order=order.InventoryItems.CORE_RESOURCES)
         reg.page("inventory", objects=self.page_objects, icon_grid=True,
-                 menu_text=lambda: f'Inventory. {self.engine.resources["coin"]} gold.',
+                 menu_text=lambda: f'Inventory.',
                  on_menu_open=self.first_page, navigate=self.navigate,
                  panel=lambda: (self.engine.inventory_page, self.engine.inventory_page_count, None),
                  detail=lambda: "Inventory. Select an item to use.")
