@@ -89,8 +89,8 @@
     "seed_return": {
       "max_level": 2,
       "costs": [
-        20,
-        40
+        60,
+        100
       ],
       "copper_costs": [
         3,
@@ -113,10 +113,10 @@
     "field_expansion": {
       "initial_plot_count": 2,
       "costs": [
-        30,
-        50,
-        70,
-        90
+        40,
+        60,
+        100,
+        150
       ],
       "stone_costs": [
         5,
@@ -137,8 +137,8 @@
     "mineral_luck": {
       "max_level": 2,
       "costs": [
-        20,
-        40
+        100,
+        200
       ],
       "iron_costs": [
         3,
@@ -163,8 +163,8 @@
         250
       ],
       "wool_costs": [
-        2,
-        4
+        3,
+        6
       ],
       "bonus_chances": [
         0.15,
