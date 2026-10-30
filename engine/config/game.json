@@ -89,8 +89,8 @@
     "seed_return": {
       "max_level": 2,
       "costs": [
-        60,
-        100
+        30,
+        60
       ],
       "copper_costs": [
         3,
