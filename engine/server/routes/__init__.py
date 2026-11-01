@@ -1,1 +1,1 @@
-"""Route modules: game, speech and static files."""
+"""Route modules: game, speech, static files and the icon lab."""

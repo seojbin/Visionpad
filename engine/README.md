@@ -8,13 +8,13 @@ The server owns game state and checks every action. The browser sends pointer an
 
 | Path | Contents |
 |---|---|
-| `server/` | FastAPI app (`main.py`, run as `uvicorn engine.server.main:app`), shared runtime, routes: game page and input/state API (`/api/state`, `/api/pointer/*`, `/api/command`, `/api/reset`, `/api/visual-tick`), speech (`/api/speech*`), static files |
+| `server/` | FastAPI app (`main.py`, run as `uvicorn engine.server.main:app`), shared runtime, routes: game page and input/state API (`/api/state`, `/api/pointer/*`, `/api/command`, `/api/reset`, `/api/visual-tick`), speech (`/api/speech*`), static files, icon lab (`/icon-lab`, `/api/icon-lab/*`) |
 | `core/` | `engine.py` (state, reset, page objects, responses), `registry.py` (how features plug in), `order.py` (run orders for events and slots), `input.py`, `render.py`, `time.py` (time, night, sleep), `state.py` (shared-state helpers), `effects.py` (food effects) |
 | `display/` | `dotpad.py` (dot matrix and drawing), `icons.py` (icon grid and symbols), `keypad.py` (F-key menus, arrow navigation) |
 | `services/` | `saves.py` (save files and migrations), `speech.py` (Piper and WAV cache), `speech_queue.py` |
 | `spectator/` | `state.py`: public data for the companion window |
 | `config/` | `game.json` (rules), `npc.json` (Rowan's lines), `speech.json` (voices), `tracking.json` (camera); `load_config()` in `__init__.py` |
-| `web/` | `game.html`; `core/` (`game.js` page script, `pages.js` feature hooks, `game-audio.js`, `game-speech.js`, `game-keys.js`, `pad/`); `audio/` (shared sounds); `spectator/` (companion window) |
+| `web/` | `game.html`, `icon-lab.html`; `core/` (`game.js` page script, `icon-lab.js`, `pages.js` feature hooks, `game-audio.js`, `game-speech.js`, `game-keys.js`, `pad/`); `audio/` (shared sounds); `spectator/` (companion window) |
 | `launcher/` | `launch_game.py`, `setup_game.py` (`--with-pad`), `check_setup.py`, `prepare_pad.py` (optional Dot Pad SDK): the logic behind the root `start-*` and `install-*` files |
 | `tools/` | Dev tools (below) |
 | `tracking/` | Camera hand and ArUco tracking (below) |
@@ -149,6 +149,7 @@ It collects about 210 lines at rate 1.0 (fixed guidance, Rowan's tutorial and ad
 | `python engine/tools/audio_integration_lab.py` | Browser lab on `http://127.0.0.1:8001/` starting in a temporary watering scene; does not touch real saves |
 | `python engine/tools/prepare_speech.py [--download]` | Download the voice models (verified against the pinned size and SHA-256, three attempts, the old file is kept if a download fails, matching files are reused offline); write preview samples to `.audio/reports/` |
 | `python engine/tools/prepare_effects_preview.py` | Effects reel (above) |
+| `http://127.0.0.1:8000/icon-lab` (game server running) | Icon lab for user testing: draw 0/1 patterns or load any table in the game (`IconRenderer.PATTERNS`, module-level `*PATTERNS` dicts in `game/`, `icon` lists in `game.json`), show one icon or a 3 × 4 grid framed by the game's own code, send it to a USB/Bluetooth pad, step through a test set with F1/F2, log answers to CSV and copy the result as a Python tuple. Saved icons stay in the browser (export/import JSON); it never changes game state or saves |
 | `python engine/launcher/check_setup.py [--synthesize]` | Diagnose packages, files, sounds, voices and writable folders without starting a game |
 
 ## Manual testing

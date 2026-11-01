@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dotdew Valley · Icon lab</title>
+<style>
+:root{color-scheme:dark;--bg:#101514;--panel:#1b2421;--muted:#a8b8ad;--mint:#c1edaa;--line:#34433b}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#eff5ee;font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer;border:1px solid #556b4c;border-radius:6px;background:#26361f;color:#eff5ee;padding:6px 12px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,canvas:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
+input,select,textarea{background:#111b13;border:1px solid #41543b;color:#dcead4;border-radius:6px;padding:6px}
+.container{max-width:1400px;margin:auto;padding:20px}header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}h1{margin:0 0 4px;font-size:24px}h2{font-size:15px;margin:0 0 10px;color:var(--mint)}
+p,.hint{color:var(--muted);font-size:13px;line-height:1.5}
+.layout{display:grid;grid-template-columns:280px minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:12px}@media (max-width:1100px){.layout{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
+#library{max-height:70vh;overflow:auto;font-size:13px}#library h3{font-size:12px;color:var(--muted);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+#library button{display:block;width:100%;text-align:left;margin:2px 0;padding:4px 8px;background:#1f2b1a;border-color:#334430}
+#editor-grid,#preview{display:block;width:100%;height:auto;background:#182218;border-radius:6px;touch-action:none}
+#editor-grid{cursor:crosshair;max-width:520px}
+textarea{width:100%;min-height:120px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+#set{list-style:none;padding:0;margin:6px 0;font-size:13px}#set li{display:flex;gap:6px;align-items:center;padding:3px 6px;border-radius:4px}#set li.current{background:#314a2b}#set li span{flex:1}#set button{padding:1px 8px}
+table{width:100%;border-collapse:collapse;font-size:12px}td,th{border-bottom:1px solid var(--line);padding:3px;text-align:left}
+#hardware-status,#lab-status{font-size:12px;color:var(--muted)}
+</style></head><body><div class="container">
+<header><div><h1>Icon lab</h1><p>Draw and test tactile icons on the 60 × 40 pad. Frames are drawn by the game's own code, so what you see matches the game. Nothing here changes a saved game.</p></div><a href="/" style="color:var(--mint)">Back to the game</a></header>
+<div class="layout">
+<aside class="card"><h2>Library</h2><input id="search" placeholder="Search icons" aria-label="Search icons" style="width:100%"><div id="library" aria-label="Icon library"></div></aside>
+<main class="card"><h2>Editor</h2>
+<div class="toolbar"><label>Name <input id="name" size="14" value="new_icon"></label><label>W <input id="w" type="number" min="1" max="60" value="7" style="width:56px"></label><label>H <input id="h" type="number" min="1" max="40" value="5" style="width:56px"></label></div>
+<canvas id="editor-grid" width="520" height="372" aria-label="Pattern editor. Click or drag to raise and lower dots."></canvas>
+<div class="toolbar"><button id="clear">Clear</button><button id="invert">Invert</button><button id="save">Save to My icons</button><button id="delete">Delete from My icons</button><button id="add-set">Add to test set</button></div>
+<label class="hint" for="code">Pattern as Python (paste rows here to load them; one row per line or a tuple)</label>
+<textarea id="code" spellcheck="false"></textarea>
+<div class="toolbar"><button id="copy">Copy Python</button><button id="export">Export My icons</button><label><button id="import-button" type="button">Import My icons</button><input id="import" type="file" accept="application/json" hidden></label></div>
+<p id="lab-status" role="status"></p>
+</main>
+<section class="card"><h2>Pad output</h2>
+<div class="toolbar"><label>Show <select id="source"><option value="editor">Editor pattern</option><option value="set">Test set</option></select></label><label>Layout <select id="layout"><option value="single">One icon, centred</option><option value="grid">3 × 4 game grid</option></select></label><label><input id="frame" type="checkbox" checked> Frame</label></div>
+<canvas id="preview" width="600" height="400" aria-label="Pad output preview"></canvas>
+<div class="toolbar"><button id="usb-button">Connect USB pad</button><button id="ble-button">Connect Bluetooth pad</button></div>
+<p id="hardware-status">Web preview · USB not connected</p>
+<h2 style="margin-top:14px">Test set</h2>
+<p class="hint">Prev/Next steps through the set; on the pad F1/F2 or the panning keys do the same. The grid layout shows up to 12 icons at once.</p>
+<div class="toolbar"><button id="prev">◀ Prev</button><button id="next">Next ▶</button><button id="clear-set">Clear set</button></div>
+<ol id="set"></ol>
+<h2 style="margin-top:14px">Responses</h2>
+<div class="toolbar"><input id="response" placeholder="Participant's answer, Enter to log" aria-label="Participant response" style="flex:1"><button id="csv">Download CSV</button></div>
+<table><thead><tr><th>Time</th><th>Shown</th><th>Layout</th><th>Response</th></tr></thead><tbody id="log"></tbody></table>
+<div hidden><input id="tracking-url" value="ws://127.0.0.1:8765"><button id="tracking-button"></button><button id="tracking-hold" disabled></button><p id="tracking-status"></p></div>
+</section>
+</div></div>
+<script src="/static/core/icon-lab.js?v=1"></script><script type="module" src="/static/core/pad/hardware.mjs?v=20261020-bluetooth-tracking"></script>
+</body></html>

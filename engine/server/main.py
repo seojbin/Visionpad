@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from engine.paths import ROOT
 from engine.server import runtime
 from engine.services.audio_files import migrate_legacy_audio
-from engine.server.routes import game, speech, static
+from engine.server.routes import game, icon_lab, speech, static
 
 
 def create_app():
@@ -22,6 +22,7 @@ def create_app():
     app.include_router(speech.router)
     app.include_router(static.router)
     app.include_router(game.router)
+    app.include_router(icon_lab.router)
     return app
 
 
