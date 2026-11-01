@@ -13,7 +13,7 @@ class CatalogTests(unittest.TestCase):
         entries = icon_lab.catalog()
         groups = {entry["group"] for entry in entries}
         self.assertIn("shared icons", groups)
-        self.assertIn("pasture · ICON_PATTERNS", groups)
+        self.assertIn("flowers · FLOWER_STAGE_PATTERNS", groups)
         self.assertIn("game.json · recipes", groups)
         shared = [entry for entry in entries if entry["name"] == "coin"]
         self.assertEqual(len(shared), 1, "aliases of IconRenderer.PATTERNS must not repeat it")
