@@ -22,6 +22,28 @@ class GameSpeech {
         this.cache = new Map();
         this.clientId = options.clientId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'speech-'+Date.now()+'-'+Math.random().toString(36).slice(2));
         this.serverPending = false;
+        this.preloading = new Map();
+    }
+    preload(texts, profile='system') {
+        // Warm a bounded set of visible labels without captions or audible playback.
+        const jobs=[...new Set(texts.filter(t=>typeof t==='string'&&t.trim()))].slice(0,16);
+        for(const text of jobs) {
+            const key=JSON.stringify([text,profile,this.rate]);
+            if(this.cache.has(key)||this.preloading.has(key))continue;
+            const rate=this.rate;
+            const task=(async()=>{
+                const response=await this.fetcher('/api/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,profile,rate,priority:'background'})});
+                if(!response.ok)return null;
+                const info=await response.json(), sound=await this.fetcher(info.url);
+                if(!sound.ok)return null;
+                const context=this.getContext?.();if(!context)return null;
+                const buffer=await context.decodeAudioData(await sound.arrayBuffer());
+                if(this.cache.size>=128)this.cache.delete(this.cache.keys().next().value);
+                this.cache.set(key,buffer);return buffer;
+            })().catch(()=>null).finally(()=>this.preloading.delete(key));
+            this.preloading.set(key,task);
+        }
+        return Promise.all(jobs.map(text=>this.preloading.get(JSON.stringify([text,profile,this.rate]))));
     }
     async voices() {
         const response = await this.fetcher('/api/speech/voices');
@@ -64,7 +86,7 @@ class GameSpeech {
         const normalized = String(text || '').trim();
         if (!normalized) return Promise.resolve(false);
         const job = {text: normalized, profile: options.profile || 'system',
-                     priority: options.priority || 'action', channel: options.channel || 'general', rate: this.rate};
+                     priority: options.priority || 'action', channel: options.channel || 'general', rate: this.rate, notBefore:options.notBefore};
         const protectedJob = this.active || this.pending;
         if (!options.silent && this.enabled && !this.suspended && protectedJob?.channel === 'quest' && job.channel !== 'quest') {
             if (job.priority !== 'hover') this.pendingAction = job;
@@ -128,6 +150,7 @@ class GameSpeech {
             if (!context) throw new Error('Audio unavailable. Click Replay to retry.');
             const key = JSON.stringify([job.text, job.profile, job.rate]);
             let buffer = this.cache.get(key);
+            if(sequence!==this.sequence)return false;
             if (!buffer) {
                 this.serverPending = true;
                 const response = await this.fetcher('/api/speech', {
@@ -154,6 +177,8 @@ class GameSpeech {
                 this.cache.set(key, buffer);
             }
             if (sequence !== this.sequence || !this.enabled || this.suspended) return false;
+            if(job.notBefore)await job.notBefore;
+            if(sequence!==this.sequence || !this.enabled || this.suspended)return false;
             if (context.state === 'suspended') await context.resume();
             if (sequence !== this.sequence || !this.enabled || this.suspended) return false;
             const source = context.createBufferSource();

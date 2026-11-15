@@ -22,6 +22,8 @@ ENABLED = (
     "harvest",
     "farming",
     "home",
+    "pets",
+    "roulette",
 )
 
 

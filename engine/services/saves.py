@@ -49,6 +49,8 @@ SAVE_KEY_ORDER = (
     "activity_counts", "activity_serial", "recent_activity", "npc_reactions", "activity_history_complete",
     "flower_seeds", "houseplant", "flower_watering", "flower_contact_at",
     "rowan_daily",
+    "flower_seed_stock", "pets", "pet_next_id", "pet_selected", "pet_active", "pet_adoption", "pet_motion", "pet_contact", "pet_pose_until",
+    "roulette_goods", "gold_tools", "roulette_last_result", "roulette_queue",
     "pasture_animals", "pasture_goods", "pasture_selected", "pasture_sheared", "pasture_morning_id", "pasture_move_at", "pasture_stroke",
 )
 

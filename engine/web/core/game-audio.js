@@ -14,6 +14,8 @@ const SOUND_CUES = {
 };
 // Feature sounds live next to their feature; shared sounds stay in engine/web/audio/.
 const FEATURE_SOUND_URLS = {'feed':'/static/features/pasture/audio/feed.mp3','brush':'/static/features/pasture/audio/brush.mp3?v=2','shear':'/static/features/pasture/audio/cut.mp3','chicken_main':'/static/features/pasture/audio/chicken_main.mp3','chicken_routine':'/static/features/pasture/audio/chicken_routine.mp3','chicken_morning':'/static/features/pasture/audio/chicken_morning.mp3','sheep_main':'/static/features/pasture/audio/sheep_main.mp3','sheep_routine':'/static/features/pasture/audio/sheep_routine.mp3','crack':'/static/features/cook/audio/crack.mp3','water':'/static/features/farming/audio/water.mp3', 'soil':'/static/features/farming/audio/soil.mp3', 'crop':'/static/features/harvest/audio/crop.mp3', 'cut':'/static/features/cooking/audio/cut.mp3', 'cook':'/static/features/cooking/audio/cook.mp3', 'pickaxe':'/static/features/mining/audio/pickaxe.mp3', 'break':'/static/features/mining/audio/break.mp3', 'splash':'/static/features/fishing/audio/splash.mp3'};
+for (const name of ['dog_main','dog_routine','cat_main','cat_routine']) FEATURE_SOUND_URLS[name]=`/static/features/pets/audio/${name}.mp3`;
+FEATURE_SOUND_URLS.roulette='/static/features/roulette/audio/roulette.mp3';
 class GameAudio {
     constructor(options = {}) {
         this.contextFactory = options.contextFactory || (() => new (window.AudioContext || window.webkitAudioContext)());
@@ -250,7 +252,7 @@ class GameAudio {
     feedback(name, events=[]) {
         if (!name || !this.enabled || this.suspended) return;
         // Structured events own audible feedback; sfx is a legacy fallback only.
-        if (events.some(e => ['one_shot','one_shot_group','mining_loot','item_destroyed'].includes(e.kind) || (e.kind==='correct' && e.count>0))) return;
+        if (events.some(e => ['one_shot','one_shot_group','mining_loot','item_destroyed','pet_sound'].includes(e.kind) || (e.kind==='correct' && e.count>0))) return;
         if (name.startsWith('hover_')) {this.cue('hover');return;}
         const recorded = new Set(events.flatMap(event => event.kind==='one_shot' ? [event.sound] : event.kind==='one_shot_group' ? event.sounds || [] : []));
         if (name==='travel') {if (!recorded.has('step')) this.oneShot('step');return;}
@@ -370,9 +372,9 @@ class GameAudio {
             if (this.held || this.workName || this.clickSources.size || this.rewardSources.size) this.stopTasks();
             return;
         }
-        if(state.page==='animal_detail') {
-            const region=state.pasture?.brush_region, point=this.lastPosition;
-            const owned=state.pasture?.animals?.[state.pasture?.selected]?.owned;
+        if(['animal_detail','pet_detail'].includes(state.page)) {
+            const region=state.page==='pet_detail'?state.pets?.brush_region:state.pasture?.brush_region, point=this.lastPosition;
+            const owned=state.page==='pet_detail'?state.pets?.animals?.some(a=>a.id===state.pets.selected):state.pasture?.animals?.[state.pasture?.selected]?.owned;
             const inside=region && point && point[0]>=region.x && point[0]<region.x+region.width && point[1]>=region.y && point[1]<region.y+region.height;
             if(owned && inside && this.motionActive && this.now()-this.lastMotion<=this.settings.motion_idle_ms) this.startWork('brush');
             else this.stopWork();
@@ -401,12 +403,14 @@ class GameAudio {
         if (this.suspended || state?.paused) { this.stopAll(); return; }
         this.syncWork(state);
         this.syncAnimals(state,feedback);
+        this.syncPets(state);
         this.syncBackground(state);
         this.syncFishing(state);
         this.syncGuidance(state);
         const eventPosition=Number.isFinite(state?.pointer?.x) && Number.isFinite(state?.pointer?.y) ? [state.pointer.x,state.pointer.y] : this.lastPosition;
         // Layer 2 only: never stop, restart, pulse, or change gain of layer 1.
         for (const event of events) {
+            if(event.kind==='pet_sound') this.oneShot(event.sound,null,false,0,{petId:event.pet_id,pitch:event.pitch});
             if(event.kind==='item_destroyed') {
                 if (event.reward_sound) this.miningLoot({...event, sound:event.reward_sound, impact_sound:'destroy'},eventPosition);
                 else this.oneShot('destroy',eventPosition);
@@ -520,6 +524,36 @@ syncAnimals(state,feedback=null) {
         const speech = this.ducked ? this.settings.bgm_during_tts : 1;
         this.bgmGain.gain.setTargetAtTime(this.settings.bgm_gain[name] * fishing * speech, this.context.currentTime, 0.03);
     }
+    syncPets(state) {
+        const pets=state?.pets?.animals||[], cfg=state?.pets?.audio||{};
+        const active=!state?.paused&&!state?.sleeping&&!state?.day_ended&&['home','care','pets','pet_detail'].includes(state?.page);
+        const allowed=active ? pets.filter(a=>state.page!=='pet_detail'||a.id===state.pets.selected) : [];
+        for(const [source,name] of this.oneShotNames){
+            if(source.petId && (!pets.some(a=>a.id===source.petId) || (name.endsWith('_routine') && !allowed.some(a=>a.id===source.petId)))){
+                try{source.stop();}catch{}this.oneShotSources.delete(source);this.oneShotNames.delete(source);
+            }
+        }
+        for(const k of ['dog','cat']){
+            this.settings.one_shot_gain[k+'_routine']=(k==='cat'?cfg.cat_routine_gain:cfg.routine_gain)??0.35;
+            this.settings.one_shot_gain[k+'_main']=cfg.main_gain??1.3;
+        }
+        const group=allowed.map(a=>a.id).join(',')+':'+(active?state.page:'');
+        if(group!==this.petGroup){clearTimeout(this.petTimer);this.petTimer=null;this.petGroup=group;}
+        if(!allowed.length || this.petTimer || !this.enabled || this.suspended)return;
+        const range=cfg.routine_interval_seconds||[8,14];
+        this.petTimer=setTimeout(()=>{
+            this.petTimer=null;
+            const current=this.latestState;
+            if(!this.enabled||this.suspended||current?.paused||current?.sleeping||current?.day_ended||this.petGroup!==group)return;
+            const alive=allowed.filter(a=>current?.pets?.animals?.some(p=>p.id===a.id));
+            if(alive.length && ![...this.oneShotNames.values()].some(n=>/^(dog|cat)_/.test(n))){
+                this.petIndex=(this.petIndex??-1)+1;
+                const a=alive[this.petIndex%alive.length];
+                this.oneShot(a.species+'_routine',null,false,0,{petId:a.id,pitch:a.pitch});
+            }
+            this.syncPets(current);
+        },1000*(range[0]+Math.random()*Math.max(0,range[1]-range[0])));
+    }
     async startBackground(name) {
         this.stopBackground();
         this.bgmName = name;
@@ -537,18 +571,19 @@ syncAnimals(state,feedback=null) {
         this.bgmToken++; this.bgmName = null;
         if (this.bgm) { try { this.bgm.stop(); } catch {} this.bgm = null; }
     }
-    oneShot(name,position=this.lastPosition,spatial=true,progress=0) { return this.oneShotGroup([name],position,spatial,progress); }
-    async oneShotGroup(names=[],position=this.lastPosition,spatialEnabled=true,progress=0) {
+    oneShot(name,position=this.lastPosition,spatial=true,progress=0,options={}) { return this.oneShotGroup([name],position,spatial,progress,options); }
+    async oneShotGroup(names=[],position=this.lastPosition,spatialEnabled=true,progress=0,options={}) {
         // Capture the action point before decoding; later pointer moves must not move this sound.
         position=position ? [...position] : null;
         if (!this.enabled || this.suspended) return;
-        names=[...new Set(names)].filter(n=>['sleep','door','coin','step','pickaxe','break','shine','destroy','splash','chicken_main','chicken_routine','chicken_morning','sheep_main','sheep_routine','feed'].includes(n));
+        names=[...new Set(names)].filter(n=>['sleep','door','coin','step','pickaxe','break','shine','destroy','splash','chicken_main','chicken_routine','chicken_morning','sheep_main','sheep_routine','feed','dog_main','dog_routine','cat_main','cat_routine','roulette'].includes(n));
         if (!names.length) return;
         this.unlock();
         if (!this.context) return;
         const token=this.oneShotToken;
         const buffers=await Promise.all(names.map(n=>this.load(n)));
         if (token!==this.oneShotToken || !this.enabled || this.suspended) return;
+        if(options.petId && !this.latestState?.pets?.animals?.some(a=>a.id===options.petId)) return;
         const startAt=this.context.currentTime+0.015;
         return Promise.all(buffers.map((buffer,i)=>{
             if(!buffer)return Promise.resolve();
@@ -557,6 +592,7 @@ syncAnimals(state,feedback=null) {
             const spatial=spatialEnabled && ['pickaxe','break','destroy','step','coin'].includes(name) ? this.createSpatialBus(position,this.effectsGain) : null;
             gain.connect(spatial ? spatial.input : this.effectsGain);
             const source=this.context.createBufferSource();source.buffer=buffer;source.connect(gain);
+            if(options.petId){source.petId=options.petId;if(source.playbackRate)source.playbackRate.value=Math.max(0.75,Math.min(1.25,Number(options.pitch)||1));}
             if (name==='pickaxe' && source.playbackRate) source.playbackRate.value=1+0.18*Math.max(0,Math.min(1,progress||0));
             this.oneShotSources.add(source);
             this.oneShotNames.set(source,name);
@@ -564,6 +600,7 @@ syncAnimals(state,feedback=null) {
                 source.onended=()=>{this.oneShotSources.delete(source);this.oneShotNames.delete(source);source.disconnect();gain.disconnect?.();spatial?.disconnect();resolve();};
                 // Both buffers are decoded before scheduling the same start time.
                 source.start(startAt);
+                options.onStart?.(startAt);
             });
         }));
     }
@@ -621,6 +658,7 @@ syncAnimals(state,feedback=null) {
     stopAll() {
         // animalTimer 대신 chickenTimer와 sheepTimer를 지웁니다.
         clearTimeout(this.chickenTimer); clearTimeout(this.sheepTimer); clearTimeout(this.morningTimer);
+        clearTimeout(this.petTimer);this.petTimer=null;this.petGroup=null;
         this.chickenTimer=null; this.sheepTimer=null; this.morningTimer=null; this.animalGroup=null;
         this.motionActive=false;
         this.stopGuidance();

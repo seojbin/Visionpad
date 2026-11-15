@@ -14,8 +14,8 @@ class Home(Feature):
         reg.slot("home.objects", "Extra tactile objects on the home page (daytime only). Provider returns a list of objects.")
         reg.slot("home.scene_objects", "Home scene hitboxes, inserted after the kitchen and before the roads (daytime only).")
         reg.slot("home.scene", "Drawing on the home scene after the furniture (daytime only). Provider draws, returns None.")
-        reg.page("home", objects=self.page_objects, scene=self.draw_scene, icon_grid=True,
-                 detail=lambda: "Home. Bed, Research, Kitchen, and Flower pot.")
+        reg.page("home", objects=self.page_objects, scene=self.draw_scene, icon_grid=True, live=True,
+                 detail=lambda: "Home. Bed, Research, Kitchen, and Care.")
         reg.icon("bed", layout_order=0)
         reg.icon("chest", layout_order=1)
         reg.icon("stove", layout_order=2)

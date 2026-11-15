@@ -193,11 +193,12 @@ class Mining(Feature):
             events.append({"kind": "one_shot", "sound": "pickaxe",
                            "progress": rock["hits"] / max(1, int(cfg.get("hits_to_break", 3)))})
         safe_hits = int(cfg.get("pickaxe_safe_hits", 9))
-        break_chance = min(1, max(0, e._pickaxe_hits - safe_hits) * float(cfg.get("pickaxe_break_increment", .05)))
+        break_chance = min(1, max(0, e._pickaxe_hits / (e.config['roulette']['gold_durability_multiplier'] if e.gold_tools.get('pickaxe') else 1) - safe_hits) * float(cfg.get("pickaxe_break_increment", .05)))
         break_chance *= e.buff_multiplier_for("pickaxe_protection")
         item_destroyed = break_chance > 0 and random.random() < break_chance
         if item_destroyed:
             e.resources["pickaxe"] = 0
+            e.gold_tools["pickaxe"] = False
             e._pickaxe_hits = 0
             text += (". " if text else "") + "Pickaxe broken. Buy another at the shop."
         if destroyed:

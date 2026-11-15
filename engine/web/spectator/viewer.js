@@ -414,6 +414,21 @@ function itemSprite(o) {
  if(['research','care_button','save_slot','shop_choice'].includes(o.type))return spriteFor(o);
  return null;
 }
+function petHome() {
+  const h=['00001110000','00011111000','00111111100','01111111110','11111111111','01111111110','01110001110','01100000110','01100000110','01100000110','01111111110'];
+  const pixels=(rows,x,y,scale,color)=>{ctx.fillStyle=color;rows.forEach((row,j)=>[...row].forEach((v,i)=>{if(v==='1')ctx.fillRect(x+i*scale,y+j*scale,scale,scale);}));};
+  pixels(h,610,400,10,'#9b602d');outline(610,400,110,110,'home_pet_house');text('Pet house',603,540);
+  const pet=state.pets?.home_pet;
+  if(pet){const x=210+(pet.position[0]-25)*16,y=405+(pet.position[1]-33)*12;
+    pixels(pet.pattern,x,y,5,'#564037');outline(x,y,180,120,'home_pet_'+pet.id);text(pet.name,x,y+147);}
+}
+function prizeShortcut() {
+  if(state.page!=='shop_choice')return;
+  const x=880,y=235;ctx.fillStyle='#b96824';ctx.fillRect(x-32,y-35,64,80);
+  ctx.beginPath();ctx.arc(x,y,28,0,2*Math.PI);ctx.fillStyle='#f1c65c';ctx.fill();ctx.strokeStyle='#4d2b1b';ctx.lineWidth=5;ctx.stroke();
+  for(let i=0;i<8;i++){const a=i*Math.PI/4;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+25*Math.cos(a),y+25*Math.sin(a));ctx.stroke();}
+  outline(x-32,y-35,64,80,'shop_scene_roulette');text('Prize draw',x-60,y+75,'#baff91',18);
+}
 function render() {
   if (!state) return;
   if(state.page==='flower_detail'){flowerDetail();return;}
@@ -430,7 +445,8 @@ function render() {
     sprite('flower_'+state.flowers.stage,20,355,160,180);
     outline(20,355,160,180,'houseplant');
   }
-  if (state.page.startsWith('shop_')) sceneObjects('shop');
+  if (state.page.startsWith('shop_')) {sceneObjects('shop');prizeShortcut();}
+  if(state.page==='home'&&state.pets)petHome();
   if (["pasture","animal_detail","egg_collect","shearing"].includes(state.page)) pastureView();
   const ph = phase(state);
   ctx.fillStyle = ph.color;

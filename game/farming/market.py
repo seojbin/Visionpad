@@ -21,7 +21,7 @@ class FarmMarket:
         entries = [("seed", seed_id, f"{e.get_seed_label(seed_id)} seeds", e.resources["seeds"].get(seed_id, 0),
                     int(seed.get("seed_price", max(1, round(int(seed.get("crop_price", 1)) * .8)))))
                    for seed_id, seed in e.config.get("seeds", {}).items()]
-        entries.append(("fertilizer", "fertilizer", "Fertilizer", e.resources["fertilizer"], self.fertilizer_price()))
+
         return entries
 
     def shop_sell_rows(self):
@@ -31,6 +31,7 @@ class FarmMarket:
 
     def buy_item(self, kind, item_id):
         e = self.engine
+        if kind == "fertilizer": return e.response(tts="Fertilizer is available from the prize draw.")
         if kind == "seed":
             seed = e.get_seed_config(item_id)
             if not seed:

@@ -293,7 +293,7 @@ class Farming(CareMinigame, FarmMarket, FarmDrawing, Feature):
         if state["fertilized"]:
             fertilizer_text = "Fertilized"
         elif int(e.resources.get("fertilizer", 0)) <= 0:
-            fertilizer_text = "No fertilizer. Buy at the shop."
+            fertilizer_text = "No fertilizer. Available from the prize draw."
         else:
             fertilizer_text = f"Not fertilized. Stock: {e.resources.get('fertilizer', 0)} in stock"
 
@@ -348,7 +348,7 @@ class Farming(CareMinigame, FarmMarket, FarmDrawing, Feature):
             if state["fertilized"]:
                 fertilizer_tts = "Already fertilized."
             elif fertilizer_count <= 0:
-                fertilizer_tts = "No fertilizer. Buy at the shop."
+                fertilizer_tts = "No fertilizer. Available from the prize draw."
             else:
                 fertilizer_tts = f"Fertilizer. Stock: {fertilizer_count}."
             objects.append({
@@ -516,7 +516,7 @@ class Farming(CareMinigame, FarmMarket, FarmDrawing, Feature):
             return e.response(tts=f"{label} is already fertilized.", sfx="error")
         count = int(e.resources.get("fertilizer", 0))
         if count <= 0:
-            return e.response(tts="No fertilizer. Buy at the shop.", sfx="error")
+            return e.response(tts="No fertilizer. Available from the prize draw.", sfx="error")
         e.resources["fertilizer"] = count - 1
         fertilizer_text = self.apply_fertilizer_bonus(state)
         result = e.consume_time("fertilize")

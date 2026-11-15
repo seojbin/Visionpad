@@ -87,10 +87,10 @@ class QuestTests(unittest.TestCase):
 
     def test_special_effect_scope_purchase_failure_and_save(self):
         e=self.e;e.resources['coin']=10000
-        for kind,item in [('seed','carrot'),('flower_seed','morning_glory'),('animal_feed','animal_feed')]:
+        for kind,item in [('seed','carrot'),('pet_medicine','medicine'),('animal_feed','animal_feed')]:
             e.start_food_effect('rowan_special_yellow',e.get_recipe_config('rowan_special_yellow'))
             rows=e.registry.collect('shop.buy_items');base=next(v[4] for v in rows if v[0]==kind and v[1]==item)
-            expected=e.purchase_price(base) if kind=='flower_seed' else e.market_price(base,kind,'buy')
+            expected=e.market_price(base,kind,'buy')
             before=e.resources['coin'];reply=e.buy_shop_item(kind,item)
             self.assertEqual(before-e.resources['coin'],expected)
             self.assertEqual(e.active_buff['remaining_purchases'],2)

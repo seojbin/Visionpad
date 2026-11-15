@@ -54,7 +54,7 @@ class Flowers(Feature):
     name = "flowers"
 
     def register(self, reg):
-        reg.owns("flower_seeds", "houseplant", "flower_watering", "flower_contact_at")
+        reg.owns("flower_seed_stock", "flower_seeds", "houseplant", "flower_watering", "flower_contact_at")
         reg.page("flower_detail", name="Flower pot", objects=self.page_objects,
                  pointer_move=self.pointer, pointer_drag=self.pointer)
         reg.action("flower:", self.action, before_night_guard=True)
@@ -66,8 +66,8 @@ class Flowers(Feature):
         reg.on("end_of_day", self.advance, order=order.EndOfDay.FLOWERS)
         reg.on("before_navigation", self.stop_contact, order=order.BeforeNavigation.FLOWERS)
         reg.save_fields(transient={"flower_contact_at": None, "flower_watering": False},
-                        defaults=("flower_seeds", "houseplant", "flower_watering", "flower_contact_at"))
-        reg.contribute("home.objects", lambda: [self.pot_object()], order=order.HomeObjects.FLOWERS)
+                        defaults=("flower_seed_stock", "flower_seeds", "houseplant", "flower_watering", "flower_contact_at"))
+        reg.page("flower_seeds", name="Choose flower seeds", objects=self.seed_objects, icon_grid=True)
         reg.contribute("home.scene_objects", self.home_scene_objects, order=order.HomeSceneObjects.FLOWERS)
         reg.contribute("home.scene", self.draw_home_pot, order=order.HomeScene.FLOWERS)
         reg.contribute("inventory.items", self.inventory_items, order=order.InventoryItems.FLOWERS)
@@ -80,6 +80,7 @@ class Flowers(Feature):
 
     def reset(self):
         e = self.engine
+        e.flower_seed_stock = {"sunflower":0,"orchid":0}
         e.flower_seeds = 0
         e.houseplant = self.empty_houseplant()
         e.flower_watering = False
@@ -134,13 +135,13 @@ class Flowers(Feature):
     def page_objects(self):
         p = self.engine.houseplant
         buttons = [('empty', 'Empty pot', 'tool')]
-        if p['stage'] == 'empty': buttons = [('plant','Plant morning glory','plant')]
+        if p['stage'] == 'empty': buttons = [('choose','Plant seeds','plant')]
         elif p['stage'] != 'withered': buttons.insert(0, ('water','Water','water'))
         result = [dict(id='flower_'+action, type='care_button', care_kind=kind,
                        x=8+14*i, y=6, width=12,height=10,hit_width=12,hit_height=10,
                        label=label,tts=label+'.',action='flower:'+action)
                   for i,(action,label,kind) in enumerate(buttons)]
-        return result+[self.pot_object(True), self.engine.back_arrow('flower_back','Home','return_scene')]
+        return result+[self.pot_object(True), self.engine.back_arrow('flower_back','Care','pet:care')]
 
     def action(self, action, obj):
         e = self.engine
@@ -148,10 +149,16 @@ class Flowers(Feature):
         if action == 'open':
             self.stop_contact()
             e.set_page('flower_detail')
+        elif action == 'choose' and e.current_page == 'flower_detail':
+            e.set_page('flower_seeds');e.render();return e.response(tts='Choose flower seeds.')
+        elif action.startswith('plant:') and e.current_page == 'flower_seeds':
+            species=action.split(':',1)[1]
+            if e.houseplant['stage']!='empty' or self.seed_count(species)<=0:return e.response(tts='Seeds unavailable.')
+            self.add_seed(species,-1);e.houseplant=self.empty_houseplant();e.houseplant.update(species=species,stage='sprout');e.set_page('flower_detail')
         elif e.current_page != 'flower_detail': return e.response()
         elif action == 'plant':
             if e.houseplant['stage'] != 'empty': return e.response()
-            if e.flower_seeds <= 0: return e.response(tts='Buy morning glory seeds at the shop.')
+            if e.flower_seeds <= 0: return e.response(tts='Get flower seeds from the prize draw.')
             e.flower_seeds -= 1
             e.houseplant = self.empty_houseplant()
             e.houseplant.update(species='morning_glory',stage='sprout')
@@ -211,7 +218,9 @@ class Flowers(Feature):
                 p['growth'] = 0
                 p['stage'] = 'stem' if p['stage'] == 'sprout' else 'flower'
                 if p['stage'] == 'flower': p['bloom_cycles'] = 1
-        chance = min(1.0, p['dry_days']*cfg.get('dry_wilt_increment', .3)
+        protected=p.get('nutrient_days',0)>0
+        p['nutrient_days']=max(0,p.get('nutrient_days',0)-1)
+        chance = 0 if protected else min(1.0, p['dry_days']*cfg.get('dry_wilt_increment', .3)
                      +p['bloom_cycles']*cfg.get('bloom_wilt_increment', .1))
         if chance > 0 and random.random() < chance: p['stage'] = 'withered'
         p.update(watered=False,water_seconds=0.0)
@@ -219,21 +228,26 @@ class Flowers(Feature):
     def harvest_bonus(self):
         return self.config().get('harvest_bonus',1) if self.engine.houseplant['stage']=='flower' else 0
 
-    def buy_seed(self, item_id):
-        if item_id != "morning_glory": return None
-        e = self.engine
-        price = e.purchase_price(int(self.config().get('seed_price',150)))
-        if e.resource('coin') < price: return e.response(tts=f'Not enough gold. Morning glory seeds cost {price} gold.',sfx='error')
-        e.add_resource('coin', -price)
-        e.flower_seeds += 1
-        e.render()
-        return e.response(tts='Bought morning glory seeds.',sound_events=[{'kind':'one_shot','sound':'coin'}])
+    def seed_count(self, species):
+        return self.engine.flower_seeds if species=='morning_glory' else self.engine.flower_seed_stock.get(species,0)
 
-    def shop_buy_items(self):
-        return [("flower_seed", "morning_glory", "Morning glory seeds", self.engine.flower_seeds, int(self.config().get("seed_price",150)))]
+    def add_seed(self,species,amount):
+        if species=='morning_glory':self.engine.flower_seeds+=amount
+        else:self.engine.flower_seed_stock[species]=self.seed_count(species)+amount
+
+    def seed_objects(self):
+        result=[]
+        for i,(species,cfg) in enumerate(self.config()['species'].items()):
+            result.append(dict(id='flower_seed_'+species,type='resource',resource_kind='seed',seed_id=species,x=8+i*14,y=6,width=12,height=10,hit_width=12,hit_height=10,label=cfg['label']+' seeds',tts=cfg['label']+f' seeds. {self.seed_count(species)}.',count=self.seed_count(species),action='flower:plant:'+species))
+        return result+[self.engine.back_arrow('seed_back','Flower pot','flower:open')]
+
+    def buy_seed(self,item_id):
+        return self.engine.response(tts='Flower seeds are available from the prize draw.')
+
+    def shop_buy_items(self):return []
 
     def inventory_items(self):
-        return [dict(id='seed_morning_glory', label='Morning glory seeds', count=self.engine.flower_seeds, kind='seed', seed_id='morning_glory', action='')]
+        return [dict(id='seed_'+key,label=cfg['label']+' seeds',count=self.seed_count(key),kind='seed',seed_id=key,action='') for key,cfg in self.config()['species'].items()]
 
     def icon_pattern(self, obj):
         stage = self.engine.houseplant.get('stage', 'empty')
@@ -400,6 +414,13 @@ class Flowers(Feature):
             stamp(cx - 9, 25, leaf_left)
             stamp(cx + 3, 22, leaf_right)
             stamp(cx - 8, 18, ('01100', '11110', '01111', '00110'))
+            return
+
+        if self.engine.houseplant.get('species') in ('sunflower','orchid'):
+            plot([(0,y) for y in range(22,32)])
+            stamp(cx-8,26,leaf_left);stamp(cx+2,24,leaf_right)
+            head=('001111100','011111110','111000111','111000111','111000111','011111110','001111100') if self.engine.houseplant['species']=='sunflower' else ('1100011','1110111','0111110','0011100','0111110','1101011','1100011')
+            stamp(cx-len(head[0])//2,16,head,clear_zero=True)
             return
 
         # 4. 개화 단계 (Flower): 상세 화면 vs 홈 화면 맞춤형 나팔꽃 연출

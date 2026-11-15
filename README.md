@@ -30,7 +30,7 @@ Dotdew Valley adapts everyday farming-game activities, inspired by Stardew Valle
 | Buttons | Travel, menus, selection and saves |
 | Pointer or tracked hand | Explore, sweep targets, trace paths and select objects |
 
-Farming, cooking, mining, fishing, trading, research, Rowan's tutorial quests and a houseplant are implemented. Ranching is also implemented. Pets, music, crafting and additional NPCs are planned, and artwork for these expansions has been prepared.
+Farming, cooking, mining, fishing, trading, research, Rowan's tutorial quests and a houseplant are implemented. Ranching, dog and cat care, and a shop prize draw are also implemented. Music, crafting and additional NPCs are planned, with artwork prepared for these expansions.
 
 ## Install
 
@@ -89,13 +89,13 @@ Hold Shift in the demo, or use the pointing gesture with hand tracking, to hear 
 
 ### Inventory and item recognition
 
-Press F2 to check belongings. The first page holds gold and usable items. Additional food pages come first when needed, followed by seeds, crops, fish, minerals and tools. Empty items are hidden and each page holds up to 12 entries in three rows of four. Select food to eat it; other inventory entries are for inspection, not direct use.
+Press F2 to check belongings. The first page holds gold and usable items. Additional food pages come first when needed, followed by seeds, crops, fish, minerals and tools. Empty items are hidden and each page holds up to 12 entries in three rows of four. Select food to eat it. Adoption vouchers, care supplies and gold tool kits can also be used from inventory; other entries are for inspection.
 
-The current tactile renderer uses a single-line rectangular frame for ordinary items, gold and NPCs. Usable food has two nested rectangular outlines with no central symbol. Seeds, crops, minerals and tools have category symbols inside their frames. The shared grid keeps objects in predictable slots. The companion uses image cards and quantities, rather than reproducing every tactile frame.
+The current tactile renderer uses a single-line rectangular frame for ordinary items, gold and NPCs. Usable items, including food, vouchers, care supplies and gold tool kits, have two nested rectangular outlines with no central symbol. Seeds, crops, minerals and tools have category symbols inside their frames. The shared grid keeps objects in predictable slots. The companion uses image cards and quantities, rather than reproducing every tactile frame.
 
 ### Home, time and sleep
 
-At home, select the bed to sleep, the research station to buy an upgrade, the kitchen to cook or **Flower pot** to tend the houseplant. A new game starts with 60 gold, two fertilizer, crop seeds and three of each vegetable for cooking.
+At home, select the bed to sleep, the research station to buy an upgrade, the kitchen to cook, or the fourth **Care** control to choose Plants or Pets. The lower **Flower pot** opens plant care; the pet house opens the pet slots. A new game starts with 60 gold, two fertilizer, crop seeds and three of each vegetable for cooking.
 
 Time is measured in ticks consumed by activities. The current day allows 20 ticks: planting, watering, fertilizing, breaking a rock and casting each cost 2; harvesting, research and cooking cost 3. Travelling costs 0. Individual mine hits cost nothing until the rock breaks. Food can change the time cost.
 
@@ -107,7 +107,7 @@ When time runs out, the player returns home and must select the bed. Sleep blank
 2. On an empty plot, choose planting and select an owned seed. On a planted plot, check its growth, water and fertilizer state.
 3. Choose watering or fertilizing and sweep over the target dots. Holding a click is not required.
 4. Sleep after watering to advance growth. Fertilizer immediately advances growth by one day; it is an optional aid.
-5. Once mature, choose harvest and pass every crop target. There is no time limit or score-based yield multiplier. Basic yield, food effects and any flower bonus determine the result. Seed recovery, improved through research, is checked separately and may return seeds.
+5. Once mature, choose harvest and pass every crop target. There is no time limit or score-based yield multiplier. Basic yield, food effects and any flower or pet bonuses determine the result. Seed recovery, improved through research, is checked separately and may return seeds.
 
 Care dots and cooking traces remain briefly after contact, then disappear. The current delay is 200 ms, configurable to 1000 ms for a one-second tactile reading interval. Completion waits for the applicable delayed display to finish.
 
@@ -153,7 +153,7 @@ Click, Enter or F4 casts once inside the lake. Both a catch and a miss use 2 tic
 
 ### Shop and the weekly calendar
 
-Select the village shop, then Sell, Buy or Calendar. Hover an item to check its price and owned quantity; select it to trade one. The shop sells crop seeds, fertilizer, tools, selected minerals and morning glory seeds, and buys eligible crops, food, fish and minerals. Lists use pages rather than scrolling. Calendar speaks today's offer only, without opening another page.
+Select the village shop, then Sell, General goods, Tools or Calendar. Hover an item to check its price and owned quantity; select it to trade one. The shop sells crop seeds, feed, pet medicine, tools, livestock and selected minerals, and buys eligible crops, food, fish, minerals and animal products. Fertilizer and flower seeds are now prize-draw rewards rather than direct purchases. Lists use pages rather than scrolling. Calendar speaks today's offer only, without opening another page.
 
 | Day | Offer |
 |---|---|
@@ -162,10 +162,31 @@ Select the village shop, then Sell, Buy or Calendar. Hover an item to check its 
 | Wednesday | Fish sells for 20% more |
 | Thursday | Crop seeds 20% off |
 | Friday | Ore sells for 20% more |
-| Saturday | Fertilizer, pickaxes and rods 20% off |
+| Saturday | Pickaxes and rods 20% off |
 | Sunday | All eligible sales earn 20% more |
 
 Day 1 is Monday. Prices are rounded down after each applicable multiplier; food sale bonuses also affect the shown price and the paid amount.
+
+### Prize draw and special items
+
+**Prize draw** is the first item in General goods and costs 200 gold. It has a dedicated wheel icon; selecting the wheel beside the shopkeeper in the lower scene buys a draw directly. The reward is granted immediately. Its spoken result starts at least one second after the roulette sound begins, or later if speech is still being prepared.
+
+| Reward | Chance | Quantity |
+|---|---:|---|
+| Plant nutrient | 12% | 1 |
+| Special feed | 12% | 1 |
+| Gold tool kit | 10% | 1 pickaxe or fishing-rod kit |
+| Adoption voucher | 6% | 1 dog or cat voucher |
+| Flower seed | 6% | 1 morning glory, sunflower or orchid seed |
+| Diamond | 1% | 1 |
+| Fertilizer | 20% | 3 |
+| Crop seeds | 33% | 3 of one crop type |
+
+Types within each reward category are equally likely. The draw always costs 200 gold, ignores weekly and food discounts, and does not consume discount charges. An adoption voucher can be used to adopt or sold for exactly 300 gold. Its sale neither applies weekly/food bonuses nor consumes sale-effect charges.
+
+Plant nutrient resets a living plant's dry-day and bloom-age counters and prevents wilting for six days; it does not revive a wilted plant. Special feed gives a large affection increase. A gold tool kit requires the corresponding owned tool, resets its wear and divides subsequent effective use by four. Upgrades do not stack and are lost when the tool breaks. The break-probability formula still applies, so this does not guarantee exactly four times as many uses.
+
+Five upcoming rewards are prepared in advance. Each paid draw awards the first and adds one at the end. This list and the random state are stored in the normal save slot; loading restores that slot's reward order. A failed purchase does not advance it. There is no separate prize-sequence file.
 
 ### Rowan and tutorial quests
 
@@ -212,24 +233,43 @@ Short research speech lists the name and next-level gold/material cost. Detailed
 
 ### Flower pot
 
-Buy morning glory seeds for 150 gold and select **Flower pot** at home to plant. This is mainly a decorative activity: it costs a substantial amount of gold for a modest practical benefit. The small home drawing and the enlarged detail drawing show sprout, stem, flower or wilted states. The detail page has watering and empty-pot controls above the plant.
+Use a morning glory, sunflower or orchid seed from the prize draw through **Care → Plants** or the lower **Flower pot** at home. Choose a species for the single pot. This is mainly a decorative activity: it costs a substantial amount of gold for a modest practical benefit. The small home drawing and the enlarged detail drawing show sprout, stem, flower or wilted states. The detail page has watering and empty-pot controls above the plant.
 
 A blooming plant grants a hidden effect. Morning glory adds one crop to each harvest while in bloom.
 
-Choose water, then keep the pointer on the actual pot area for a total of three seconds. Clicking is unnecessary; contact time, not a path score, determines completion. Water each day and sleep to grow the plant: two watered nights to a stem and two more to a flower. A blooming plant stays in bloom rather than returning to a stem, but becomes more likely to wilt as it ages. Missing water adds risk. A wilted plant cannot be watered and must be emptied before planting again. Hidden bloom benefits and wilt probabilities are not announced in play. Morning glory is the currently playable plant; images for other seeds are planned.
+Choose water, then keep the pointer on the actual pot area for a total of three seconds. Clicking is unnecessary; contact time, not a path score, determines completion. Water each day and sleep to grow the plant: two watered nights to a stem and two more to a flower. A blooming plant stays in bloom rather than returning to a stem, but becomes more likely to wilt as it ages. Missing water adds risk. A wilted plant cannot be watered and must be emptied before planting again. Hidden bloom benefits and wilt probabilities are not announced in play. The three species currently share growth, watering and bloom-effect rules. Their flower dots and existing seed images differ; dedicated detail artwork for the additional species has not been added.
+
+### Pets
+
+Use a dog or cat voucher from the prize draw in inventory. Choose one of 12 names for that species; the pet is displayed as **Cat Luna**, for example. The voucher is consumed only after the name is confirmed. Up to six pets can live together, including several of the same species.
+
+Open the six pet slots through **Care → Pets** or the pet house in the lower home scene. Choosing a pet opens its detail page and brings it out at home. It moves within the lower-left area at home and shifts slightly on the detail page. Position, direction and pose change every 3–5 seconds; stroking does not force a pose. Dog and cat dots retain connected bodies and tails with slightly shorter muzzles.
+
+| Detail control | Action |
+|---|---|
+| Give something | Choose shared Animal feed or special feed. Medicine is shown and usable only when the pet is sick. |
+| Receive | Collect a waiting gift, or select the gift beside the animal directly. |
+| Change pet | Open the slots and choose which pet to bring out. |
+| Let pet go | Ask for confirmation. Confirm sends the pet away; Keep pet cancels. |
+
+Move over the body for three seconds to increase affection once per day. There is no percentage display or petting button; the reward plays the main call. Normal feed can be given once daily, and special feed uses the existing feed sound too. Missed feeding leads to hunger and illness. Medicine is available from General goods at a base price of 30 gold. Unlike livestock, pets do not die or escape.
+
+Affection states are **Getting to know you → Recognizes you → Trusts you**. Healthy, fed pets may prepare gifts according to affection: crop seeds from dogs or low-tier fish from cats. One gift waits until collected. A healthy, fed pet at the highest affection stage adds one crop per harvest. Multiple pets do not stack this bonus, and it is separate from food effects. Numeric affection and probabilities are not spoken in play.
+
+At home, routine calls rotate through owned pets; the detail page plays only the selected pet's calls. Entry and care use main calls, which can overlap with brushing. Each pet's pitch is assigned at adoption and saved. Cat routine gain is currently 0.8; the default routine gain is 0.35.
 
 ### Save and load
 
 Hold F3 for 0.8 seconds to save into a new file. **Game saved.** plays while the button is held; releasing it leaves the current screen unchanged. A short press opens the save list; select a slot to restore it.
 
-The latest 12 JSON saves are kept in `saves/`; older slots are removed. Gold, items, day, plots, research, food effects, quests, mine/fishing state and the houseplant are restored. Older formats receive defaults and feature migrations. Connections, camera calibration and browser audio preferences are separate. Save before shutting down: the server's in-memory game is not an automatic persistent save.
+The latest 12 JSON saves are kept in `saves/`; older slots are removed. Gold, items, day, plots, research, food effects, quests, mine/fishing state, the houseplant, individual pets, the active pet, gold tool upgrades and the next five prize-draw rewards are restored. Older formats receive defaults and feature migrations. Connections, camera calibration and browser audio preferences are separate. Save before shutting down: the server's in-memory game is not an automatic persistent save.
 
 ## Folders
 
 | Folder | What is in it |
 |---|---|
 | `engine/` | Shared code: server, engine core, Dot Pad display, saves, speech, browser player (audio, keys, pad), Visual Companion, configuration, launcher and installer logic, camera tracking, dev tools and shared tests. See [engine/README.md](engine/README.md). |
-| `game/` | One folder per feature (cooking, farming, fishing, flowers, harvest, home, inventory, minimap, mining, npc, research, seafood, shop, village) with its Python code, browser texts, sounds, images, tests and README. See [game/README.md](game/README.md). |
+| `game/` | One folder per feature (cook, cooking, farming, fishing, flowers, harvest, home, inventory, minimap, mining, npc, pasture, pets, research, roulette, seafood, shop, village) with its Python code, browser texts, sounds, images, tests and README. See [game/README.md](game/README.md). |
 | `install-*`, `start-*` | Thin wrappers that call `engine/launcher/`. |
 | `.audio/`, `saves/` | Created when you install and play, not committed: voices, speech cache and audio reports; saved games. Voices and cache from older versions (`models/`, `.cache/`, `output/`) are moved into `.audio/` automatically. |
 | `AGENTS.md` | Rules for people and AI agents: who owns which folder, what needs approval, the save format. |
@@ -264,7 +304,9 @@ Each folder's README documents its pages, actions, state, events, configuration 
 | `farming/`, `harvest/` | Plot state, planting, water/fertilizer activities, growth and harvest |
 | `cooking/`, `seafood/` | Recipes, ingredient selection, paths and fish-dish variants |
 | `mining/`, `fishing/` | Rocks, catches, tool wear and resource prices |
-| `flowers/` | Pot interaction, daily plant state and bloom contribution |
+| `flowers/` | Pot interaction, daily plant state, bloom contribution, seed selection and nutrients |
+| `pets/` | Adoption, names, slots, care, health, gifts, movement and animal dots |
+| `roulette/` | Weighted rewards, the five-draw queue, special items and gold tool upgrades |
 | `inventory/`, `shop/` | Item lists, pagination and transactions |
 | `research/` | Upgrade costs, levels, plot expansion and animal-shelter research |
 | `pasture/` | Animal ownership, movement, feed, hidden petting, production, escape and collection |
@@ -297,11 +339,13 @@ Select **Open visual display** to open the read-only window and keep the game ta
 | Under `engine/web/spectator/` | Responsibility |
 |---|---|
 | `standalone.html`, `boot.js` | Window entry and startup integration |
-| `display.js` | Bundle loaded by the current display |
+| `display.js` | Existing bundle on the game page; the separate window loads `viewer.js` |
 | `viewer.js`, `model.mjs`, `viewer.css` | Scene drawing, state-to-layout mapping and interface styles |
 | `visual-assets.json` | Backgrounds, facilities, items and sprite rectangles |
 | `scene-objects.json` | Facility positions, sizes and order |
 | `assets/` | Shared atlases; feature art also lives in `game/<feature>/assets/` |
+
+The separate window shows the pet house and moving active pet at home, and the roulette object beside the shopkeeper. Pet detail pages currently use the tactile fallback.
 
 Backgrounds, facilities and item registrations are separate so existing art can be reused. Unknown pages fall back to the dot view; an item without art uses a name card. Keep existing atlases when adding assets. **Do not regenerate or edit `display.js` under the current repository rules:** it contains hand edits not yet reconciled with the source files (follow-up F5). The older instruction to rebuild it with `build_display.py` no longer applies.
 
@@ -318,6 +362,9 @@ Backgrounds, facilities and item registrations are separate so existing art can 
 | `pickaxe`, `break`, `destroy`, `shine` | Hit, broken rock, broken tool and rare reward |
 | `splash` | Fish catch, synchronized with shine for rare catches |
 | `sleep` | One-shot that continues across the morning transition |
+| `dog_main`, `cat_main`, `dog_routine`, `cat_routine` | Pet entry/care and routine calls, with per-pet pitch |
+| `feed`, `brush` | Normal/special feed and petting, independent of animal calls |
+| `roulette` | Prize draw; result speech follows the sound start by at least one second |
 | Synthetic cues and target beacons | Selection, errors, progress and optional directional target guidance |
 
 Task spatial sound places the pointer relative to the pad centre. Fishing places the hidden target relative to the pointer. Target beacons are a separate guide to remaining farm/mine targets and can be disabled with **Target cues**. Shop entry and trading remain nonspatial; travel uses the pressed direction. Current task routing uses `dry_gain: 0`, avoiding a centred copy that can weaken direction. Repeat presses do not add another copy over an active work loop, and structured sound events suppress overlapping legacy feedback. These controls do not make every sound spatial.
@@ -325,6 +372,8 @@ Task spatial sound places the pointer relative to the pad centre. Fishing places
 Speech uses fixed English Piper models, not the browser's operating-system voice. The system guide uses `en_US-hfc_female-medium`; Rowan uses `en_US-hfc_male-medium` (the internal profile key is still `shopkeeper`). Models, cached WAVs and reports are in `.audio/voices/`, `.audio/cache/` and `.audio/reports/`. **Test guide**, **Test Rowan**, **Replay**, speech stop/on/off, rate and volume controls are available. Speech volume defaults to 85% and is separate from music/effects.
 
 Action results and dialogue take priority over hover text. Requests carry client and sequence information so stale replies do not replace newer speech. New NPC dialogue replaces old dialogue; ordinary hover does not interrupt it. Leaving the window silences playback and discards late replies. On return, current music and lake sound can resume without replaying old speech. Speech can lower background music and selected effects; fishing exploration retains its configured gain.
+
+Initial prompts and visible page text are synthesized and decoded in the background at low priority to reduce first-play delay. Prepared speech is reused; new text or an unprepared voice model still needs synthesis time. Prize-draw results retain the existing speech priority and cancellation behavior.
 
 ### Configuration reference
 
@@ -335,7 +384,7 @@ Edit **`engine/config/game.json`**, not the former root `game_config.json`, then
 | `game.start_day`, `resources` | Starting day (1), gold, fertilizer, seeds and crops |
 | `time.total_cells`, `time.action_costs` | Day length (20), per-action costs listed above |
 | `seeds.<id>.growth_days`, `.yield`, `.seed_price`, `.crop_price`, `.seed_return_chance` | Growth, yield, prices and baseline seed recovery (0.1) |
-| `fertilizer.growth_day_bonus`, `shop.fertilizer_price` | Immediate growth bonus (1 day), fertilizer price (12) |
+| `fertilizer.growth_day_bonus`, `shop.fertilizer_price` | Immediate growth bonus (1 day); fertilizer reference price (12) retained for tool pricing, not direct fertilizer sales |
 | `research.seed_return` | Gold `[20,40]`, copper `[3,6]`, recovery `[0.3,0.6]`, maximum level 2 |
 | `research.field_expansion` | Initial 2 plots; gold `[30,50,70,90]`, stone `[5,10,15,20]` |
 | `research.mineral_luck` | Gold `[20,40]`, iron `[3,6]`; diamond weight +1 and double-drop chance +0.15 per level |
@@ -364,9 +413,17 @@ Edit **`engine/config/game.json`**, not the former root `game_config.json`, then
 | `pasture.shear_radius`, `.shear_success_ratio` | Eraser radius 5.5 dots; complete at 75% of fleece dots removed |
 | `pasture.audio` | Routine interval/gain, main-call gain and morning-call delay |
 | `time.action_costs.animal_collect`, `recipes.fried_egg` | Collection costs 3 ticks; egg-and-carrot recipe with one-use research discount |
-| `flowers.seed_price`, `.watering_seconds`, `.contact_gap_seconds` | 150 gold; 3 seconds contact; maximum contact-sample gap 0.5 seconds |
+| `flowers.species`, `.watering_seconds`, `.contact_gap_seconds` | Morning glory, sunflower and orchid; 3 seconds contact; maximum sample gap 0.5 seconds. Legacy `seed_price` is not used for direct sales |
 | `flowers.sprout_days`, `.stem_days`, `.bloom_cycle_days` | 2 watered days per early stage; 3-day bloom-age cycles |
 | `flowers.bloom_wilt_increment`, `.dry_wilt_increment`, `.harvest_bonus` | Hidden wilt increments 0.1 per bloom cycle and 0.3 per dry day; blooming crop bonus +1 |
+| `pets.max_pets`, `.names`, `.pitch_values` | Up to 6 pets, 12 names per species, pitches `[0.88,1.04,0.96,1.12,0.92,1.08]` |
+| `pets.pet_seconds`, `.contact_gap_seconds`, `.pet_points`, `.feed_points`, `.treat_points` | Petting 3 seconds, sample gap 0.5 seconds; affection gains 10 / 5 / 60 |
+| `pets.hungry_days`, `.sick_after_days`, `.neglect_points` | Hungry after 2 unfed days, sick after 4; affection loss 10 on hungry days |
+| `pets.gift_chances`, `.trusted_harvest_bonus` | Gift chances by tier `[0,0.15,0.30]`; trusted-pet crop bonus 1 |
+| `pets.audio` | Calls every 8–14 seconds; routine gain 0.35, cat routine 0.8, main 1.3 |
+| `roulette.price`, `.weights` | 200 gold per draw; reward weights from the table above |
+| `roulette.seed_quantity`, `.fertilizer_quantity`, `.voucher_sell_price`, `.medicine_price` | 3 seeds/fertilizer per reward; voucher sale 300; medicine base price 30 |
+| `roulette.nutrient_days`, `.gold_durability_multiplier`, `.result_delay_ms` | Wilt protection 6 days, effective tool-use divisor 4, result speech delay 1000 ms |
 | `rowan.seed_gift_each`, `.vegetable_reward_gold` | One seed each; submission reward 100 gold |
 | `weekly_market.discount_percent`, `.bonus_percent`, `.days` | 20% discount/bonus and the weekday item categories |
 | `dotpad`, `time.bar`, `home`, `farm`, `town`, `minimap` | Display sizes and base layouts; some are normalized by fixed-grid code |

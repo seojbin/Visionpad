@@ -36,6 +36,8 @@ let lastPointerSendAt = 0;
 let hoverTimer = null;
 let objectSignature = "";
 let scoreTimer = null;
+let speechWarmTimer = null;
+let speechWarmPage = null;
 const gameSpeech = new GameSpeech({
     getContext: () => { gameAudio.unlock(); return gameAudio.context; },
     onCaption: text => { document.getElementById("caption").textContent = text; },
@@ -56,6 +58,7 @@ function unlockSpeech() { gameAudio.unlock(); return gameSpeech.unlock(); }
 function speak(text, important=true) { return announce(text, important ? "action" : "hover"); }
 gameSpeech.voices().then(info => {
     const ready = info.profiles.every(profile => profile.ready);
+    if(ready)gameSpeech.preload(["Home.","Bed","Research","Kitchen","Care","Pet house."]);
     document.getElementById("voice-info").textContent = ready
         ? "Consistent English voices · Guide and Rowan"
         : "English voices need setup. Follow the project speech setup guide.";
@@ -324,13 +327,31 @@ async function handleResponse(response, audioToken) {
 
     if (data.state) {
         drawState(data.state);
+        if(speechWarmPage!==data.state.page){
+            speechWarmPage=data.state.page;clearTimeout(speechWarmTimer);
+            speechWarmTimer=setTimeout(()=>{
+                const labels=(currentState?.inspect_objects||[]).map(o=>o.short_description||o.description||o.label).filter(Boolean);
+                gameSpeech.preload(labels);
+            },400);
+        }
     }
 
     // Passive visual observer: no input or game logic depends on this listener.
     try { window.dispatchEvent(new CustomEvent("dotdew-observer", {detail: {state:currentCompanionState(data.state), events:data.sound_events || [], message:data.tts, priority:data.priority, sfx:data.sfx}})); } catch (error) { console.warn("Observer unavailable", error); }
 
     if (data.tts && playAudio) gameAudio.miningNarrationToken++;
-    gameAudio.handle(data.state, playAudio ? data.sound_events || [] : [], playAudio ? data.sfx : null);
+    const delayedSound=playAudio&&data.tts_after_sound;
+    let resultReady=null;
+    const audioEvents=(data.sound_events||[]).filter(e=>!delayedSound||e.sound!==delayedSound);
+    gameAudio.handle(data.state, playAudio ? audioEvents : [], playAudio ? data.sfx : null);
+    if(delayedSound){
+        const delay=Math.max(0,Number(data.tts_delay_ms)||1000);
+        resultReady=new Promise(resolve=>{
+            let started=false;
+            const onStart=at=>{if(started)return;started=true;setTimeout(resolve,delay+Math.max(0,(at-gameAudio.context.currentTime)*1000));};
+            gameAudio.oneShot(delayedSound,null,false,0,{onStart}).finally(()=>{if(!started)setTimeout(resolve,delay);});
+        });
+    }
     const score = (data.sound_events || []).filter(e=>e.kind === "correct").reduce((n,e)=>n+e.count,0);
     if(score) {
         clearTimeout(scoreTimer);
@@ -344,7 +365,7 @@ async function handleResponse(response, audioToken) {
     }
 
     if (data.tts) {
-        announce(data.tts, data.priority || "action", data.speech_profile || "system", data.speech_channel || "general");
+        gameSpeech.say(data.tts,{priority:data.priority||"action",profile:data.speech_profile||"system",channel:data.speech_channel||"general",notBefore:resultReady});
     }
 }
 
@@ -668,7 +689,7 @@ let visualPollPending = false;
 let lastPastureVisualPoll = 0;
 let visualPollTimer = null;
 let clientSettingsSignature = "";
-const delayedVisualPages = ["pasture", "animal_detail","cooking", "water_minigame", "fertilizer_minigame"];
+const delayedVisualPages = ["home","pasture", "animal_detail", "pet_detail","cooking", "water_minigame", "fertilizer_minigame"];
 function applyClientSettings(settings = {}) {
     const signature = JSON.stringify(settings);
     if (signature === clientSettingsSignature) return;
@@ -681,7 +702,7 @@ function applyClientSettings(settings = {}) {
     visualPollTimer = setInterval(refreshDelayedVisuals, visualRefreshIntervalMs);
 }
 function refreshDelayedVisuals() {
-    if (["pasture", "animal_detail"].includes(currentState?.page)) {
+    if (["home", "pasture", "animal_detail", "pet_detail"].includes(currentState?.page)) {
         if (performance.now()-lastPastureVisualPoll < 500) return;
         lastPastureVisualPoll=performance.now();
     }

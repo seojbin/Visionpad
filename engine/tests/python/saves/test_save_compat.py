@@ -23,6 +23,19 @@ class SaveCompatibilityTests(unittest.TestCase):
         self.engine = GameEngine(config, save_dir=self.temp.name)
         self.saved = decode(json.loads(FIXTURE.read_text(encoding="utf-8"))["state"])
         self.saved["rowan_daily"] = {}  # New daily requests are absent in old saves.
+        # Explicit defaults for the added features; the old fixture itself stays unchanged.
+        self.saved.update(flower_seed_stock={'sunflower':0,'orchid':0}, pets=[], pet_next_id=1,
+                          pet_selected=None, pet_active=None, pet_adoption=None, pet_motion={}, pet_contact=None, pet_pose_until=None,
+                          roulette_goods={'special_feed':0,'plant_nutrient':0,'medicine':0,
+                                          'gold_pickaxe':0,'gold_rod':0,'dog_voucher':0,'cat_voucher':0},
+                          gold_tools={'pickaxe':False,'fishing_rod':False}, roulette_last_result=None, roulette_queue=[])
+        import random
+        from game.roulette.sequence import generate
+        previous=random.getstate()
+        random.setstate(self.saved['random_state'])
+        self.saved['roulette_queue']=[generate(self.engine.config) for _ in range(5)]
+        self.saved['random_state']=random.getstate()
+        random.setstate(previous)
         for key, value in self.engine.snapshot().items():
             if key.startswith("pasture_"): self.saved[key] = value
 

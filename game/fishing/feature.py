@@ -175,9 +175,10 @@ class Fishing(Feature):
         e.rod_casts += 1
         if grade != 'miss':
             e.rod_catches += 1
-            chance = min(1, max(0,e.rod_catches-cfg.get('rod_safe_catches',4))*cfg.get('rod_break_increment',.1))
+            chance = min(1, max(0,e.rod_catches/(e.config['roulette']['gold_durability_multiplier'] if e.gold_tools.get('fishing_rod') else 1)-cfg.get('rod_safe_catches',4))*cfg.get('rod_break_increment',.1))
             if chance>0 and random.random()<chance:
                 e.resources['fishing_rod']=0
+                e.gold_tools['fishing_rod']=False
                 e.rod_casts=0
                 e.rod_catches=0
                 text += ' Fishing rod broken. Buy another at the shop.'

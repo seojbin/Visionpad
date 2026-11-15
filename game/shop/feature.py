@@ -48,6 +48,7 @@ class Shop(Feature):
         reg.expose("sell_shop_item", self.sell)
 
     def item_pattern(self,obj):
+        if obj.get('shop_kind')=='roulette':return ('0011100','0111110','1101011','1110111','1101011','0111110','0011100')
         if obj.get('shop_kind')=='animal':
             pattern=self.engine.registry.icon_patterns.get('animal_icon')
             if pattern:return pattern({'animal':obj['item_id']})
@@ -87,7 +88,7 @@ class Shop(Feature):
             before = e.resource('coin')
             result = buyer(item_id)
             if result is not None:
-                if e.resource('coin') < before:
+                if e.resource('coin') < before and kind != 'roulette':
                     e.consume_purchase()
                     # Buyers build a response before the successful-use counter changes.
                     e.render()
@@ -139,6 +140,7 @@ class Shop(Feature):
     def choice_spatial_objects(self):
         e = self.engine
         return [
+            dict(id='shop_scene_roulette',type='shop_hitbox',skip_grid=True,x=44,y=19,width=9,height=9,hit_width=9,hit_height=9,label='Prize draw',tts='Prize draw. 200 gold.',action='buy:roulette:draw'),
             dict(id='shop_scene_calendar', type='shop_hitbox', skip_grid=True,
                  x=11, y=20, width=9, height=9, hit_width=11, hit_height=11,
                  label='Calendar', tts='Calendar. Weekly offers.', action='open_calendar'),
@@ -205,6 +207,8 @@ class Shop(Feature):
             '111111111',
         ))
 
+        e.draw_icon_pattern(44,19,('000111000','001111100','011010110','111101111','110111011','111101111','011010110','001111100','000111000'))
+
         # Three disjoint counters; their bounds match the lower hit regions.
         for cx,width,letter in [(20,12,'sell'),(33,10,'buy'),(45,10,'buy')]:
             left=cx-width//2
@@ -251,7 +255,8 @@ class Shop(Feature):
 
     def purchase_rows(self, tools):
         kinds={'pickaxe','fishing_rod','animal','flower_seed'}
-        return [row for row in self.engine.registry.collect('shop.buy_items') if (row[0] in kinds)==tools]
+        rows=[row for row in self.engine.registry.collect('shop.buy_items') if (row[0] in kinds)==tools]
+        return sorted(rows,key=lambda row:row[0]!='roulette')
 
     def build_objects(self, entries, mode):
         e = self.engine
@@ -261,7 +266,7 @@ class Shop(Feature):
         e.shop_page = max(0, min(e.shop_page, pages - 1))
         objects = []
         for i, (kind, item_id, label, count, price) in enumerate(entries[e.shop_page * page_size:(e.shop_page + 1) * page_size]):
-            price = e.purchase_price(price) if kind in e.registry.fixed_price_kinds and mode == "buy" else price if kind in e.registry.fixed_price_kinds else e.market_price(price, kind, mode)
+            price = price if kind == "roulette" else e.purchase_price(price) if kind in e.registry.fixed_price_kinds and mode == "buy" else price if kind in e.registry.fixed_price_kinds else e.market_price(price, kind, mode)
             x, y = (9, 23, 37, 51)[i % 4], (5, 15, 25)[i // 4]
             text = f"{label}, {price} gold. stock {count} " if mode == "buy" else f"{label}, stock {count}. Sell {price} gold"
             owned_text = e.registry.shop_owned_texts.get(kind)

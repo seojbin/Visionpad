@@ -2605,7 +2605,8 @@
         "shine": 3.0,
         "destroy": 0.7,
         "splash": 0.9,
-        "feed": 1.8
+        "feed": 1.8,
+        "roulette": 1.0
       },
       "bgm_minigame_pages": [
         "seed_select",
@@ -3543,7 +3544,18 @@
     "bloom_cycle_days": 3,
     "bloom_wilt_increment": 0.1,
     "dry_wilt_increment": 0.3,
-    "harvest_bonus": 1
+    "harvest_bonus": 1,
+    "species": {
+      "morning_glory": {
+        "label": "Morning glory"
+      },
+      "sunflower": {
+        "label": "Sunflower"
+      },
+      "orchid": {
+        "label": "Orchid"
+      }
+    }
   },
   "pasture": {
     "animals": {
@@ -3618,5 +3630,89 @@
       5
     ],
     "breath_seconds": 1.5
+  },
+  "pets": {
+    "max_pets": 6,
+    "pitch_values": [
+      0.88,
+      1.04,
+      0.96,
+      1.12,
+      0.92,
+      1.08
+    ],
+    "pet_seconds": 3,
+    "contact_gap_seconds": 0.5,
+    "pet_points": 10,
+    "feed_points": 5,
+    "treat_points": 60,
+    "hungry_days": 2,
+    "sick_after_days": 4,
+    "neglect_points": 10,
+    "gift_chances": [
+      0,
+      0.15,
+      0.3
+    ],
+    "trusted_harvest_bonus": 1,
+    "audio": {
+      "routine_interval_seconds": [
+        8,
+        14
+      ],
+      "routine_gain": 0.35,
+      "main_gain": 1.3,
+      "cat_routine_gain": 0.8
+    },
+    "names": {
+      "cat": [
+        "Luna",
+        "Milo",
+        "Cleo",
+        "Nori",
+        "Coco",
+        "Leo",
+        "Mochi",
+        "Willow",
+        "Pepper",
+        "Olive",
+        "Jasper",
+        "Misty"
+      ],
+      "dog": [
+        "Buddy",
+        "Max",
+        "Charlie",
+        "Daisy",
+        "Bailey",
+        "Rocky",
+        "Teddy",
+        "Ruby",
+        "Scout",
+        "Maple",
+        "Finn",
+        "Sunny"
+      ]
+    }
+  },
+  "roulette": {
+    "price": 200,
+    "weights": {
+      "plant_nutrient": 12,
+      "special_feed": 12,
+      "gold_tool": 10,
+      "pet_voucher": 6,
+      "flower_seed": 6,
+      "diamond": 1,
+      "fertilizer": 20,
+      "crop_seed": 33
+    },
+    "seed_quantity": 3,
+    "fertilizer_quantity": 3,
+    "medicine_price": 30,
+    "voucher_sell_price": 300,
+    "nutrient_days": 6,
+    "gold_durability_multiplier": 4,
+    "result_delay_ms": 1000
   }
 }

@@ -56,7 +56,7 @@ class PurchaseEscapeTests(unittest.TestCase):
         e.perform_action('shop_mode:buy',{});kinds={o.get('shop_kind') for o in e.get_objects()}
         self.assertIn('animal_feed',kinds);self.assertTrue(kinds.isdisjoint({'animal','pickaxe','fishing_rod','flower_seed'}))
         e.perform_action('shop_mode:tools',{});kinds={o.get('shop_kind') for o in e.get_objects()}
-        self.assertTrue({'animal','pickaxe','fishing_rod','flower_seed'}<=kinds);self.assertNotIn('animal_feed',kinds)
+        self.assertTrue({'animal','pickaxe','fishing_rod'}<=kinds);self.assertNotIn('animal_feed',kinds);self.assertNotIn('flower_seed',kinds)
         self.assertEqual(e.lower_panel_state()['label'],'buy')
         e.navigate_key('left');self.assertEqual(e.current_page,'shop_choice')
     def test_collection_button_and_three_ticks(self):
