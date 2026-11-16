@@ -4,7 +4,7 @@ const {GameAudio}=require('../../../engine/web/core/game-audio.js');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 function setup(){
  const a=new GameAudio();const played=[];a.oneShot=n=>played.push(n);
- const s={page:'home',pasture:{morning_id:0,selected:'chicken',animals:{chicken:{owned:true},sheep:{owned:true}},audio:{routine_interval_ms:15,morning_delay_ms:15}}};
+ const s={page:'home',pasture:{morning_id:0,selected:'chicken',animals:{chicken:{owned:true},sheep:{owned:true}},audio:{routine_interval_min_ms:15,routine_interval_max_ms:15,morning_delay_ms:15}}};
  a.latestState=s;a.syncAnimals(s);return {a,s,played};
 }
 test('morning plays without another input; initial state does not crow',async()=>{

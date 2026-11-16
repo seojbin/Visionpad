@@ -44,3 +44,7 @@ Shearing erases individual raised dots within a circular swept brush, not 5×5 t
 ## Rowan and shelter update
 
 Animal shelter research independently rolls an extra unit for every base egg/wool collected. The configuration is `research.animal_shelter.bonus_chances`; stored ready quantities and the three-egg cap are unchanged.
+
+Petting feedback: every two seconds of valid movement over the animal emits its main call and resets the feedback timer. Affection still increases only once per animal per day. Configure `pets.pet_seconds` or `pasture.pet_seconds`; default 2 seconds. Standing still does not count as petting.
+
+Petting release update: two seconds arms a response but does not emit a call while stroking. Leaving the body or remaining motionless for 0.5 seconds completes one session and triggers one main call. Affection increases only on the first qualifying session per animal per day. Idle completion is polled through before_state; transient feedback IDs prevent repeated playback of the same state. Pausing or leaving the page cancels an unfinished session.

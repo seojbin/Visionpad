@@ -63,7 +63,9 @@ class Roulette(Feature):
         e=self.engine
         if item not in LABELS or e.roulette_goods[item]<=0:return e.response(tts='Item unavailable.')
         if item in ('medicine','special_feed'):
-            e.set_page('pets');e.clear_hover();e.render();return e.response(tts='Select a pet, then Give something.')
+            pets=e.registry.features['pets'];a=pets.active()
+            if not a:return e.response(tts='No pets yet.')
+            e.pet_selected=a['id'];e.set_page('pet_give');e.clear_hover();e.render();return e.response(tts='Give something.')
         events=[]
         if item.endswith('_voucher'):
             return e.registry.features['pets'].begin_adoption(item.split('_')[0])

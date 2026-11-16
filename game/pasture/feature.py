@@ -1,3 +1,4 @@
+from engine.core.petting import PettingSession
 """Free-range animals, daily production and persistent collection interactions."""
 import random
 import math
@@ -126,12 +127,13 @@ class Pasture(Feature):
     def register(self, reg):
         reg.owns('pasture_animals', 'pasture_goods', 'pasture_selected', 'pasture_sheared',
                  'pasture_move_at', 'pasture_stroke', 'pasture_morning_id')
-        reg.on('reset', self.reset)
+        reg.on('reset',self.reset)
+        reg.on('before_state',self.pet_idle)
         reg.on('end_of_day', self.advance)
         reg.on('start_of_day', self.morning)
         reg.on('before_state', self.move)
         reg.on('before_navigation', self.stop)
-        reg.on('release_drag', self.stop)
+        reg.on('release_drag', self.release_drag)
         reg.on('leave_activity', self.stop)
         reg.save_fields(defaults=('pasture_animals','pasture_goods','pasture_selected','pasture_sheared','pasture_morning_id'),
                         transient={'pasture_move_at':None,'pasture_stroke':None}, migrate=self.migrate)
@@ -203,6 +205,7 @@ class Pasture(Feature):
 
     def cfg(self): return self.engine.config['pasture']
     def reset(self):
+        self._pet_session=PettingSession();self._pet_feedback=None
         e=self.engine
         self._pet_contact=None; self._pet_seconds=0.0; self._motion={};self._breath_offset=0
         e.pasture_animals={kind:dict(owned=False, friendship=0, remaining=cfg['days'],ready=False,
@@ -210,9 +213,15 @@ class Pasture(Feature):
             x=16 if kind=='chicken' else 43,y=25,step=0,facing_left=False,escaped=False,shear_format='dots_v1') for kind,cfg in self.cfg()['animals'].items()}
         e.pasture_goods={'egg':0,'wool':0,'animal_feed':0}
         e.pasture_selected='chicken';e.pasture_sheared=[];e.pasture_move_at=None;e.pasture_stroke=None;e.pasture_morning_id=0
-    def stop(self):
+    def release_drag(self):
+        # Preserve the movement session until the idle poll confirms release.
         self.engine.pasture_stroke=None
         self._pet_contact=None
+    def stop(self):
+        self._pet_session.clear();self._pet_feedback=None
+        self.engine.pasture_stroke=None
+        self._pet_contact=None
+        self._pet_seconds=0.0
     def morning(self): self.engine.pasture_morning_id += 1
     def level(self,a):return min(2,max(0,a['friendship']//100))
     def status(self,a):return ('Indifferent','Recognizes you','Seems happy')[self.level(a)]
@@ -236,7 +245,7 @@ class Pasture(Feature):
         return dict(selected=e.pasture_selected,morning_id=e.pasture_morning_id,
             animals={k:dict(owned=a['owned'],status=self.status(a),ready=a['ready'],x=a['x'],y=a['y'],
                             fed=a['fed_day']==e.day,petted=a['pet_day']==e.day,facing_left=a.get('facing_left',False)) for k,a in e.pasture_animals.items()},
-            shear_dot_width=e.dotpad.width,breath_offset=self.breathe(),sheared=list(e.pasture_sheared),brush_region=self.brush_region(),audio=self.cfg()['audio'])
+            petting_feedback=self._pet_feedback if self._pet_feedback and time.monotonic()-self._pet_feedback["at"]<2 else None,shear_dot_width=e.dotpad.width,breath_offset=self.breathe(),sheared=list(e.pasture_sheared),brush_region=self.brush_region(),audio=self.cfg()['audio'])
     def advance(self):
         e=self.engine; tomorrow=e.day+1; c=self.cfg()
         notes=[]
@@ -320,27 +329,28 @@ class Pasture(Feature):
         # Match the uploaded detail drawing, excluding the egg collection area.
         return dict(x=22,y=12+self.breathe(),width=18,height=19) if self.engine.pasture_selected=='chicken' else dict(x=14,y=12+self.breathe(),width=32,height=19)
 
+    def pet_complete(self,a,now):
+        e=self.engine
+        if a['pet_day']!=e.day:
+            a['pet_day']=e.day
+            a['friendship']=min(299,a['friendship']+self.cfg()['pet_points'])
+        self._pet_feedback=dict(id=str(time.monotonic_ns()),at=now,events=self.sound(e.pasture_selected))
+    def pet_idle(self):
+        e=self.engine;a=self.engine.pasture_animals[self.engine.pasture_selected]
+        if e.current_page!='animal_detail' or not a or not a['owned'] or e.paused or e.day_ended or e.sleep_until is not None:
+            self.stop();return
+        now=time.monotonic()
+        if self._pet_session.poll(now,self.cfg().get('pet_seconds',2),self.cfg().get('pet_release_idle_seconds',0.5)):
+            self.pet_complete(a,now)
     def pet_motion(self,x,y):
-        e=self.engine; a=e.pasture_animals[e.pasture_selected]; now=time.monotonic()
+        e=self.engine;a=self.engine.pasture_animals[self.engine.pasture_selected];now=time.monotonic()
+        if not a or e.paused or e.day_ended or e.sleep_until is not None or not a['owned']:
+            self.stop();return None
         region=self.brush_region()
-        inside=(region['x']<=x<region['x']+region['width'] and region['y']<=y<region['y']+region['height'])
-        if e.paused or e.day_ended or e.sleep_until is not None or not a['owned'] or not inside:
-            self._pet_contact=None
-            return None
-        previous=self._pet_contact
-        self._pet_contact=(now,x,y)
-        if previous is not None:
-            elapsed=now-previous[0]
-            distance=math.hypot(x-previous[1],y-previous[2])
-            if 0<elapsed<=self.cfg().get('pet_contact_gap_seconds',0.5) and distance>0.05:
-                self._pet_seconds+=elapsed
-                if a['pet_day']!=e.day and self._pet_seconds>=self.cfg().get('pet_seconds',3):
-                    a['friendship']=min(299,a['friendship']+self.cfg()['pet_points'])
-                    a['pet_day']=e.day
-                    self._pet_seconds=0.0
-                    e.last_pointer=(x,y)
-                    return e.response(sound_events=self.sound(e.pasture_selected))
-        # Normal hover handling still runs; no progress or completion TTS.
+        inside=region['x']<=x<region['x']+region['width'] and region['y']<=y<region['y']+region['height']
+        if self._pet_session.move(x,y,now,inside,self.cfg().get('pet_seconds',2),self.cfg().get('pet_release_idle_seconds',0.5),self.cfg().get('pet_contact_gap_seconds',0.5)):
+            self.pet_complete(a,now)
+            return e.response()
         return None
 
     def detail_objects(self):

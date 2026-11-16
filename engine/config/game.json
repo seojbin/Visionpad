@@ -3619,7 +3619,7 @@
     ],
     "escape_increment": 0.1,
     "shear_success_ratio": 0.75,
-    "pet_seconds": 3,
+    "pet_seconds": 2,
     "pet_contact_gap_seconds": 0.5,
     "move_interval_seconds": [
       3,
@@ -3632,7 +3632,7 @@
     "breath_seconds": 1.5
   },
   "pets": {
-    "max_pets": 6,
+    "max_pets": 12,
     "pitch_values": [
       0.88,
       1.04,
@@ -3641,7 +3641,7 @@
       0.92,
       1.08
     ],
-    "pet_seconds": 3,
+    "pet_seconds": 2,
     "contact_gap_seconds": 0.5,
     "pet_points": 10,
     "feed_points": 5,
@@ -3660,9 +3660,9 @@
         8,
         14
       ],
-      "routine_gain": 0.35,
-      "main_gain": 1.3,
-      "cat_routine_gain": 0.8
+      "routine_gain": 0.6,
+      "main_gain": 2.0,
+      "cat_routine_gain": 1.0
     },
     "names": {
       "cat": [

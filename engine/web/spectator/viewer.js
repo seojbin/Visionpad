@@ -28,7 +28,7 @@ const sheets = {};
 let sceneDefinitions={scenes:{}}, assetCatalog={backgrounds:{},facilities:{},objects:{},pages:{}};
 const assetsReady=Promise.all([
  fetch(new URL('scene-objects.json?v=town-layout-3',base)).then(r=>{if(!r.ok)throw new Error('Scene registry unavailable');return r.json();}).then(d=>{sceneDefinitions=d;}),
- fetch(new URL('visual-assets.json?v=rowan-quests-1',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
+ fetch(new URL('visual-assets.json?v=pets-v3',base)).then(r=>{if(!r.ok)throw new Error('Asset registry unavailable');return r.json();}).then(async d=>{assetCatalog=d;await Promise.all(Object.entries(d.textures||{}).map(([name,url])=>new Promise(resolve=>{const i=new Image();i.onload=()=>{sheets[name]=i;resolve();};i.onerror=()=>resolve();i.src=new URL(url,base);})));})
 ]).catch(error=>{console.warn(error);}).then(()=>{menuKey='';if(state)updateUI();});
 let animationFrame = 0;
 let state = null,
@@ -407,6 +407,8 @@ function itemFrame(o) {
  return 'rectangle';
 }
 function itemSprite(o) {
+ if(o.type==='pet_icon'){const p=state.pets?.animals?.find(p=>'pet_'+p.id===o.id);if(p)return `pet_${p.species}_${p.appearance||0}`;}
+ if(o.type==='pet_button')return ({'pet:home':'chest','flower:open':'plant_nutrient','pet:active':'cat_voucher','pet:feed':'animal_feed','pet:treat':'special_feed','pet:medicine':'medicine'})[o.action]||'dog_voucher';
  if(o.id==='shop_tools_choice')return 'pickaxe';
  if(o.research_kind==='animal_shelter')return 'wool';
  const key=itemKey(o);if(assetCatalog.objects[key])return key;
@@ -414,23 +416,39 @@ function itemSprite(o) {
  if(['research','care_button','save_slot','shop_choice'].includes(o.type))return spriteFor(o);
  return null;
 }
+function petSprite(p,x,y,w,h) {
+ const key=`pet_${p.species}_${p.appearance||0}${p.pose==='sleeping'?'_sleeping':''}`;
+ sprite(key,x,y,w,h);
+}
 function petHome() {
-  const h=['00001110000','00011111000','00111111100','01111111110','11111111111','01111111110','01110001110','01100000110','01100000110','01100000110','01111111110'];
-  const pixels=(rows,x,y,scale,color)=>{ctx.fillStyle=color;rows.forEach((row,j)=>[...row].forEach((v,i)=>{if(v==='1')ctx.fillRect(x+i*scale,y+j*scale,scale,scale);}));};
-  pixels(h,610,400,10,'#9b602d');outline(610,400,110,110,'home_pet_house');text('Pet house',603,540);
-  const pet=state.pets?.home_pet;
-  if(pet){const x=210+(pet.position[0]-25)*16,y=405+(pet.position[1]-33)*12;
-    pixels(pet.pattern,x,y,5,'#564037');outline(x,y,180,120,'home_pet_'+pet.id);text(pet.name,x,y+147);}
+ const p=state.pets?.home_pet;if(!p)return;
+ const x=590+(p.position[0]-42)*16,y=400+(p.position[1]-33)*12;
+ petSprite(p,x,y,180,135);outline(x,y,180,135,'home_pet_'+p.id);text(p.name,x,y+150);
+}
+function petDetail() {
+ environment('pet_room');const p=state.pets?.detail;
+ if(p){const x=300+(p.position[0]-29)*16,y=245+(p.position[1]-25)*12;
+ petSprite(p,x,y,360,290);outline(x,y,360,290,'pet_body');text(p.name,390,555);}
+ for(const o of (state.objects||[]).filter(o=>o.type==='pet_button')) {
+  const x=o.x*16-65,y=o.y*15-45;
+  ctx.fillStyle='#f2dfb5';ctx.fillRect(x,y,130,85);
+  sprite(({give:'special_feed',gift:'extras',list:'cat_voucher',release:'dog_voucher'})[o.action?.split(':')[1]]||'special_feed',x+35,y,60,55);
+  outline(x,y,130,85,o.id);text(o.label,x+5,y+76,'#baff91',14);
+ }
 }
 function prizeShortcut() {
   if(state.page!=='shop_choice')return;
   const x=880,y=235;ctx.fillStyle='#b96824';ctx.fillRect(x-32,y-35,64,80);
   ctx.beginPath();ctx.arc(x,y,28,0,2*Math.PI);ctx.fillStyle='#f1c65c';ctx.fill();ctx.strokeStyle='#4d2b1b';ctx.lineWidth=5;ctx.stroke();
   for(let i=0;i<8;i++){const a=i*Math.PI/4;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+25*Math.cos(a),y+25*Math.sin(a));ctx.stroke();}
+  sprite('draw',x-44,y-50,88,100);
   outline(x-32,y-35,64,80,'shop_scene_roulette');text('Prize draw',x-60,y+75,'#baff91',18);
 }
 function render() {
   if (!state) return;
+  if(['pet_detail','pets'].includes(state.page)){petDetail();return;}
+  if(['pet_give','pet_names','pet_release'].includes(state.page)){environment('pet_room');return;}
+  if(state.page==='care'){sceneObjects('home');petHome();if(state.flowers)sprite('flower_'+state.flowers.stage,20,355,160,180);return;}
   if(state.page==='flower_detail'){flowerDetail();return;}
   if(fallbackPage()){tactileFallback();return;}
   const pageSpec=assetCatalog.pages[state.page];
@@ -531,7 +549,7 @@ function menus() {
   const show =
     !fallbackPage() && (renderers.has(state.page)||assetCatalog.pages[state.page]?.items===true) && (!SCENES.includes(state.page) || state.rowan_submission) &&
     ![
-      "animal_detail", "egg_collect", "shearing",
+      "pet_detail", "animal_detail", "egg_collect", "shearing",
       "minimap",
       "rowan_dialogue",
       "cooking",
@@ -542,7 +560,7 @@ function menus() {
   const menu = q(".dv-menu");
   menu.hidden = !show;
   if (!show) return;
-  const cards = state.rowan_submission ? publicCards(state).filter(o=>o.id.startsWith("rowan_crop_")) : publicCards(state),
+  const cards = state.rowan_submission ? publicCards(state).filter(o=>o.id.startsWith("rowan_crop_")) : publicCards(state).filter(o=>state.page!=='care'||o.type==='pet_button'),
     key = JSON.stringify([
       state.page,
       cards,

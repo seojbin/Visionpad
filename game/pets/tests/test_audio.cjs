@@ -31,3 +31,14 @@ test('late main decode cannot play for a removed individual',async()=>{
 test('new uploaded sounds are routed once through the existing audio context',()=>{
  const a=new GameAudio();assert.match(a.urls.dog_main,/features\/pets\/audio/);assert.match(a.urls.cat_routine,/features\/pets\/audio/);assert.match(a.urls.roulette,/features\/roulette\/audio/);a.stopAll();
 });
+
+test('petting completion is played once per feedback ID for pets and livestock',()=>{
+ const a=new GameAudio(),calls=[];
+ for(const name of ['updateTaskPosition','syncWork','syncAnimals','syncPets','syncBackground','syncFishing','syncGuidance','feedback'])a[name]=()=>{};
+ a.oneShot=(...args)=>calls.push(args);
+ const s={page:'pet_detail',pets:{petting_feedback:{id:'pet-1',events:[{kind:'pet_sound',sound:'cat_main',pet_id:1,pitch:1.04}]}}};
+ a.handle(s);a.handle(s);assert.equal(calls.length,1);assert.equal(calls[0][4].pitch,1.04);
+ const t={page:'animal_detail',pasture:{petting_feedback:{id:'sheep-1',events:[{kind:'one_shot',sound:'sheep_main'}]}}};
+ a.latestState=null;a.handle(t);a.handle(t);assert.equal(calls.length,2);
+ t.pasture.petting_feedback.id='sheep-2';a.handle(t);assert.equal(calls.length,3);
+});

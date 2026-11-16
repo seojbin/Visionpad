@@ -1,3 +1,4 @@
+from engine.core.petting import PettingSession
 """Individual pets, care, daily health and gifts. Tactile artwork is fixed-grid."""
 import math
 import random
@@ -10,11 +11,12 @@ class Pets(Feature):
     def register(self,r):
         r.owns('pets','pet_next_id','pet_selected','pet_contact','pet_pose_until','pet_active','pet_adoption','pet_motion')
         r.on('reset',self.reset)
+        r.on('before_state',self.pet_idle)
         r.on('end_of_day',self.advance)
         r.on('before_navigation',self.clear_contact)
         r.on('leave_activity',self.clear_contact)
         r.save_fields(defaults=('pets','pet_next_id','pet_selected','pet_active'),transient={'pet_contact':None,'pet_pose_until':None,'pet_adoption':None,'pet_motion':{}})
-        r.page('care',name='Care',objects=self.care_objects,icon_grid=True)
+        r.page('care',name='Care',objects=self.care_objects,scene=lambda:self.engine.registry.features['home'].draw_scene(),icon_grid=True,live=True)
         r.page('pets',name='Pets',objects=self.objects,icon_grid=True)
         r.page('pet_detail',name='Pet care',objects=self.detail_objects,scene=self.draw_detail,live=True,pointer_move=self.stroke,pointer_drag=self.stroke)
         r.page('pet_release',name='Find a new family',objects=self.release_objects,icon_grid=True)
@@ -34,13 +36,17 @@ class Pets(Feature):
         r.contribute('harvest.bonus',self.harvest_bonus)
     def cfg(self):return self.engine.config['pets']
     def reset(self):
+        self._pet_session=PettingSession();self._pet_feedback=None
         e=self.engine;e.pets=[];e.pet_next_id=1;e.pet_selected=None;e.pet_contact=None;e.pet_pose_until=None;e.pet_active=None;e.pet_adoption=None;e.pet_motion={}
-    def clear_contact(self):self.engine.pet_contact=None;self.engine.pet_pose_until=None
+    def clear_contact(self):
+        self.engine.pet_contact=None;self.engine.pet_pose_until=None
+        self._pet_session.clear();self._pet_feedback=None
     def selected(self):return next((a for a in self.engine.pets if a['id']==self.engine.pet_selected),None)
     def button(self,id,label,i,action,symbol='tool'):
         return dict(id='pet_'+id,type='pet_button',x=8+14*(i%4),y=6+10*(i//4),width=12,height=10,hit_width=12,hit_height=10,label=label,tts=label+'.',action=action,symbol=symbol)
     def back(self,page,label='Back'):return self.engine.back_arrow('pet_back',label,'pet:'+page)
-    def care_objects(self):return [self.button('plants','Plants',0,'flower:open','seed'),self.button('pets','Pets',1,'pet:list'),self.back('home')]
+    def care_objects(self):
+        return [self.button('home','Back',0,'pet:home','nav_left'),self.button('plants','Plants',1,'flower:open','seed'),self.button('pets','Pets',2,'pet:active')]+self.engine.registry.features['home'].scene_objects()
     def mood(self,a):return 'Trusts you' if a['affection']>=200 else 'Recognizes you' if a['affection']>=100 else 'Getting to know you'
     def describe(self,a):
         health='Sick' if a['sick'] else 'Hungry' if self.engine.day-a['fed_day']>=self.cfg()['hungry_days'] else self.mood(a)
@@ -48,9 +54,8 @@ class Pets(Feature):
     def objects(self):
         rows=[]
         for i,a in enumerate(self.engine.pets):
-            rows.append(dict(id='pet_'+str(a['id']),type='pet_icon',species=a['species'],x=8+(i%3)*14,y=6+(i//3)*12,width=12,height=10,hit_width=12,hit_height=10,label=a['name'],short=self.describe(a),tts=self.describe(a)+' Select to care for your pet.',action='pet:open:'+str(a['id'])))
-        for i in range(len(rows),self.cfg()['max_pets']):rows.append(self.button('empty_'+str(i),'Empty pet slot',i,'pet:empty','chest'))
-        return rows+[self.back('care')]
+            rows.append(dict(id='pet_'+str(a['id']),type='pet_icon',species=a['species'],x=8+(i%4)*14,y=6+(i//4)*10,width=12,height=10,hit_width=12,hit_height=10,label=a['name'],short=self.describe(a),tts=self.describe(a)+' Select to care for your pet.',action='pet:open:'+str(a['id'])))
+        return rows+[self.back('detail')]
     def detail_objects(self):
         a=self.selected()
         if not a:return [self.back('list')]
@@ -59,7 +64,7 @@ class Pets(Feature):
         x,y=self.position(a,True)
         body=dict(id='pet_body',type='pet_body',skip_grid=True,x=x,y=y,width=36,height=24,hit_width=36,hit_height=24,label=a['name'],short=self.describe(a),tts=self.describe(a)+' Move your hand over the animal to pet it.',action='')
         if a['gift']:buttons.append(dict(id='pet_gift',type='pet_button',skip_grid=True,x=54,y=32,width=8,height=8,hit_width=8,hit_height=8,label='Gift',tts='Gift. Select to collect.',symbol='crop',action='pet:gift'))
-        return buttons+[body,self.back('list')]
+        return buttons+[body,self.back('care')]
     def give_objects(self):
         a=self.selected()
         rows=[self.button('feed','Animal feed',0,'pet:feed','fertilizer'),self.button('treat','Special feed',1,'pet:treat','fertilizer')]
@@ -68,7 +73,11 @@ class Pets(Feature):
     def name_objects(self):
         species=self.engine.pet_adoption
         if species not in ('dog','cat'):return [self.back('list')]
-        return [self.button('name_'+str(i),species.title()+' '+n,i,'pet:name:'+str(i),'tool') for i,n in enumerate(self.cfg()['names'][species])]+[self.back('list')]
+        return [self.button('name_'+str(i),species.title()+' '+n,i,'pet:name:'+str(i),'tool') for i,n in enumerate(self.cfg()['names'][species]) if n.casefold() not in self.used_names()]+[self.back('care')]
+    def used_names(self):
+        return {a['name'].split(' ',1)[-1].casefold() for a in self.engine.pets}
+    def available_names(self,species):
+        return [n for n in self.cfg()['names'][species] if n.casefold() not in self.used_names()]
     def begin_adoption(self,species):
         e=self.engine
         if len(e.pets)>=self.cfg()['max_pets']:return e.response(tts='No room for another pet.')
@@ -82,10 +91,14 @@ class Pets(Feature):
         e=self.engine
         if species not in ('dog','cat'):return False,'Unknown pet.'
         if len(e.pets)>=self.cfg()['max_pets']:return False,'No room for another pet.'
+        available=self.available_names(species)
+        if name is not None and name.casefold() in self.used_names():return False,'That name is already in use. Choose another name.'
+        if not available:return False,'No unused names available.'
+        name=name or random.choice(available)
         number=e.pet_next_id;e.pet_next_id+=1
         # Stable per-individual pitch, chosen once and saved, rather than per call.
         pitch=self.cfg()['pitch_values'][(number-1)%len(self.cfg()['pitch_values'])]
-        a=dict(id=number,species=species,name=f'{species.title()} {name or random.choice(self.cfg()["names"][species])}',pitch=pitch,affection=0,fed_day=e.day,pet_day=-1,sick=False,gift=None)
+        a=dict(id=number,species=species,name=f'{species.title()} {name or random.choice(self.cfg()["names"][species])}',pitch=pitch,appearance=random.randrange(3),affection=0,fed_day=e.day,pet_day=-1,sick=False,gift=None)
         e.pets.append(a);e.pet_selected=number;e.pet_active=number
         return True,a['name']+' joined your home.'
     def action(self,arg,obj):
@@ -99,7 +112,14 @@ class Pets(Feature):
             ok,text=self.adopt(species,self.cfg()['names'][species][index])
             if not ok:return e.response(tts=text)
             e.roulette_goods[species+'_voucher']-=1;e.pet_adoption=None;e.set_page('pet_detail');events=[self.sound(self.selected())]
+        elif arg=='detail' and e.current_page=='pets':
+            e.set_page('pet_detail' if self.selected() else 'care');text=self.describe(self.selected()) if self.selected() else 'Care.'
+        elif arg=='active':
+            a=self.active()
+            if not a:return e.response(tts='No pets yet. Use an adoption voucher from your inventory.')
+            return self.action('open:'+str(a['id']),obj)
         elif arg in ('care','list','home'):
+            if arg=='list' and e.current_page!='pet_detail':return e.response(tts='Choose Change pet from pet care.')
             self.clear_contact();e.set_page({'care':'care','list':'pets','home':'home'}[arg]);text={'care':'Care. Plants and pets.','list':'Pets.' if e.pets else 'No pets yet. Use an adoption voucher from your inventory.','home':'Home.'}[arg]
         elif arg.startswith('open:'):
             a=next((a for a in e.pets if str(a['id'])==arg.split(':')[1]),None)
@@ -113,7 +133,7 @@ class Pets(Feature):
             elif arg=='give':e.set_page('pet_give');text='Give something.'
             elif arg=='release':e.set_page('pet_release');text='Are you sure you want to let '+a['name']+' go? Select Confirm or Keep pet.'
             elif arg=='release_confirm' and e.current_page=='pet_release':
-                text=a['name']+' has joined a new family.';e.pets.remove(a);e.pet_selected=None;e.pet_active=next((p['id'] for p in e.pets),None);self.clear_contact();e.set_page('pets')
+                text=a['name']+' has joined a new family.';e.pets.remove(a);e.pet_selected=None;e.pet_active=next((p['id'] for p in e.pets),None);self.clear_contact();e.set_page('care')
             elif e.current_page not in ('pet_detail','pet_give'):return e.response()
             elif arg=='feed':
                 if a['fed_day']==e.day:return e.response(tts='Already fed today.')
@@ -131,6 +151,9 @@ class Pets(Feature):
                 if not a['gift']:return e.response(tts='No gift today.')
                 g=a['gift'];e.resources[g['resource']][g['item']]=e.resources[g['resource']].get(g['item'],0)+g['count'];a['gift']=None;text=a['name']+' brought '+g['label']+'.';events=[self.sound(a),{'kind':'correct','count':1}]
             else:return e.response()
+        if arg.startswith(('open:','name:')) or arg in ('feed','treat','medicine','gift'):
+            a=self.selected()
+            if a:self.motion(a)['pose']=random.choice(['standing','sitting'])
         if arg in ('feed','treat','medicine'):e.set_page('pet_detail')
         e.clear_hover();e.render();return e.response(tts=text or (self.describe(self.selected()) if self.selected() else 'Pets.'),sound_events=events)
     def motion(self,a):
@@ -138,14 +161,15 @@ class Pets(Feature):
         if m is None:
             m=dict(next=now+random.uniform(3,5),dx=0,dy=0,pose='sitting',left=False);e.pet_motion[key]=m
         if now>=m['next'] and not e.paused and not e.day_ended:
-            m.update(next=now+random.uniform(3,5),dx=random.randint(-2,2),dy=random.randint(0,1),pose=random.choice(['standing','sitting','sleeping']),left=random.choice([True,False]))
+            m.update(next=now+random.uniform(3,5),dx=random.randint(-2,2),dy=random.randint(0,1))
         return m
     def pose(self,a):
+        if self.engine.day_ended or self.engine.time_used_cells>=self.engine.time_total_cells*.75:return 'sleeping'
         if a['sick']:return 'unwell'
         return self.motion(a)['pose']
     def position(self,a,detail=False):
         m=self.motion(a)
-        return (29+m['dx'],25+m['dy']) if detail else (26+max(-1,min(1,m['dx'])),33+m['dy'])
+        return (29+m['dx'],25+m['dy']) if detail else (42+max(-1,min(1,m['dx'])),33+m['dy'])
     def rows(self,a):
         rows=DETAIL_PATTERNS[a['species']][self.pose(a)]
         return tuple(r[::-1] for r in rows) if self.motion(a)['left'] else rows
@@ -155,7 +179,7 @@ class Pets(Feature):
     def active(self):
         return next((a for a in self.engine.pets if a['id']==self.engine.pet_active),self.engine.pets[0] if self.engine.pets else None)
     def home_objects(self):
-        rows=[dict(id='home_pet_house',type='pet_body',skip_grid=True,x=42,y=32,width=11,height=11,hit_width=11,hit_height=11,label='Pet house',short='Pet house.',tts='Pet house. Choose a pet.',action='pet:list')]
+        rows=[]
         a=self.active()
         if a:
             x,y=self.position(a)
@@ -168,25 +192,31 @@ class Pets(Feature):
         elif pose=='sitting':rows=tuple(rows[:3])+('0011110','0011110')
         return tuple(r[::-1] for r in rows) if self.motion(a)['left'] else rows
     def draw_home(self):
-        self.engine.draw_icon_pattern(42,32,('00001110000','00011111000','00111111100','01111111110','11111111111','01111111110','01110001110','01100000110','01100000110','01100000110','01111111110'))
         a=self.active()
         if a:
             self.engine.draw_icon_pattern(*self.position(a),self.home_rows(a))
+    def pet_complete(self,a,now):
+        e=self.engine
+        if a['pet_day']!=e.day:
+            a['pet_day']=e.day
+            a['affection']=min(299,a['affection']+self.cfg()['pet_points'])
+        self._pet_feedback=dict(id=str(time.monotonic_ns()),at=now,events=[self.sound(a)])
+    def pet_idle(self):
+        e=self.engine;a=self.selected()
+        if e.current_page!='pet_detail' or not a or e.paused or e.day_ended or e.sleep_until is not None:
+            self.clear_contact();return
+        now=time.monotonic()
+        if self._pet_session.poll(now,self.cfg()['pet_seconds'],self.cfg().get('pet_release_idle_seconds',0.5)):
+            self.pet_complete(a,now)
     def stroke(self,x,y):
         e=self.engine;a=self.selected();now=time.monotonic()
-        if not a or e.paused or e.day_ended or e.sleep_until is not None:self.clear_contact();return None
+        if not a or e.paused or e.day_ended or e.sleep_until is not None:
+            self.clear_contact();return None
         rows=self.rows(a);cx,cy=self.position(a,True);ix=int(x)-(cx-18);iy=int(y)-(cy-12)
         inside=0<=ix<36 and 0<=iy<24 and rows[iy][ix]=='1'
-        prev=e.pet_contact;e.pet_contact=None
-        if not inside:return None
-        total=0
-        if prev and 0<now-prev[0]<=self.cfg()['contact_gap_seconds']:
-            total=prev[3]
-            if math.hypot(x-prev[1],y-prev[2])>=.2:
-                total+=now-prev[0]
-        e.pet_contact=(now,x,y,total);e.last_pointer=(x,y)
-        if total>=self.cfg()['pet_seconds'] and a['pet_day']!=e.day:
-            a['pet_day']=e.day;a['affection']=min(299,a['affection']+self.cfg()['pet_points']);e.render();return e.response(sound_events=[self.sound(a)])
+        if self._pet_session.move(x,y,now,inside,self.cfg()['pet_seconds'],self.cfg().get('pet_release_idle_seconds',0.5),self.cfg()['contact_gap_seconds']):
+            self.pet_complete(a,now)
+            return e.response()
         return None
     def advance(self):
         e=self.engine;cfg=self.cfg();notes=[]
@@ -205,4 +235,4 @@ class Pets(Feature):
         return int(any(a['affection']>=200 and not a['sick'] and self.engine.day-a['fed_day']<self.cfg()['hungry_days'] for a in self.engine.pets))*self.cfg()['trusted_harvest_bonus']
     def public(self):
         a=self.selected();e=self.engine;active=self.active()
-        return dict(home_pet=dict(id=active['id'],name=active['name'],position=self.position(active),pattern=self.rows(active)) if active else None,animals=[dict(id=p['id'],species=p['species'],name=p['name'],pitch=p['pitch'],status=self.describe(p)) for p in e.pets],selected=e.pet_selected,active=e.pet_active,pose=self.pose(a) if a else None,brush_region=dict(x=self.position(a,True)[0]-18,y=self.position(a,True)[1]-12,width=36,height=24) if a else None,audio=self.cfg()['audio'])
+        return dict(petting_feedback=self._pet_feedback if self._pet_feedback and time.monotonic()-self._pet_feedback["at"]<2 else None,home_pet=dict(id=active['id'],name=active['name'],species=active['species'],appearance=active.get('appearance',(active['id']-1)%3),pose=self.pose(active),position=self.position(active),pattern=self.rows(active)) if active else None,animals=[dict(id=p['id'],species=p['species'],name=p['name'],appearance=p.get('appearance',(p['id']-1)%3),pitch=p['pitch'],status=self.describe(p)) for p in e.pets],selected=e.pet_selected,detail=dict(species=a['species'],appearance=a.get('appearance',(a['id']-1)%3),position=self.position(a,True),pose=self.pose(a),name=a['name']) if a else None,active=e.pet_active,pose=self.pose(a) if a else None,brush_region=dict(x=self.position(a,True)[0]-18,y=self.position(a,True)[1]-12,width=36,height=24) if a else None,audio=self.cfg()['audio'])

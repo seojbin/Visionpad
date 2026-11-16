@@ -401,6 +401,13 @@ class GameAudio {
         if (state) this.latestState = state;
         this.updateTaskPosition();
         if (this.suspended || state?.paused) { this.stopAll(); return; }
+        for (const [key,page] of [['pets','pet_detail'],['pasture','animal_detail']]) {
+            const cue=state?.[key]?.petting_feedback;
+            if(cue && state.page===page && this['lastPetting_'+key]!==cue.id){
+                this['lastPetting_'+key]=cue.id;
+                for(const event of cue.events||[])this.oneShot(event.sound,null,false,0,event.kind==='pet_sound'?{petId:event.pet_id,pitch:event.pitch}:{});
+            }
+        }
         this.syncWork(state);
         this.syncAnimals(state,feedback);
         this.syncPets(state);

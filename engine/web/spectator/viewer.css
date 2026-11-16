@@ -378,3 +378,10 @@
 .dotdew-observer[data-page="shop_tools"] .dv-card {gap:.35cqw;padding:.65cqw;}
 .dotdew-observer[data-page="shop_tools"] .dv-item-top canvas {width:6.5cqw;height:6.5cqw;}
 .dotdew-observer[data-page="shop_tools"] .dv-card strong {font-size:1.35cqw;}
+
+/* Care keeps the home scene visible; pet switching is a transient overlay. */
+.dotdew-observer[data-page="care"] .dv-menu {inset:9% 3% auto;max-height:30%;}
+.dotdew-observer[data-page="care"] .dv-menu h3,
+.dotdew-observer[data-page="care"] .dv-subtitle {display:none;}
+.dotdew-observer[data-page="care"] .dv-cards {grid-template-columns:repeat(4,minmax(0,1fr));}
+.dotdew-observer[data-page="pets"] .dv-menu {inset:12% 10% 8%;box-shadow:0 0 0 100vmax #10181066;}

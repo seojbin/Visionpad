@@ -13,7 +13,10 @@
     "flower-items": "assets/flower-items.png",
     "flower-stages": "assets/flower-stages.png",
     "flower-backgrounds": "assets/flower-backgrounds.png",
-    "pasture-items": "assets/pasture-items.png"
+    "pasture-items": "assets/pasture-items.png",
+    "pets-v3": "assets/pets-v3.png",
+    "pet-room": "assets/pet-room.png",
+    "pet-items": "assets/pet-items.png"
   },
   "backgrounds": {
     "home": {
@@ -150,6 +153,9 @@
         766,
         486
       ]
+    },
+    "pet_room": {
+      "texture": "pet-room"
     }
   },
   "facilities": {
@@ -964,6 +970,186 @@
         288,
         246
       ]
+    },
+    "pet_cat_0": {
+      "texture": "pets-v3",
+      "source": [
+        0,
+        0,
+        313,
+        313
+      ]
+    },
+    "pet_cat_0_sleeping": {
+      "texture": "pets-v3",
+      "source": [
+        0,
+        627,
+        313,
+        313
+      ]
+    },
+    "pet_cat_1": {
+      "texture": "pets-v3",
+      "source": [
+        313,
+        0,
+        313,
+        313
+      ]
+    },
+    "pet_cat_1_sleeping": {
+      "texture": "pets-v3",
+      "source": [
+        313,
+        627,
+        313,
+        313
+      ]
+    },
+    "pet_cat_2": {
+      "texture": "pets-v3",
+      "source": [
+        627,
+        0,
+        313,
+        313
+      ]
+    },
+    "pet_cat_2_sleeping": {
+      "texture": "pets-v3",
+      "source": [
+        627,
+        627,
+        313,
+        313
+      ]
+    },
+    "pet_dog_0": {
+      "texture": "pets-v3",
+      "source": [
+        0,
+        313,
+        313,
+        313
+      ]
+    },
+    "pet_dog_0_sleeping": {
+      "texture": "pets-v3",
+      "source": [
+        0,
+        940,
+        313,
+        313
+      ]
+    },
+    "pet_dog_1": {
+      "texture": "pets-v3",
+      "source": [
+        313,
+        313,
+        313,
+        313
+      ]
+    },
+    "pet_dog_1_sleeping": {
+      "texture": "pets-v3",
+      "source": [
+        313,
+        940,
+        313,
+        313
+      ]
+    },
+    "pet_dog_2": {
+      "texture": "pets-v3",
+      "source": [
+        627,
+        313,
+        313,
+        313
+      ]
+    },
+    "pet_dog_2_sleeping": {
+      "texture": "pets-v3",
+      "source": [
+        627,
+        940,
+        313,
+        313
+      ]
+    },
+    "draw": {
+      "texture": "pets-v3",
+      "source": [
+        940,
+        0,
+        313,
+        313
+      ]
+    },
+    "plant_nutrient": {
+      "texture": "pets-v3",
+      "source": [
+        940,
+        313,
+        313,
+        313
+      ]
+    },
+    "special_feed": {
+      "texture": "pets-v3",
+      "source": [
+        940,
+        627,
+        313,
+        313
+      ]
+    },
+    "medicine": {
+      "texture": "pets-v3",
+      "source": [
+        940,
+        940,
+        313,
+        313
+      ]
+    },
+    "gold_pickaxe": {
+      "texture": "pet-items",
+      "source": [
+        0,
+        0,
+        627,
+        627
+      ]
+    },
+    "gold_rod": {
+      "texture": "pet-items",
+      "source": [
+        627,
+        0,
+        627,
+        627
+      ]
+    },
+    "dog_voucher": {
+      "texture": "pet-items",
+      "source": [
+        0,
+        627,
+        627,
+        627
+      ]
+    },
+    "cat_voucher": {
+      "texture": "pet-items",
+      "source": [
+        627,
+        627,
+        627,
+        627
+      ]
     }
   },
   "pages": {
@@ -1050,6 +1236,30 @@
     },
     "shop_tools": {
       "renderer": "shop_buy"
+    },
+    "care": {
+      "renderer": "home",
+      "items": true
+    },
+    "pets": {
+      "renderer": "home",
+      "items": true
+    },
+    "pet_detail": {
+      "renderer": "home",
+      "items": true
+    },
+    "pet_give": {
+      "renderer": "home",
+      "items": true
+    },
+    "pet_names": {
+      "renderer": "home",
+      "items": true
+    },
+    "pet_release": {
+      "renderer": "home",
+      "items": true
     }
   }
 }

@@ -21,6 +21,8 @@ class PastureTests(unittest.TestCase):
             for i in range(33):
                 clock.return_value=100+i*.1
                 self.e.pointer_move(28+i%2,22)
+            clock.return_value=104
+            self.e.pointer_move(0,0)
     def day(self):
         self.e.registry.run('end_of_day'); self.e.day+=1; self.e.registry.run('start_of_day')
     def test_navigation_and_map(self):
@@ -94,33 +96,6 @@ class PastureTests(unittest.TestCase):
         self.pet();self.assertEqual(a['friendship'],10)
         self.assertNotIn('progress',str(e.get_state()['pasture']))
         e.day+=1;self.act('open:chicken');self.pet();self.assertEqual(a['friendship'],20)
-
-    def test_daily_pet_main_call_once_per_animal_and_day(self):
-        e=self.e
-        for kind in ('chicken','sheep'):
-            self.act('open:'+kind)
-            with patch('game.pasture.feature.time.monotonic') as clock:
-                events=[]
-                for i in range(81):
-                    clock.return_value=100+i*.1
-                    result=e.pointer_move(28+i%2,22)
-                    events.extend(result.get('sound_events',[]))
-                self.assertEqual(events,[{'kind':'one_shot','sound':kind+'_main'}])
-            self.assertEqual(e.pasture_animals[kind]['friendship'],10)
-            self.act('open:'+kind)
-            with patch('game.pasture.feature.time.monotonic') as clock:
-                events=[]
-                for i in range(41):
-                    clock.return_value=200+i*.1
-                    events.extend(e.pointer_move(28+i%2,22).get('sound_events',[]))
-                self.assertEqual(events,[])
-        e.day+=1;self.act('open:chicken')
-        with patch('game.pasture.feature.time.monotonic') as clock:
-            events=[]
-            for i in range(41):
-                clock.return_value=300+i*.1
-                events.extend(e.pointer_move(28+i%2,22).get('sound_events',[]))
-            self.assertEqual(events,[{'kind':'one_shot','sound':'chicken_main'}])
 
     def test_pet_does_not_count_pause_or_long_gaps(self):
         self.act('open:sheep');e=self.e;a=e.pasture_animals['sheep']
