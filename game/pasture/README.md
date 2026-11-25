@@ -11,7 +11,7 @@ The three visible states are Indifferent, Recognizes you and Seems happy. The in
 | Code | `game/pasture/feature.py` |
 | Pages | `pasture`, `animal_detail`, `egg_collect`, `shearing` |
 | Actions | `animal:open:<kind>`, `animal:feed`, `animal:gather`, `animal:collect`, `animal:shear`, `animal:cancel` |
-| Object types | `animal_icon`, `animal_care`, `animal_hitbox`, `egg_target` |
+| Object types | `animal_icon`, `animal_care`, `animal_hitbox`, `egg_target`; `pasture_exit` (the arrow on the east fence, to the farm). The woolly sheep's scene and detail objects carry `filled_by_design` (its filled drawing is intentional); the chicken and shorn sheep use `fur_rows` (the chicken after `close_gaps`) |
 | Owned engine attributes | `pasture_animals`, `pasture_goods`, `pasture_selected`, `pasture_sheared`, `pasture_move_at`, `pasture_stroke`, `pasture_morning_id` |
 | Shared attributes written/read | Page through `set_page`; gold through resource methods; pointer position; day, pause, sleep and night state |
 | Events | reset, end_of_day, start_of_day, before_state, before_navigation, leave_activity, release_drag |
@@ -21,7 +21,7 @@ The three visible states are Indifferent, Recognizes you and Seems happy. The in
 | Engine API provided/used | Provided: none. Used: back_arrow, set_page, clear_hover, render, response, resource, add_resource, market_price, point_to_segment_distance, draw_icon_pattern |
 | Config | `engine/config/game.json` → pasture: animals.days/product/price/buy_price/wait_days/wait_weights/double_egg_chance/ready_capacity/yield_range, escape_grace_days, escape_increment, shear_success_ratio, feed_price, breath_seconds, move_seconds, move_interval_seconds, flip_interval_multipliers, shear_radius, pet_seconds, pet_contact_gap_seconds, pet_points, collect_points, feed_grace_days, collection_grace_days, unfed_penalty, uncollected_penalty, audio |
 | Client (web) | `engine/web/core/game-audio.js` schedules calls; `engine/web/core/game.js` refreshes moving animals; companion viewer and asset catalog render animals and fleece. Audio files live in `game/pasture/audio/`. |
-| Tests | `game/pasture/tests/test_production.py`, `game/pasture/tests/test_interaction_fixes.py`, `game/pasture/tests/test_purchase_escape.py`, `game/pasture/tests/test_pasture.py`, `game/pasture/tests/test_animal_audio.cjs`, `engine/tests/python/saves/test_save_compat.py` |
+| Tests | `game/pasture/tests/test_production.py`, `game/pasture/tests/test_interaction_fixes.py`, `game/pasture/tests/test_purchase_escape.py`, `game/pasture/tests/test_pasture.py`, `game/pasture/tests/test_animal_audio.cjs`, `engine/tests/python/saves/test_save_compat.py` The scene is audited by `engine/tests/python/display/test_tactile_rules.py` (gaps, outlines, symbols per page). |
 
 Developer defaults: each stage is 100 points (maximum 299); pet +10 once per day, collection +30. After four days without feed, each subsequent morning subtracts 20. After two days with uncollected products, each subsequent morning subtracts 30. These losses do not destroy an existing product. Shared animal feed costs 30; eggs sell for 70 and wool for 100 before market/food modifiers. Petting and feeding do not spend activity time. Completed egg/wool collection uses time.action_costs.animal_collect (3).
 

@@ -10,7 +10,7 @@ The server owns game state and checks every action. The browser sends pointer an
 |---|---|
 | `server/` | FastAPI app (`main.py`, run as `uvicorn engine.server.main:app`), shared runtime, routes: game page and input/state API (`/api/state`, `/api/pointer/*`, `/api/command`, `/api/reset`, `/api/visual-tick`), speech (`/api/speech*`), static files |
 | `core/` | `engine.py` (state, reset, page objects, responses), `registry.py` (how features plug in), `order.py` (run orders for events and slots), `input.py`, `render.py`, `time.py` (time, night, sleep), `state.py` (shared-state helpers), `effects.py` (food effects) |
-| `display/` | `dotpad.py` (dot matrix and drawing), `icons.py` (icon grid and symbols), `keypad.py` (F-key menus, arrow navigation) |
+| `display/` | `dotpad.py` (dot matrix and drawing), `icons.py` (icon grid and the shared 14-symbol vocabulary with aliases for retired names), `keypad.py` (F-key menus, arrow navigation), `tactile.py` (tactile design rules: gaps, outlines, symbols per page, the checker, `SymbolTrace` for contacts between drawings, and `fur_rows` for animal drawings; see the root README) |
 | `services/` | `saves.py` (save files and migrations), `speech.py` (Piper and WAV cache), `speech_queue.py` |
 | `spectator/` | `state.py`: public data for the companion window |
 | `config/` | `game.json` (rules), `npc.json` (Rowan's lines), `speech.json` (voices), `tracking.json` (camera); `load_config()` in `__init__.py` |
@@ -149,6 +149,7 @@ It collects about 210 lines at rate 1.0 (fixed guidance, Rowan's tutorial and ad
 | `python engine/tools/audio_integration_lab.py` | Browser lab on `http://127.0.0.1:8001/` starting in a temporary watering scene; does not touch real saves |
 | `python engine/tools/prepare_speech.py [--download]` | Download the voice models (verified against the pinned size and SHA-256, three attempts, the old file is kept if a download fails, matching files are reused offline); write preview samples to `.audio/reports/` |
 | `python engine/tools/prepare_effects_preview.py` | Effects reel (above) |
+| `python engine/tools/tactile_audit.py [--show] [--png DIR]` | Render every registered page plus minigame, cooking and flower states (temporary saves) and list tactile design rule violations, including symbols that touch another drawing (`tactile.SymbolTrace`); `--show` prints each page as dots, `--png DIR` saves pictures for a visual dot review. `engine/tests/python/display/test_tactile_rules.py` runs the same scenarios |
 | `python engine/launcher/check_setup.py [--synthesize]` | Diagnose packages, files, sounds, voices and writable folders without starting a game |
 
 ## Manual testing

@@ -19,7 +19,7 @@ Daily rocks at the mine, pickaxe wear and breakage, mineral loot (with mineral-d
 | Engine API used | `market_price` (village), `boost_rare_weights`, `loot_amount` (seafood), `get_fertilizer_price` (farming, for the pickaxe price), `buff_multiplier_for` (cooking, core), `item_destroyed_event` (core) |
 | Config | `engine/config/game.json` → `mine.*`, `research.mineral_luck.*`, `time.action_costs.mine` |
 | Client (web) | `game/mining/client.js` (mine task text); sounds `game/mining/audio/pickaxe.mp3`, `break.mp3` (`shine`, `destroy` are shared in `engine/web/audio/`) |
-| Tests | `engine/tests/python/audio/test_gameplay_audio.py` (rock guidance, tool break) |
+| Tests | `engine/tests/python/audio/test_gameplay_audio.py` (rock guidance, tool break) The scene is audited by `engine/tests/python/display/test_tactile_rules.py` (gaps, outlines, symbols per page). The mine is exempt from the fill rule: rocks keep their filled shape with damage patterns (owner decision). |
 | Note | `draw_item` was unused before the split (follow-up F14); kept for parity. |
 
 ## Rowan and shelter update

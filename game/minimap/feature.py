@@ -4,14 +4,17 @@ Owns no engine attributes. Shared state written: current_page (open), via
 return_to_scene/travel_to in core.
 """
 from engine.core.registry import Feature
+from engine.display.tactile import MIN_GAP
 
 
 class Minimap(Feature):
     name = "minimap"
 
     def register(self, reg):
-        reg.page("minimap", objects=self.page_objects, menu_text=lambda: 'Map. Select a place.',
-                 navigate=self.navigate)
+        reg.slot("minimap.objects", "Extra objects on the F1 map (for example the Guide button). "
+                                    "Provider returns a list of objects placed clear of the location nodes.")
+        reg.page("minimap", objects=self.page_objects, navigate=self.navigate,
+                 menu_text=lambda: 'Map. Select a place.' + (' The guide is at the top left.' if self.engine.registry.collect("minimap.objects") else ''))
         reg.renderer("node", self.draw_node)
         reg.renderer("route", self.draw_route)
         reg.hit_test("route", self.route_contains)
@@ -55,7 +58,30 @@ class Minimap(Feature):
                        label=label, tts=label+(". You are here." if here else (f". {direction}." if direction else ".")),
                        action=f"travel:{location}")
             objects.append(obj)
-        return objects
+        self.clear_route_ends(objects)
+        return objects + self.engine.registry.collect("minimap.objects")
+
+    @staticmethod
+    def clear_route_ends(objects, gap=MIN_GAP):
+        """Shorten each path so it stops `gap` lowered pins before a node frame instead of running into it.
+
+        Tactile design rules (README.md): a line never touches a symbol; the reader feels the node's
+        whole frame and then a short break before the path continues.
+        """
+        boxes = [(o["x"] - 3 - gap, o["y"] - 3 - gap, o["x"] + 3 + gap, o["y"] + 3 + gap)
+                 for o in objects if o.get("type") == "node"]
+
+        def inside(x, y):
+            return any(left <= x <= right and top <= y <= bottom for left, top, right, bottom in boxes)
+
+        for route in (o for o in objects if o.get("type") == "route"):
+            x1, y1, x2, y2 = route["x1"], route["y1"], route["x2"], route["y2"]
+            sx, sy = (x2 > x1) - (x2 < x1), (y2 > y1) - (y2 < y1)
+            while (x1, y1) != (x2, y2) and inside(x1, y1):
+                x1, y1 = x1 + sx, y1 + sy
+            while (x1, y1) != (x2, y2) and inside(x2, y2):
+                x2, y2 = x2 - sx, y2 - sy
+            route.update(x1=x1, y1=y1, x2=x2, y2=y2)
 
     def navigate(self, direction):
         """Left or Right closes the map and returns to the current region."""
@@ -67,13 +93,14 @@ class Minimap(Feature):
 
     def draw_node(self, obj):
         e = self.engine
-        # Exact seven-dot bounds for both empty and filled nodes. Clear paths
-        # beneath the node, leaving connections outside its frame intact.
+        # Exact seven-dot frame. The current place ("you are here") adds a small solid 3x3 mark in the
+        # centre instead of filling the whole node (large filled shapes are hard to read by touch).
         left, top = round(obj['x'])-3, round(obj['y'])-3
         for dy in range(7):
             for dx in range(7):
-                raised = obj.get('current') or dx in (0,6) or dy in (0,6)
-                e.dotpad.set_dot(left+dx,top+dy,int(bool(raised)))
+                frame = dx in (0,6) or dy in (0,6)
+                mark = obj.get('current') and 2 <= dx <= 4 and 2 <= dy <= 4
+                e.dotpad.set_dot(left+dx,top+dy,int(bool(frame or mark)))
 
     def route_contains(self, obj, x, y):
         distance = self.engine.point_to_segment_distance(x, y, obj["x1"], obj["y1"], obj["x2"], obj["y2"])

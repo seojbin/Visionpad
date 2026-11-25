@@ -48,7 +48,9 @@ class Shop(Feature):
         reg.expose("sell_shop_item", self.sell)
 
     def item_pattern(self,obj):
-        if obj.get('shop_kind')=='roulette':return ('0011100','0111110','1101011','1110111','1101011','0111110','0011100')
+        # Prize draw: a 7x5 starburst (open lines, unlike the closed coin) that leaves one lowered pin
+        # inside the 11x9 icon frame; the old 7x7 wheel touched the frame top and bottom.
+        if obj.get('shop_kind')=='roulette':return ('1001001','0101010','1111111','0101010','1001001')
         if obj.get('shop_kind')=='animal':
             pattern=self.engine.registry.icon_patterns.get('animal_icon')
             if pattern:return pattern({'animal':obj['item_id']})
@@ -126,7 +128,7 @@ class Shop(Feature):
                 "x": 30, "y": 6, "width": 12, "height": 10, "hit_width": 10, "hit_height": 8,
                 "label": "General goods", "tts": "General goods.", "action": "shop_mode:buy"
             },
-            {"id":"shop_tools_choice", "type":"shop_choice", "choice":"buy", "x":38,"y":6,
+            {"id":"shop_tools_choice", "type":"shop_choice", "choice":"tools", "x":38,"y":6,
              "width":12,"height":10,"hit_width":10,"hit_height":8,
              "label":"Tools", "tts":"Tools.", "action":"shop_mode:tools"},
             {
@@ -148,76 +150,63 @@ class Shop(Feature):
                  x=30, y=19, width=9, height=8, hit_width=11, hit_height=9,
                  label='Shopkeeper', tts='Shopkeeper. Select Sell, General goods, Tools, or Calendar.', action='open_calendar'),
             dict(id='shop_scene_sell', type='shop_hitbox', skip_grid=True,
-                 x=20, y=30, width=12, height=11, hit_width=12, hit_height=11,
+                 x=16, y=30, width=12, height=11, hit_width=12, hit_height=11,
                  label='Sell', tts='Sell.', action='shop_mode:sell'),
             dict(id='shop_scene_buy', type='shop_hitbox', skip_grid=True,
-                 x=33, y=30, width=10, height=11, hit_width=10, hit_height=11,
+                 x=30, y=30, width=12, height=11, hit_width=12, hit_height=11,
                  label='General goods', tts='General goods.', action='shop_mode:buy'),
             dict(id='shop_scene_tools', type='shop_hitbox', skip_grid=True,
-                 x=45,y=30,width=10,height=11,hit_width=10,hit_height=11,
+                 x=44,y=30,width=12,height=11,hit_width=12,hit_height=11,
                  label='Tools',tts='Tools.',action='shop_mode:tools'),
             dict(id='shop_scene_exit', type='shop_hitbox', skip_grid=True,
                  x=2, y=26, width=5, height=7, hit_width=7, hit_height=9,
                  label='Back to village', tts='Back to village.', action='return_scene'),
         ]
 
+    # Shop interior drawn to the tactile design rules (README.md): raised outlines with lowered
+    # interiors, at least one lowered pin between neighbours, and one raised symbol per counter.
+    CALENDAR = ('011000110',
+                '111111111',
+                '100000001',
+                '101010101',
+                '100000001',
+                '101010101',
+                '100000001',
+                '111111111')
+    # Head joined to the shoulders by a neck pin, so the shopkeeper is felt as one figure.
+    KEEPER = ('000111000',
+              '001000100',
+              '001000100',
+              '000111000',
+              '000010000',
+              '011111110',
+              '100000001',
+              '111111111')
+    WHEEL = ('000111000',
+             '011000110',
+             '010000010',
+             '100010001',
+             '100111001',
+             '100010001',
+             '010000010',
+             '011000110',
+             '000111000')
+    # (centre x, width, symbol): Sell shows a coin, General goods a bag, Tools a tool.
+    # Every counter is 12 pins wide (10 inside) so the 7-pin bag keeps one lowered pin on each side.
+    COUNTERS = ((16, 12, 'coin'), (30, 12, 'bag'), (44, 12, 'tool'))
+
     def draw_scene(self):
         e = self.engine
         pad = e.dotpad
-        pad.draw_line(0, 12, pad.width - 1, 12)
-        pad.draw_line(0, 13, pad.width - 1, 13)
-
-        pad.draw_line(4, 39, 55, 39)
-        for y in range(13, 40):
-            if not (24 <= y <= 28):
-                pad.set_dot(4, y)
-            pad.set_dot(55, y)
-        for dx in (3, 4, 5):
-            pad.set_dot(dx, 23)
-            pad.set_dot(dx, 29)
-        e.draw_icon_pattern(1, 26, (
-            '001',
-            '011',
-            '111',
-            '011',
-            '001',
-        ))
-
-        draw_solid_pattern = e.draw_solid_pattern
-
-        draw_solid_pattern(11, 20, (
-            '.1100011.',
-            '111111111',
-            '101010101',
-            '111111111',
-            '101010101',
-            '111111111',
-            '101010101',
-            '111111111',
-        ))
-
-        draw_solid_pattern(30, 19, (
-            '..11111..',
-            '.1111111.',
-            '..10101..',
-            '..11111..',
-            '.1111111.',
-            '111111111',
-            '111010111',
-            '111111111',
-        ))
-
-        e.draw_icon_pattern(44,19,('000111000','001111100','011010110','111101111','110111011','111101111','011010110','001111100','000111000'))
-
-        # Three disjoint counters; their bounds match the lower hit regions.
-        for cx,width,letter in [(20,12,'sell'),(33,10,'buy'),(45,10,'buy')]:
-            left=cx-width//2
-            for y in range(25,36):
-                for x in range(left,left+width):pad.set_dot(x,y)
-            for x in range(left+1,left+width-1):pad.set_dot(x,26,0)
-            rows=self.engine.icons.PATTERNS[letter]
-            for dy,row in enumerate(rows):
-                for dx,pixel in enumerate(row):pad.set_dot(cx-len(row)//2+dx,28+dy,0 if pixel=='1' else 1)
+        e.draw_room(doors=('left',))
+        e.draw_solid_pattern(11, 20, self.CALENDAR)
+        e.draw_solid_pattern(30, 19, self.KEEPER)
+        e.draw_solid_pattern(44, 19, self.WHEEL)
+        # Three separate counters (outline boxes, rows 25-35) matching the lower hit regions.
+        for cx, width, symbol in self.COUNTERS:
+            left = cx - width // 2
+            pad.draw_box(left + (width - 1) / 2, 30, width - 1, 10)
+            e.draw_icon_pattern(cx, 30, e.icons.PATTERNS[symbol])
 
     def open(self):
         e = self.engine

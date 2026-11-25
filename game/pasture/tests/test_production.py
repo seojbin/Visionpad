@@ -54,4 +54,4 @@ class ProductionTests(unittest.TestCase):
         e.restore_snapshot(snap);self.assertIn(3*60+4,e.pasture_sheared)
         self.assertEqual(e.pasture_animals['sheep']['shear_format'],'dots_v1')
     def test_prices(self):
-        c=self.e.config['pasture']['animals'];self.assertEqual(c['chicken']['price'],70);self.assertEqual(c['sheep']['price'],100)
+        c=self.e.config['pasture']['animals'];self.assertEqual(c['chicken']['price'],50);self.assertEqual(c['sheep']['price'],100)

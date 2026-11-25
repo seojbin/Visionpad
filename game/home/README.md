@@ -11,8 +11,8 @@ The home page: bed, research chest and kitchen icons, the drawn home scene with 
 | Owned engine attributes | none |
 | Shared attributes read | `config` (`home.objects`, `recipes`), `day_ended`, `dotpad` |
 | Slots declared | `home.objects`, `home.scene_objects`, `home.scene` (order tables `order.HomeObjects`, `HomeSceneObjects`, `HomeScene`); flowers contributes |
-| Engine API used | `can_craft_recipe` (cooking) for "Kitchen. Available recipes: N."; `draw_icon_pattern`, `draw_solid_pattern` (core) |
+| Engine API used | `can_craft_recipe` (cooking) for "Kitchen. Available recipes: N."; `draw_icon_pattern`, `draw_solid_pattern`, `draw_room` (core: divider, walls with doorways and doorway arrows) |
 | Config | `engine/config/game.json` → `home.objects`; page name `pages.home` |
 | Events | none |
 | Client (web) | `game/home/client.js` (home task text) |
-| Tests | No dedicated tests. Covered through `engine/tests/python/audio/test_audio_flow.py` and `engine/tests/python/saves/test_save_compat.py`. |
+| Tests | No dedicated tests. Covered through `engine/tests/python/audio/test_audio_flow.py` and `engine/tests/python/saves/test_save_compat.py`. The scene is audited by `engine/tests/python/display/test_tactile_rules.py` (gaps, outlines, symbols per page). |

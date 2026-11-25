@@ -9,19 +9,20 @@ class ShelterTests(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.e=GameEngine(load_config('game'),save_dir=self.tmp.name)
     def test_prices_levels_description_and_discount(self):
-        e=self.e;e.resources['coin']=1000;e.pasture_goods['wool']=6
+        # Wool costs follow engine/config/game.json research.animal_shelter.wool_costs (3, 6 since the farm update).
+        e=self.e;e.resources['coin']=1000;e.pasture_goods['wool']=9
         e.perform_action('open_research',{})
         obj=next(o for o in e.get_objects() if o.get('research_kind')=='animal_shelter')
-        self.assertEqual(e.get_object_tts(obj),'Animal shelter, 150 Gold, 2 Wool.')
-        self.assertEqual(e.get_object_tts(obj,detail=True),'Animal shelter. Level 1. Requires 150 gold, Wool 2 required. Increased yield.')
+        self.assertEqual(e.get_object_tts(obj),'Animal shelter, 150 Gold, 3 Wool.')
+        self.assertEqual(e.get_object_tts(obj,detail=True),'Animal shelter. Level 1. Requires 150 gold, Wool 3 required. Increased yield.')
         self.assertIn('Increased yield',e.get_object_tts(obj,detail=True))
-        self.assertEqual([(i['item'],i['required']) for i in obj['display_quantities']],[('coin',150),('wool',2)])
+        self.assertEqual([(i['item'],i['required']) for i in obj['display_quantities']],[('coin',150),('wool',3)])
         e.perform_action('research:animal_shelter',{})
-        self.assertEqual((e.resources['coin'],e.pasture_goods['wool'],e.research_levels['animal_shelter']),(850,4,1))
+        self.assertEqual((e.resources['coin'],e.pasture_goods['wool'],e.research_levels['animal_shelter']),(850,6,1))
         e.start_food_effect('fried_egg',e.get_recipe_config('fried_egg'))
         obj=next(o for o in e.get_objects() if o.get('research_kind')=='animal_shelter')
-        self.assertEqual(e.get_object_tts(obj),'Animal shelter, 200 Gold, 4 Wool.')
-        self.assertEqual(e.get_object_tts(obj,detail=True),'Animal shelter. Level 2. Requires 200 gold, Wool 4 required. Increased yield.')
+        self.assertEqual(e.get_object_tts(obj),'Animal shelter, 200 Gold, 6 Wool.')
+        self.assertEqual(e.get_object_tts(obj,detail=True),'Animal shelter. Level 2. Requires 200 gold, Wool 6 required. Increased yield.')
         e.perform_action('research:animal_shelter',{})
         self.assertEqual((e.resources['coin'],e.pasture_goods['wool'],e.research_levels['animal_shelter']),(650,0,2))
         obj=next(o for o in e.get_objects() if o.get('research_kind')=='animal_shelter')

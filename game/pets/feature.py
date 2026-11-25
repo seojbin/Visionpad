@@ -1,5 +1,6 @@
-from engine.core.petting import PettingSession
 """Individual pets, care, daily health and gifts. Tactile artwork is fixed-grid."""
+from engine.core.petting import PettingSession, next_feedback_id
+from .shapes import drawing
 import math
 import random
 import time
@@ -46,7 +47,11 @@ class Pets(Feature):
         return dict(id='pet_'+id,type='pet_button',x=8+14*(i%4),y=6+10*(i//4),width=12,height=10,hit_width=12,hit_height=10,label=label,tts=label+'.',action=action,symbol=symbol)
     def back(self,page,label='Back'):return self.engine.back_arrow('pet_back',label,'pet:'+page)
     def care_objects(self):
-        return [self.button('home','Back',0,'pet:home','nav_left'),self.button('plants','Plants',1,'flower:open','seed'),self.button('pets','Pets',2,'pet:active')]+self.engine.registry.features['home'].scene_objects()
+        # The Care page shows the home scene, so the arrow keys travel like on the home page
+        # (Left: farm, Right: village) instead of answering "Cannot go left/right".
+        travel=[dict(id='care_farm',type='arrow',direction='left',x=3,y=35,label='Farm',tts='Farm.',action='travel:farm'),
+                dict(id='care_town',type='arrow',direction='right',x=56,y=5,label='Village',tts='Village.',action='travel:town')]
+        return [self.button('home','Back',0,'pet:home','nav_left'),self.button('plants','Plants',1,'flower:open','seed'),self.button('pets','Pets',2,'pet:active')]+self.engine.registry.features['home'].scene_objects()+travel
     def mood(self,a):return 'Trusts you' if a['affection']>=200 else 'Recognizes you' if a['affection']>=100 else 'Getting to know you'
     def describe(self,a):
         health='Sick' if a['sick'] else 'Hungry' if self.engine.day-a['fed_day']>=self.cfg()['hungry_days'] else self.mood(a)
@@ -175,7 +180,9 @@ class Pets(Feature):
         return tuple(r[::-1] for r in rows) if self.motion(a)['left'] else rows
     def draw_detail(self):
         a=self.selected()
-        if a:self.engine.draw_icon_pattern(*self.position(a,True),self.rows(a))
+        # Large drawing: solid legs, tail and ears, one-pin outline, line texture on the body to feel
+        # while stroking (shapes.drawing; tactile design rules, README.md).
+        if a:self.engine.draw_icon_pattern(*self.position(a,True),drawing(a['species'],self.pose(a),self.motion(a)['left']))
     def active(self):
         return next((a for a in self.engine.pets if a['id']==self.engine.pet_active),self.engine.pets[0] if self.engine.pets else None)
     def home_objects(self):
@@ -200,7 +207,7 @@ class Pets(Feature):
         if a['pet_day']!=e.day:
             a['pet_day']=e.day
             a['affection']=min(299,a['affection']+self.cfg()['pet_points'])
-        self._pet_feedback=dict(id=str(time.monotonic_ns()),at=now,events=[self.sound(a)])
+        self._pet_feedback=dict(id=next_feedback_id(),at=now,events=[self.sound(a)])
     def pet_idle(self):
         e=self.engine;a=self.selected()
         if e.current_page!='pet_detail' or not a or e.paused or e.day_ended or e.sleep_until is not None:

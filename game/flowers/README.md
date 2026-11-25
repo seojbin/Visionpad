@@ -5,7 +5,7 @@ The houseplant at home: buying morning glory seeds, planting, watering by keepin
 | Item | Value |
 |---|---|
 | Code | `feature.py` (`Flowers`) |
-| Pages | `flower_detail` ("Flower pot") |
+| Pages | `flower_detail` ("Flower pot") The pot is drawn as a raised outline (the watering hit area is still the whole pot, `pot_dots`); the home blossom is drawn pin by pin as part of its stem. |
 | Actions | `flower:open`, `flower:plant`, `flower:water`, `flower:empty` (run before the night guard; the handler checks `day_ended`) |
 | Object types | `flower_pot` (icon on home, full drawing on the detail page) |
 | Owned engine attributes (save format) | `flower_seeds`, `houseplant`, `flower_watering`, `flower_contact_at` |

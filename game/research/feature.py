@@ -35,7 +35,7 @@ class Research(Feature):
     @staticmethod
     def icon_pattern(obj):
         symbol = RESEARCH_SYMBOLS.get(obj.get('research_kind'), 'chest')
-        return IconRenderer.PATTERNS.get(symbol, IconRenderer.PATTERNS['material'])
+        return IconRenderer.PATTERNS.get(symbol, ())
 
     @staticmethod
     def object_tts(obj):

@@ -5,7 +5,7 @@ The shop counter (sell, buy, calendar), paged buy and sell lists, weekly market 
 | Item | Value |
 |---|---|
 | Code | `feature.py` (`Shop`) |
-| Pages | `shop_choice` (counter scene, icon grid, location text, braille "shop" panel), `shop_buy`, `shop_sell` (twelve rows per page, page bar or braille "buy"/"sell" panel) |
+| Pages | `shop_choice` (counter scene, icon grid, location text, braille "shop" panel), `shop_buy`, `shop_sell` (twelve rows per page, page bar or braille "buy"/"sell" panel) The scene's three counters are 12 pins wide (one lowered pin around each symbol, including the 7-pin bag); the Prize draw icon is a 7 × 5 starburst that leaves one lowered pin inside its frame. |
 | Actions (after the night guard) | `open_shop`, `return_shop_choice`, `shop_mode:<buy|sell>`, `shop_page:<±1>`, `buy:<kind>:<item>`, `sell:<kind>:<item>` |
 | Object types | `shop_npc`, `shop_choice`, `shop_item` (icons, hover sounds), `shop_hitbox` (scene targets) |
 | Owned engine attributes (save format) | `shop_page` (`shop_page_count` is a derived cache set in the engine `__init__`, not saved) |
@@ -16,7 +16,7 @@ The shop counter (sell, buy, calendar), paged buy and sell lists, weekly market 
 | Engine API used | `market_price` (village); `consume_sale` (core effects) |
 | Config | `engine/config/game.json` → `seeds.*.seed_price/crop_price`, `fertilizer.*`, `shop.fertilizer_price`, `recipes.*.sell_price`; page names `pages.shop_*` |
 | Client (web) | `game/shop/client.js` (counter task text) |
-| Tests | `engine/tests/python/audio/test_sound_events.py` (coin sounds, rejections), `engine/tests/python/audio/test_team_audio.py` |
+| Tests | `engine/tests/python/audio/test_sound_events.py` (coin sounds, rejections), `engine/tests/python/audio/test_team_audio.py` The scene is audited by `engine/tests/python/display/test_tactile_rules.py` (gaps, outlines, symbols per page). |
 | Notes | The calendar button on the counter carries the village's `open_calendar` action. Core layout still positions arrows whose action starts with `shop_page:` and the keypad prefers paging arrows (`shop_page:`, `inventory_page:`). |
 
 ## Purchase categories

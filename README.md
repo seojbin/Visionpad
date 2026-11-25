@@ -12,6 +12,7 @@ A browser simulator supports mouse and keyboard. A USB or Bluetooth Dot Pad and 
 - [Install and start](#install)
 - [Controls](#controls)
 - [Gameplay guide](#playing-the-game)
+- [Tactile design rules](#tactile-design-rules)
 - [Folders](#folders)
 - [System and configuration](#system-structure)
 - [Further development](#further-development-and-evaluation)
@@ -73,7 +74,7 @@ Travel runs Farm ↔ Home ↔ Village, with separate up/down controls in the vil
 
 ### Navigation and the lower panel
 
-Use Left and Right to travel along **Farm ↔ Home ↔ Village**. Arrival speech names the destination; an unavailable direction gives a short message. F1 opens the minimap: explore its nodes and select a destination. The filled node marks the current location. In the village, use the separate on-screen up/down controls to reach the **mine** and **lake**.
+Use Left and Right to travel along **Farm ↔ Home ↔ Village**. Arrival speech names the destination; an unavailable direction gives a short message. F1 opens the minimap: explore its nodes and select a destination. The node with a small solid square in its centre marks the current location; paths stop one pin short of every node. The **Guide** button in the map's top-left corner opens the tutorial and symbol key (see [Learning support](#learning-support-the-guide)). In the village, use the separate on-screen up/down controls to reach the **mine** and **lake**. The farm has tactile exit arrows in both bottom corners (pasture on the left, home on the right) and the pasture one on its east fence, so travel works from the graphic as well as from the keys; on the home Care page Left and Right travel as on the home page.
 
 The menu window that turns on the device is displayed above the current region; pressing the same key again in the F1 or F2 menu returns you to the current region. The menu does not overlap even when navigating through other menus. In menus without multiple pages, the right arrow key can also be used to go back. The minimap that appears when you press F1 and the save file list that appears when you press F3 can also be navigated back to the previous screen using the arrow keys. 
 
@@ -81,7 +82,7 @@ If there are multiple pages, the arrow keys in the inventory that appear when pr
 
 Each shop consists of three levels (Town - Shop Selection Page - Buy/Sell Page). In Buy/Sell, if a page allows navigation beyond two pages, page switching takes priority; on the Buy/Sell page, the arrow key that leaves the page scroll activates the back button, leading to the shop selection screen, while the arrow key on the shop selection screen takes you to the town.
 
-For screens with few icons, such as villages and houses, create a detailed display at the bottom. On the display, you can select objects just like with the buttons, and move them using arrow indicators. At this time, the objects selectable on the display were rendered as fully filled recessed shapes, unlike the road and detail parts, to distinguish them from the general background.
+For screens with few icons, such as villages and houses, create a detailed display at the bottom. On the display, you can select objects just like with the buttons, and move them using arrow indicators. Selectable objects on the display are raised outlines with a lowered interior, separated from roads, walls and each other by at least one lowered pin; small solid triangles at the edges are exits. See [Tactile design rules](#tactile-design-rules).
 
 The lower 20-cell panel normally shows activity time. On a multi-page list it becomes a page-position strip: the width is divided by the page count and the current segment is raised. On a single-page shop screen it displays Braille **shop**, **buy** or **sell** to indicate the current menu depth. Pagination takes priority over that label; sleep blanks the panel.
 
@@ -91,7 +92,7 @@ Hold Shift in the demo, or use the pointing gesture with hand tracking, to hear 
 
 Press F2 to check belongings. The first page holds gold and usable items. Additional food pages come first when needed, followed by seeds, crops, fish, minerals and tools. Empty items are hidden and each page holds up to 12 entries in three rows of four. Select food to eat it. Adoption vouchers, care supplies and gold tool kits can also be used from inventory; other entries are for inspection.
 
-The current tactile renderer uses a single-line rectangular frame for ordinary items, gold and NPCs. Usable items, including food, vouchers, care supplies and gold tool kits, have two nested rectangular outlines with no central symbol. Seeds, crops, minerals and tools have category symbols inside their frames. The shared grid keeps objects in predictable slots. The companion uses image cards and quantities, rather than reproducing every tactile frame.
+Every entry has a single-line rectangular frame. Usable items, including food, vouchers, care supplies and gold tool kits, have two nested rectangular outlines with no central symbol. Other entries carry one symbol from the shared 14-symbol vocabulary (seed, crop, fish, mineral, tool, gold and so on; see [Symbol vocabulary](#symbol-vocabulary)), always with a lowered pin between the symbol and its frame; an item without a category shows the frame alone. The shared grid keeps objects in predictable slots. The companion uses image cards and quantities, rather than reproducing every tactile frame.
 
 ### Home, time and sleep
 
@@ -264,6 +265,212 @@ Hold F3 for 0.8 seconds to save into a new file. **Game saved.** plays while the
 
 The latest 12 JSON saves are kept in `saves/`; older slots are removed. Gold, items, day, plots, research, food effects, quests, mine/fishing state, the houseplant, individual pets, the active pet, gold tool upgrades and the next five prize-draw rewards are restored. Older formats receive defaults and feature migrations. Connections, camera calibration and browser audio preferences are separate. Save before shutting down: the server's in-memory game is not an automatic persistent save.
 
+## Tactile design rules
+
+The tactile layer follows published guidance for tactile graphics, adapted to the Dot Pad (60 × 40 single-height pins, about 2.5 mm apart). The rules live in `engine/display/tactile.py`. `python engine/tools/tactile_audit.py [--show] [--png DIR]` renders every page (see [Dot review](#dot-review)) and reports violations, and `engine/tests/python/display/test_tactile_rules.py` fails when a page breaks them. Numbers in brackets refer to [References](#references-for-the-tactile-design).
+
+| Rule in this game | Why (source) | Where it is enforced |
+|---|---|---|
+| **Separation.** Every symbol, framed icon, map object and doorway arrow has at least one lowered pin around it. Lines (roads, walls, map paths) stop short of a symbol instead of running into it. | A point symbol needs at least 1/8 inch (3 mm) of space from any other component, and symbols placed closer are felt as one [1 §3.4.3.11, §8.5.3, §8.6.5]. Lines are broken where they meet other elements [1 §2.11]. One pin pitch (about 2.5 mm) is the closest the Dot Pad gets to 3 mm, so one lowered pin is the minimum. | `tactile.isolation_problems()`; `tactile.SymbolTrace` (records which drawing raised each pin, so a symbol touching a wall or its own frame fails); map paths shortened in `game/minimap`; road edges stop before the arrows and the shop in `game/village`; room walls open two pins around the doorway arrows (`Rendering.draw_room`) |
+| **Outlines for large shapes; solid only for small signs.** Large objects (furniture, the shop, counters, the current map node) are a raised outline with a lowered interior. Solid shapes are small signs of at most 4 × 4 solid pins (arrows, the person's head, the "you are here" mark). Progress is a line texture, not a solid bar. **Exceptions by owner decision:** mine rocks keep their filled shape with damage patterns, and a sheep with grown wool (and the shearing field) stays filled, because the wool is what gets sheared. | Project decision from the professor's review: blind readers found filled (engraved) icons hard to read. On pin displays, plain outlines with empty insides were recognised most easily, and filled circles were hard to recognise [14, citing Bellik & Clavel and Velázquez]. Important features should be raised edges, not indents [3]. Outlines were easier than solids in older studies, but that advantage "does not hold when the size is reduced" [15]; BANA likewise finds solid shapes easier for young readers on paper [1 §11.2.1, §6.11.1.2]. That is why small signs stay solid. | `tactile.solid_blocks()`: no solid block larger than 4 × 4 outside the mine and the sweep minigames. `tactile.fill_ratio()`: objects of 8 × 8 pins or more raise at most half of their interior, unless marked `filled_by_design` (the woolly sheep) |
+| **Animals: solid limbs, outlined body, line texture.** The large cat, dog, chicken and shorn-sheep drawings keep thin parts (legs, tail, ears; at most five pins across, `THIN_PART`) solid. The body is a one-pin outline, then one lowered pin, then horizontal raised lines with one lowered row between them. Texture runs shorter than three pins are dropped, so no single pin stands alone. On the cat and dog only the body gets the texture; the head stays an empty outline. The woolly sheep stays filled: its wool is the part that identifies it and the part that is sheared. | Single interior pins read as eyes or as braille [14], and fewer, isolated dots hurt recognition [21]; the earlier staggered-dot texture looked like a face for this reason (owner feedback). On pin displays the best-tested choices are an empty interior or one uniform line texture [14, citing Bellik & Clavel; 16; 23]. Line pictograms were recognised better than dot pictograms (88.0 % vs 62.6–64.8 %), and at small sizes filled parts beat outlined ones [21], hence solid limbs. Lines need at least one blank row between them and blank space from other elements [23]; at 10 dpi vertical and horizontal lines are confused with each other [16], so only one direction is used. Uniformly textured pictures were recognised better than raised-line ones on paper [17, 25], and a texture on the one identifying part (a lion's mane) helped most [17], which supports the filled wool. No study of fur or petting texture on pins was found. | `tactile.fur_rows()` (optional `mask`), `shapes.TEXTURE` and `shapes.drawing()` in `game/pets`, `tactile.close_gaps()` (fills carved lines in the chicken first), `test_fur_texture_has_no_isolated_pins` |
+| **Symbols differ in structure, not only outline.** Symbols that appear together come from different classes: solid (seed, arrows), open lines (crop, tool, bed, check, bag), closed outlines (mineral, water, page, pot) and closed outlines with one extra feature (fish tail, coin centre pin, person). Each symbol is one connected shape, except the coin's centre pin. | In 194 readers, only 13 of 30 point symbols met discriminability criteria; the most confused pairs were solids of different form, closed outlines of different form, and open outlines of different form [15, citing Jansson 1972]. Readers count corners and treat every pin as meaningful; a small feature works best as a single pin [14]. A gap under the person's head made it read as two objects (owner feedback). | Comment in `SYMBOLS`; `test_each_symbol_is_felt_as_one_object` |
+| **Pixel-art drawing on the pin grid.** Outlines are one pin wide; diagonal steps touch only at their corners; drawings are redrawn for the grid instead of shrunk, and use the full space. | Guidelines G1–G6 for primitives on a pin display (square, rectangle and triangle 100 % recognised; circle 6 of 8) [14]; shrinking pictures to pin resolution lost crucial details, and larger drawings are recognised better [14, citing Bornschein et al. and Wijntjes et al.]. | `game/pets/shapes.py` (cat and dog at 36 × 24, with the proportions of the team's original drawings) |
+| **Few symbols.** One shared vocabulary of 14 symbols (previously 23 names). Each symbol means one thing everywhere, and a page shows at most five different symbols. | No more than five types of point symbols on one graphic [1 §3.2.2]; symbols are assigned consistently throughout [1 §2.18]; raised-line maps support only about 10–15 distinct symbols [3]. | `SYMBOLS` and `SYMBOL_ALIASES` in `engine/display/icons.py`; the audit counts symbols per page |
+| **Size and shape.** Symbols are 3–7 pins wide and at most 5 rows tall. They differ in shape (ring, diamond, drop, plus and so on), never only in size. | Differently shaped symbols need at least 1/4 inch (6 mm) to be told apart [1 §3.4.3.11]. Symbols of the same shape must differ in size by 25–30 % [1 §8.6.5], so the vocabulary avoids differences of size alone. | `test_symbol_vocabulary_is_small_and_fits_inside_a_frame` |
+| **Simplify, and let speech be the label.** Decorative detail is removed (the village's dashed centre lines, the shop's carved windows and eaves). Every object speaks its name on hover, and Shift gives the long description. | Simplify as long as the intent survives; drop non-essential information and decorative frames [1 §2.8, §3.7.1, §2.5–2.6]; prefer a direct label to a keyed symbol [1 §2.17]. Blind participants strongly preferred a refreshable display combined with speech [7]. | Scene code in `game/home`, `game/village`, `game/shop` |
+
+### Symbol vocabulary
+
+| Symbol | Shape | Meaning (old names now pointing to it) |
+|---|---|---|
+| `seed` | small plus | seeds (`plant`) |
+| `crop` | sprout on a stem | crops, harvesting (`harvest`) |
+| `fish` | fish outline with a tail | fish |
+| `mineral` | diamond outline | stone, copper, iron, diamond |
+| `tool` | bar on a handle | pickaxe, rod, fertilizer, feed, the tool shop (`tools`) |
+| `water` | drop outline | watering |
+| `coin` | ring with a centre dot | gold, selling (`sell`) |
+| `bag` | open basket (U shape) | the shop, buying (`shop_npc`, `buy`) |
+| `person` | head joined to shoulders by a neck | Rowan and other people (`rowan`, `npc`) |
+| `bed` | headboard and mattress | sleep |
+| `pot` | pot with a lid and knob | kitchen, cooking (`stove`) |
+| `page` | page with a folded corner | research, the calendar, saves, the guide (`chest`, `calendar`, `save`, `research`) |
+| `arrow_up`, `arrow_down`, `arrow_right` | small solid triangle | a direction or exit (`nav_up`, `nav_down`, `start`) |
+| `check` | tick | selected or done |
+| two nested frames | no symbol | food and other usable items |
+| frame only | no symbol | anything else; listen for the name (`material`) |
+
+Old names keep working (`IconRenderer.PATTERNS["rowan"]` returns the person symbol), so saves, features and the icon lab are unaffected. Iterating `PATTERNS` lists only the canonical symbols.
+
+### Where each icon comes from, and why it should be recognisable
+
+None of these drawings has been tested with blind readers yet. The *basis* column gives the design reasoning and the studies behind it, not test results. "Team" means the drawing came from the project's own earlier icons on `main` (filled silhouettes); "this overhaul" means it was redrawn during the tactile updates. No icon was copied from a published, tested symbol set: the studies found test simple shapes and pictures, not these exact symbols.
+
+| Symbol | Drawn as | Origin | Recognition basis | Test first |
+|---|---|---|---|---|
+| `seed` | 3 × 3 solid plus | Team's filled seed, reduced to a plus | Solid class [15]; small filled signs read better than outlines at small sizes [21]; a cross was among the shapes recognised fastest on a pin array [14, citing Bellik & Clavel] | Smallest symbol: 3 pins is the BANA minimum for telling shapes apart [1 §3.4.3.11] |
+| `crop` | 5 × 5 V on a stem with a base | New in this overhaul (the team's sprout was a solid blob) | Open-lines class; the V top separates it from the T of `tool` | `crop` vs `tool` |
+| `fish` | 7 × 5 outline with a forked tail | Team's fish, outlined; separate eye pin removed | Closed outline plus one protruding feature [15]; exaggerate the identifying feature [3] | — |
+| `mineral` | 5 × 5 diamond outline | Team's diamond, outlined | Closed outline with four corners; corners are counted [14] | `mineral` vs `coin` and `water` |
+| `tool` | 5 × 4 T (bar on a handle) | Team's hammer, head reduced to a bar | Open lines; a T-junction | `tool` vs `crop` |
+| `water` | 5 × 5 drop outline | Team's drop, outlined | Closed outline with one pointed top | `water` vs `mineral` |
+| `coin` | 5 × 5 ring with a centre pin | Team's filled disc, outlined; centre pin added | A single-pin feature reads well [14]; the centre pin separates it from other closed outlines [15] | `coin` vs `mineral`: pin circles were sometimes felt as octagons [14] |
+| `bag` | 7 × 5 open basket (U) | New in the second round (the team's bag was a solid blob) | Open structure, unlike the closed coin and page beside it; closed outlines of different form are the most confused pairs [15] | — |
+| `person` | 5 × 5 head on a neck and shoulders | Team's Rowan figure, joined by a neck pin | One connected shape; a gap under the head read as two objects (owner feedback) | — |
+| `bed` | 7 × 4 headboard and mattress | Team's bed, outlined | Open lines; one familiar side view | — |
+| `pot` | 7 × 5 pot with lid and knob | Team's stove, redrawn | Closed outline plus a feature (lid) | `pot` vs `page` |
+| `page` | 5 × 5 sheet with a cut corner | New in this overhaul | Closed outline with one cut corner | `page` vs `pot` |
+| arrows | small solid triangle | Team's navigation arrows, simplified | Solid small sign; triangles were recognised 100 % on a pin array [14] | — |
+| `check` | tick | Team's tick, unchanged | Open line | — |
+| frames | double frame = food, empty frame = other items | Team's frame convention | Frames carry no picture; speech names the item [1 §2.17] | — |
+| Prize draw (shop only) | 7 × 5 starburst | New in the third round (the 7 × 7 wheel touched its frame) | Radiating open lines, unlike the closed coin | — |
+| animal icons | 7 × 5 cat (ear points, raised tail), dog (snout, drooping ear), chicken, sheep | Cat and dog redrawn in the second round; chicken and sheep from the team | The identifying feature is at the top [3] | Only need to differ from each other on one page |
+
+Test these pairs first, with the Nolan & Morris criteria under [References](#references-for-the-tactile-design).
+
+### Where each graphic comes from
+
+| Graphic | Drawn as | Origin | Basis |
+|---|---|---|---|
+| Rooms (home, shop) | Double divider, side walls with doorway gaps, small solid doorway arrows | Team's layout; walls opened around the arrows in the first round (`draw_room`) | Lines break where they meet a symbol [1 §2.11]; one lowered pin of space [1 §3.4.3.11] |
+| Home furniture | Bed, chest and stove as outlines | Team's furniture, converted to outlines | Empty outlines were recognised best on pin arrays [14, citing Bellik & Clavel]; professor's feedback |
+| Village | House outline with door and windows, road edges that stop before the arrows, Rowan as one figure | Team's scene, simplified | Remove decoration [1 §2.8]; break lines [1 §2.11] |
+| Shop | Calendar, shopkeeper, prize wheel, three counters 12 pins wide showing coin, bag and tool | Team's scene, redrawn; counters widened in the third round | One lowered pin inside each counter; the same symbol for the same thing everywhere [1 §2.18] |
+| Map | Square nodes, paths that end one pin before a node; the current node has a 3 × 3 centre mark | Team's map; marks redesigned in the first round | You-are-here marking on a pin display [9]; break lines [1 §2.11] |
+| Farm | Plot outlines, growth as a vertical-line texture, exit arrows in the bottom corners | Team's plots; texture in the first round, exits in the second | Line texture from the pin-display pattern set [16, 23] |
+| Plot detail | Growth gauge with vertical lines, field outline | Team; gauge moved one row down in the third round | One lowered row below the divider |
+| Mine | Filled rocks with damage patterns | Team's original (restored) | Owner decision; exempt from the outline rule |
+| Fishing lake | Large ellipse outline | Team | Outline rule |
+| Pasture | Fence with a gate gap and exit arrow; woolly sheep filled; chicken textured | Team's pasture; exit added in the second round | Texture or fill on the identifying part (wool), as with the textured mane [17] |
+| Cat and dog | 36 × 24 side view: solid legs, tail and ears; one-pin outline; line texture on the body only | Proportions of the team's original drawings (long body, head set on the body); identifying features exaggerated | See the *Animals* rule above; full-body side view, the same view for every animal, bigger is better [3, 24] |
+| Chicken, shorn sheep | Same treatment as the cat and dog | Team's drawings | Same |
+| Flower pot | Pot outline; plant stages drawn pin by pin | Team; pot outlined in the third round (the watering area is unchanged) | Outline rule |
+| Cooking path | A line with a solid 4 × 4 start marker one pin away | Team; gap added in the third round | Break lines at symbols [1 §2.11] |
+| Minigame targets | Small plus or 2 × 2 marks inside a field outline | Team | Small solid signs; sweep pages are exempt from the fill rule |
+| Shearing field | Full fleece | Team | Owner decision: the wool is what is sheared |
+
+### Dot review
+
+Every registered page (46) plus the minigame, harvest, cooking, egg-collecting, shearing, flower and stocked-inventory states, 61 views in all, is rendered by `python engine/tools/tactile_audit.py --png DIR` and checked twice:
+
+1. **By the rules.** `audit()` checks fills and object boxes. `SymbolTrace` records which drawing raised each pin, so a symbol touching a wall, a frame, a road or another symbol is caught even when one object box contains both (the General goods bag touched its own counter this way and the box check missed it).
+2. **By eye.** Each picture (with and without object boxes) was looked at for things the rules cannot judge: odd shapes, crowded areas, unclear figures.
+
+The third-round review found and fixed: the General goods bag touching its counter, the Prize draw wheel touching its frame, the growth gauge touching the divider, a solid flower pot, and the cooking start marker sitting on its path. After the fixes the audit reports 0 problems. Remaining by design: the filled mine rocks and the shearing field.
+
+### Learning support: the Guide
+
+A map scene may be easier to experience than a row of icons, but it needs more learning. Tactile pictures are named poorly without context. Across studies, raised-line pictures are named correctly about 42 % of the time on average (range 9–85 %) [5, citing Picard & Lebaz 2012]. Knowing the category, or hearing a description first, raises accuracy: from 51.6 % to 70.7 % in [5]; see also [8]. In TactIcons, "learnable" icons were remembered after a single exposure to the key [3]. Game accessibility guidance asks for a tutorial that can be replayed at any time and a way to practise without failing [10, 11]. The game therefore adds:
+
+- **Guide** (`game/guide/`). It opens from the Guide button at the top left of the F1 map and has six topics: *Touch and listen*, *Select*, *Sweep tasks*, *Keys*, *Screen layout* and *Symbol key*. Touching a topic speaks its name; selecting it reads the explanation. It costs no time, gold or items and can be repeated at any time.
+- **Symbol key.** Five pages of four symbols each (*things you grow and find*, *tools and trade*, *places and people*, *signs*, *animals*), so every page stays within the five-symbol limit. Selecting an animal opens the **animal gallery**: the same large drawing used in the game with a spoken description of what to feel for; Right shows the next animal. Touching a symbol speaks its name; selecting it describes its shape and where it is used. Left and Right turn pages.
+- Rowan's tutorial quests in the village still teach the activities themselves. The guide teaches how to read the pad.
+
+**Are the animal drawings (cat, dog, chicken, sheep) recognizable?** Probably not by touch alone. Raised-line pictures of familiar objects are identified poorly, and congenitally blind readers do worse [6]. Category information improves identification [8]. Blind participants matched pictures far more accurately than they named them [8]. No study of animal recognition on the Dot Pad itself was found. The game therefore never relies on recognition:
+- every animal speaks its name and state on hover;
+- the large drawings are full-body side views with the proportions of the team's original drawings and the features that tell the species apart exaggerated (cat: tall pointed ears, upright curling tail; dog: long snout, drooping ear, thick legs, short tail), solid limbs, an outlined body with a line texture to stroke, and an empty head outline;
+- the small 7 × 5 icons only need to be told apart from each other on one page;
+- the animal gallery in the guide lets the player feel each drawing with its name before meeting it in play. Even with a category cue, recognition stays around 31–52 % [17, 18], so speech remains the main channel.
+
+Before changing the drawings, test them with at least three novice and three congenitally blind readers [3].
+
+### Changes in this update (tactile overhaul)
+
+Engine changes were approved by the owner and stay within the existing hover-based point-and-click design.
+
+| Area | Change |
+|---|---|
+| `engine/display/tactile.py` (new) | Rules and checker: `MIN_GAP`, `MAX_SOLID_SIDE`, `MAX_FILL_RATIO`, `MAX_SYMBOLS_PER_PAGE`, `outline_rows()`, `audit()` |
+| `engine/tools/tactile_audit.py` (new) | Renders the main pages (home, village, shop, map, mine, farm, inventory, pets, pasture, guide and others) and lists rule violations; `--show` prints the dots |
+| `engine/tests/python/display/test_tactile_rules.py` (new) | Every audited page passes; vocabulary size and symbol size; aliases; the Tools counter symbol |
+| `engine/display/icons.py` | 23 symbol names reduced to 14 outline-style symbols (`SYMBOLS`) plus aliases (`SYMBOL_ALIASES`, `SymbolTable`). An unknown kind shows the frame alone instead of a solid block |
+| `engine/core/render.py` | `draw_room()`, shared by the home and shop scenes: walls open two pins around the doorway arrows |
+| `engine/core/petting.py` | `next_feedback_id()`: petting sound IDs are unique (bug fix below) |
+| `engine/display/keypad.py` | Uses the empty frame instead of the removed solid `material` block |
+| `engine/web/game.html` | Loads `game/guide/client.js` |
+| `game/__init__.py` | `guide` added at the end of `ENABLED` |
+| `game/guide/` (new) | Guide topics and symbol key. Adds no engine attribute (the key page number is part of the page id), so the save format is unchanged |
+| `game/minimap/` | New slot `minimap.objects` (holds the Guide button). Paths stop one pin short of nodes. The current node is an outline with a 3 × 3 centre mark |
+| `game/home/`, `game/shop/`, `game/village/` | Scenes redrawn as outlines. Doorway and road-end arrows are clear of walls and road edges; road edges stop before the shop; decorative centre lines removed |
+| `game/pets/`, `game/pasture/` | Large animal drawings shown with a lowered interior (replaced in the second round, below) |
+| `game/farming/` | The growth fill and the growth gauge use a line texture instead of solid blocks |
+
+Second round (owner feedback after the first update):
+
+| Area | Change |
+|---|---|
+| `game/pets/` | **Bug fix:** the home Care page drew the doorway arrows but had no arrow objects, so Left/Right answered "Cannot go left/right"; they now travel to the farm and the village like on the home page. New `shapes.py`: cat and dog redrawn from simple shapes so the species differ in ears, snout, legs and tail in every pose; new 7 × 5 icons (cat: ear points and raised tail; dog: snout and floppy ear); the large drawing has solid limbs and a fur texture |
+| `game/farming/`, `game/pasture/` | Tactile exits at both ends of the farm (bottom left: pasture, bottom right: home) and on the pasture's east fence (to the farm), selectable and spoken, one lowered pin clear of the plots and fence |
+| `game/mining/` | Rolled back to the original filled rocks with damage patterns (owner decision) |
+| `game/pasture/` | The woolly sheep stays filled (scene and detail); the chicken and the shorn sheep get solid legs and a textured body |
+| `engine/display/icons.py` | `person` joined into one shape (head, neck, shoulders); `bag` is now an open basket so it differs in structure from the coin and page next to it; `fish` without a separate eye pin and `pot` without separate steam dots, so each is one shape |
+| `game/village/`, `game/shop/` | Rowan and the shopkeeper drawn as one connected figure |
+| `engine/display/tactile.py` | `fur_rows()`, `close_gaps()`, and the `filled_by_design` exemption in `audit()` |
+| `game/guide/` | Fifth symbol-key page, *Animals*, and an animal gallery (`guide_animal_cat` … `guide_animal_sheep`): selecting an animal shows the same large drawing used in the game, with a spoken description of what to feel for. Practice with tactile pictures roughly doubled recognition (41.7 % for regular vs 21.2 % for rare users) [17] |
+
+Third round (owner feedback: symbols still touched walls; the cat looked odd):
+
+| Area | Change |
+|---|---|
+| `engine/display/tactile.py` | `SymbolTrace`: records which drawing raised each pin, so a symbol touching its own frame is caught. `fur_rows()` rewritten: one-pin outline, lowered channel, horizontal line texture, no isolated pins, optional `mask` |
+| `engine/tools/tactile_audit.py` | Checks every registered page plus minigame, harvest, cooking, egg-collecting, shearing and flower states; `--png DIR` saves pictures for a visual dot review |
+| `game/shop/` | Counters are 12 pins wide (the 7-pin bag had no gap on one side). The Prize draw icon is a 7 × 5 starburst (the 7 × 7 wheel touched its frame) |
+| `game/farming/` | Growth gauge one row lower (it touched the divider) |
+| `game/flowers/` | The pot is an outline (it was a 21 × 6 solid block); the blossom is drawn as part of its stem |
+| `game/cooking/` | Path pins around the start and resume markers are lowered (the marker sat on the path) |
+| `game/pets/` | Cat and dog redrawn with the proportions of the team's original drawings. The second-round cat had a longer neck and a smaller body; that came from building it out of shapes, not from any source. Texture only on the body (`shapes.TEXTURE`, `shapes.drawing()`) |
+| `engine/tests/python/display/test_tactile_rules.py` | Trace test (a symbol touching its own frame), no isolated pins in animal drawings |
+
+Bugs fixed:
+
+- **The shop's Tools button showed the General goods symbol.** `shop_tools_choice` had `choice: "buy"`. It is now `"tools"` and shows the tool symbol, and the Tools counter in the shop scene shows a tool instead of a second bag.
+- **Petting sounds could be skipped on Windows.** Feedback IDs came from `time.monotonic_ns()`, which repeats within its tick of about 15 ms. A second completion could reuse the first ID, and the browser would then not play it. IDs now include a counter.
+- **Stale tests.** Pasture and research tests expected old prices (egg 70, feed 30, shelter wool 2 and 4). The configuration had already been changed to egg 50, feed 80 and wool 3 and 6. The tests now follow the configuration; the game rules were not changed.
+
+### References for the tactile design
+
+**[V]** means the item was read on its source page. **[S]** means it is known only from search results or secondary sources; check [S] items before citing them in a paper.
+
+1. Braille Authority of North America (2010). *Guidelines and Standards for Tactile Graphics, 2010*. Web manual: https://www.brailleauthority.org/tg/web-manual/tgmanual.html (sections cited above) **[V]**. A 2022 PDF edition is on the same site; its section numbers were not re-checked. Korean translation: 국립장애인도서관 (2015) **[S]**.
+2. Holloway, L., Marriott, K., & Butler, M. (2018). Accessible Maps for the Blind: Comparing 3D Printed Models with Tactile Graphics. *CHI '18* **[S]**.
+3. Holloway, L., Butler, M., & Marriott, K. (2023). TactIcons: Designing 3D Printed Map Icons for People who are Blind or have Low Vision. *CHI '23*. https://doi.org/10.1145/3544548.3581359 **[V]**
+4. Holloway, L., et al. (2022). Animations at Your Fingertips: Using a Refreshable Tactile Display to Convey Motion Graphics for People who are Blind or have Low Vision. *ASSETS '22*. https://doi.org/10.1145/3517428.3544797 **[S]**. A 60 × 40 refreshable display needs much more simplification than paper graphics.
+5. Vinter, A., Orlandi, O., & Morgan, P. (2020). Identification of Textured Tactile Pictures in Visually Impaired and Blindfolded Sighted Children. *Frontiers in Psychology*, 11, 345. https://doi.org/10.3389/fpsyg.2020.00345 **[V]**
+6. Lederman, S. J., Klatzky, R. L., Chataway, C., & Summers, C. D. (1990). Visual mediation and the haptic recognition of two-dimensional pictures of common objects. *Perception & Psychophysics*, 47, 54–64 **[S]**.
+7. Reinders, S., et al. (2024). When Refreshable Tactile Displays Meet Conversational Agents. *IEEE TVCG* (VIS 2024). https://doi.org/10.1109/TVCG.2024.3456358 **[V, abstract only]**
+8. Heller, M. A., Calcaterra, J. A., Burson, L. L., & Tyler, L. A. (1996). Tactual picture identification by blind and sighted people: Effects of providing categorical information. *Perception & Psychophysics* **[S]**. Heller (2002) on matching versus naming **[S]**.
+9. Zeng, L., & Weber, G. (2016). Exploration of Location-Aware You-Are-Here Maps on a Pin-Matrix Display. *IEEE Transactions on Human-Machine Systems*, 46(1), 88–100 **[S]**. Zeng, L., Miao, M., & Weber, G. (2015). Interactive audio-haptic map explorer on a tactile display. *Interacting with Computers*, 27(4), 413–429. https://doi.org/10.1093/iwc/iwu006 **[S]**. Both use map symbols with audio on a pin-matrix display; the full texts were not read.
+10. Yuan, B., Folmer, E., & Harris, F. C. (2011). Game accessibility: a survey. *Universal Access in the Information Society*, 10(1), 81–100. https://doi.org/10.1007/s10209-010-0189-5 **[S]**
+11. Game Accessibility Guidelines, https://gameaccessibilityguidelines.com/ (practice without failing; reminders of controls and objectives) **[S]**.
+12. Bhatnagar, T., et al. (2023). Pixelated Interactions: Exploring Pixel Art for Graphical Primitives on a Tactile Display. *DIS '23*. arXiv:2305.19444 **[V, abstract only]**. Eight tactile readers found pixel-art shapes on a pin array clear. Full text: [14].
+13. Prescher, D., Bornschein, J., & Weber, G. (2017). Consistency of a Tactile Pattern Set. *ACM TACCESS*. https://doi.org/10.1145/3053723 **[S]**. Bornschein, J., et al. (2018). Comparing Computer-Based Drawing Methods for Blind People with Real-Time Tactile Feedback. *CHI '18*. https://doi.org/10.1145/3173574.3173689 **[S]**. Background on area patterns and drawing on pin-matrix displays, for future textures and editors.
+
+14. Bhatnagar, T., Upadhyay, V., Sharma, A., Rao, P. V. M., Miodownik, M., Marquardt, N., & Holloway, C. (2023). Pixelated Interactions: Exploring Pixel Art for Graphical Primitives on a Tactile Display. *DIS '23*. arXiv:2305.19444 **[V, full text]**; DOI 10.1145/3563657.3596044 (from the repository record, not checked on a resolver). 27 × 27 pin display, eight blind adults; guidelines G1–G6; reviews pin-display studies by Bellik & Clavel, Velázquez, Bornschein et al. and Wijntjes et al.
+15. Gill, J. M., & James, G. A. (1973). A study on the discriminability of tactual point symbols. *AFB Research Bulletin*, 26, 19–34. https://www.duxburysystems.org/downloads/library/history/afb_rb_26_1973.pdf **[V]**. Cites Nolan & Morris (1971) for the test criteria and Jansson (1972) for the confusable classes.
+16. Prescher, D. (2016). *Taktile Interaktion auf flächigen Brailledisplays*. PhD thesis, TU Dresden, §7.3.2 and appendix F **[V]**; published as Prescher, D., Bornschein, J., & Weber, G. (2017). Consistency of a Tactile Pattern Set. *ACM TACCESS*, 10(2), 7. https://doi.org/10.1145/3053723 **[S]**.
+17. Theurel, A., Witt, A., Claudet, P., Hatwell, Y., & Gentaz, E. (2013). Tactile picture recognition by early blind children: The effect of illustration technique. *Journal of Experimental Psychology: Applied*, 19(3), 233–240. https://doi.org/10.1037/a0034255 **[V]**
+18. Picard, D., Albaret, J.-M., & Mazella, A. (2014). Haptic identification of raised-line drawings when categorical information is given. *Psicológica*, 35, 277–290 **[V]**. With a category cue, visually impaired children named 51.9 % of drawings (blindfolded sighted children 37.5 %).
+19. Connor, C. E., Hsiao, S. S., Phillips, J. R., & Johnson, K. O. (1990). Tactile roughness: neural codes that account for psychophysical magnitude estimates. *Journal of Neuroscience*, 10(12), 3823–3836. https://doi.org/10.1523/JNEUROSCI.10-12-03823.1990 **[S]**. Perceived roughness of raised dots peaks near 3 mm spacing, so a 2.5 mm pin grid feels rough.
+20. O'Modhrain, S., Giudice, N. A., Gardner, J. A., & Legge, G. E. (2015). Designing Media for Visually-Impaired Users of Refreshable Touch Displays. *IEEE Transactions on Haptics*, 8(3), 248–257. https://doi.org/10.1109/TOH.2015.2466231 **[S]** (full text not read).
+
+21. Mascle, C. (2020). *Le livre tactile illustré : influence de la technique d'illustration sur la reconnaissance des images*. PhD thesis, Université Toulouse 2 Jean Jaurès. Repository PDF: https://dante.univ-tlse2.fr/files/original/2115ecdc02a126b329722093a1e11088f420fae1.pdf **[V, via text extraction]**. Study 3: 5 × 5 tactile pictograms (cat, bird, sheep and others), each keeping one identifying feature; line versions 88.0 % vs dot versions 62.6–64.8 % (cat: 75.0 % vs 50.0 / 42.8 %); in dot versions filled shapes beat outlines. Related article: *Tactile perception of line and dotted pictograms by sighted and blind people*, https://isidore.science/document/10670/1.223f20794ea2ceb76f66b394e408af46fdb5ef68 **[S]** (dot pictograms need fewer dots and no curves).
+22. Kalia, A., Hopkins, R., Jin, D., Yazzolino, L., Verma, S., Merabet, L., Phillips, F., & Sinha, P. (2014). Perception of tactile graphics: embossings versus cutouts. *Multisensory Research*, 27(2), 111–125. https://pmc.ncbi.nlm.nih.gov/articles/PMC5757243 **[V]**. Cutout silhouettes were recognised more often than raised-line drawings; a textured background did not help in pilot data.
+23. American Printing House for the Blind. *Best Practices and Standards for Creating Monarch Tactile Graphics* (reference document for the Monarch pin display, about 10 dpi). https://louis.aph.org/documents/Best-Practices-Monarch-Reference.docx **[V]**. "The larger the details of a texture, the better"; at least 3/16 inch between texture lines and 1/8 inch of blank space between elements.
+24. Build a Better Book, University of Colorado Boulder. Tactile picture book project and guidance: https://www.colorado.edu/project/bbb/creating-tactile-graphics **[S]**. Show all animals in the same view; highlight one identifying part rather than the whole furry body.
+25. Thompson, L. J., Chronicle, E. P., & Collins, A. F. (2003). The role of pictorial convention in haptic picture perception. *Perception*, 32(7), 887–893. https://doi.org/10.1068/p5020 **[S]**. Thompson, L. J., Chronicle, E. P., & Collins, A. F. (2006). Enhancing 2-D tactile picture design from knowledge of 3-D haptic object recognition. *European Psychologist*, 11(2), 110–118. https://doi.org/10.1027/1016-9040.11.2.110 **[S]**. Uniformly textured pictures were identified better than line drawings.
+
+Pin-display studies cited through others: Bellik & Clavel (2017; 60 × 60 pins, empty outlines best) and Velázquez et al. (2008; filled shapes confused) are known from [14] and [21] only **[S]**.
+
+Existing Dot Pad games: Dot Vision (SmileShark with Dot Inc., 2024) is a set of arcade-style Dot Pad games known only from press coverage **[S]**; no evaluated game on any pin display was found, so this game's rules rest on the symbol, picture and texture studies above.
+
+**Test criteria for user testing.** To cut testing to a pass/fail check, use the Nolan & Morris criteria quoted in [15]: a symbol passes when its average confusion with the other symbols is at most 5 % and its confusion with any single symbol at most 10 %. Test the symbols that share a page (the per-page limit keeps that at five or fewer), and test the animal drawings by naming with the category given, as in [18].
+
+No peer-reviewed study of icon or shape recognition on the Dot Pad itself was found, and no Korean national tactile-graphics standard with spacing figures was found. Open questions for user testing:
+- large outlines versus large solid shapes on single-height pins;
+- whether one lowered pin (about 2.5 mm) is enough, or two are needed;
+- how well thin outlines hold up when a finger presses the pins down.
+
 ## Folders
 
 | Folder | What is in it |
@@ -286,7 +493,7 @@ The FastAPI server owns game state and validates actions. The browser sends poin
 | `engine/core/engine.py`, `registry.py`, `order.py` | One game instance; feature registration and event order |
 | `engine/core/input.py`, `state.py`, `render.py` | Input dispatch, shared resource/page helpers, response and drawing coordination |
 | `engine/core/time.py`, `effects.py` | Activity time, sleep, lower panel, food modifiers |
-| `engine/display/icons.py`, `keypad.py`, `dotpad.py` | Three-row/four-column icon slots, frames, navigation and dot drawing |
+| `engine/display/icons.py`, `keypad.py`, `dotpad.py`, `tactile.py` | Three-row/four-column icon slots, the shared symbol vocabulary, frames, navigation, dot drawing and the tactile design rules |
 | `engine/services/saves.py` | File slots, serialization and older-save compatibility |
 | `engine/services/speech.py`, `speech_queue.py`, `audio_files.py` | Piper synthesis, cache, prioritized requests and runtime audio storage |
 | `engine/spectator/state.py` | Public scene and object data for the companion |
@@ -301,6 +508,7 @@ Each folder's README documents its pages, actions, state, events, configuration 
 | Folder under `game/` | Responsibility |
 |---|---|
 | `home/`, `minimap/` | Home facilities, location nodes and travel selection |
+| `guide/` | Replayable tutorial and symbol key, opened from the F1 map |
 | `farming/`, `harvest/` | Plot state, planting, water/fertilizer activities, growth and harvest |
 | `cooking/`, `seafood/` | Recipes, ingredient selection, paths and fish-dish variants |
 | `mining/`, `fishing/` | Rocks, catches, tool wear and resource prices |
@@ -463,6 +671,7 @@ All entries below are under `interaction.audio`:
 | `python engine/tools/audio_flow.py` | Scripted activity flow with temporary saves |
 | `python engine/tools/audio_integration_lab.py` | Temporary browser audio lab on port 8001 |
 | `python engine/tools/prepare_effects_preview.py` | Effect reel; requires FFmpeg and Node, does not reproduce live HRTF |
+| `python engine/tools/tactile_audit.py [--show]` | Check the main pages against the tactile design rules (gaps, outlines, symbols per page) |
 
 A failed launch does not always mean the port is occupied. Check the preceding setup/speech error first, verify voices with `check_setup.py`, and rerun the installer for missing or damaged downloads. Use the address printed by the launcher. Do not close an unrelated process merely because it uses the requested port.
 
@@ -470,7 +679,7 @@ A failed launch does not always mean the port is occupied. Check the preceding s
 
 Planned work includes additional plants and pets, ranching, more recipes and quests, music and crafting. Shared work includes reconciling the companion bundle with its sources and reducing remaining cross-feature dependencies.
 
-User evaluation should record task success, completion time, accidental input, understanding of tactile/audio information and workload. Compare pointer delay on older laptops, camera calibration and occlusion, tactile legibility, voice pronunciation and stereo guidance with actual hardware.
+User evaluation should test the open tactile design questions listed under [References](#references-for-the-tactile-design) and record task success, completion time, accidental input, understanding of tactile/audio information and workload. Compare pointer delay on older laptops, camera calibration and occlusion, tactile legibility, voice pronunciation and stereo guidance with actual hardware.
 
 ## Add a feature
 

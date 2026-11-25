@@ -24,6 +24,7 @@ ENABLED = (
     "home",
     "pets",
     "roulette",
+    "guide",
 )
 
 

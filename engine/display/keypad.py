@@ -58,7 +58,7 @@ class KeypadUI:
 
     def draw_category(self, x, y, kind):
         symbol = self.icons.category(kind)
-        self.icons.pattern(x,y,self.icons.PATTERNS.get(symbol,self.icons.PATTERNS['material']))
+        self.icons.pattern(x,y,self.icons.PATTERNS.get(symbol,()))
 
     def draw_catalog_item(self, obj, kind, recipe_id=None):
         self.icons.catalog(obj,kind)

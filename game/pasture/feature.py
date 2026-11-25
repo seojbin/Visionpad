@@ -1,5 +1,6 @@
-from engine.core.petting import PettingSession
 """Free-range animals, daily production and persistent collection interactions."""
+from engine.core.petting import PettingSession, next_feedback_id
+from engine.display.tactile import close_gaps, fur_rows
 import random
 import math
 import time
@@ -158,6 +159,7 @@ class Pasture(Feature):
         reg.object_tts('egg_target', lambda o:'Eggs ready.')
         reg.object_tts('animal_icon', lambda o:o['short'])
         reg.object_tts('animal_hitbox', lambda o:o['short'])
+        reg.object_tts('pasture_exit', lambda o:o['tts'])
         reg.state('pasture', self.public)
         reg.contribute('inventory.items', self.inventory)
         reg.contribute('shop.buy_items', self.buy_rows)
@@ -321,8 +323,11 @@ class Pasture(Feature):
             hh = 12 if k == 'sheep' else 10
 
             result.append(dict(id='pasture_'+k,type='animal_hitbox',skip_grid=True,x=a['x'],y=a['y']+self.breathe(),width=w,height=h,
-                hit_width=hw,hit_height=hh,label=k.title(),short=self.short(k),tts=desc,action='animal:open:'+k))
+                hit_width=hw,hit_height=hh,label=k.title(),short=self.short(k),tts=desc,action='animal:open:'+k,
+                filled_by_design=k=='sheep' and a['ready']))  # grown wool is drawn filled on purpose
         result.append(dict(id='pasture_exit',type='arrow',direction='right',x=56,y=5,label='Farm',action='travel:farm'))
+        result.append(dict(id='road_farm_exit',type='pasture_exit',skip_grid=True,x=58,y=26,width=3,height=5,
+            hit_width=5,hit_height=7,label='Farm',short='Farm. Go east.',tts='Farm. Go east.',action='travel:farm'))
         return result
 
     def brush_region(self):
@@ -334,7 +339,7 @@ class Pasture(Feature):
         if a['pet_day']!=e.day:
             a['pet_day']=e.day
             a['friendship']=min(299,a['friendship']+self.cfg()['pet_points'])
-        self._pet_feedback=dict(id=str(time.monotonic_ns()),at=now,events=self.sound(e.pasture_selected))
+        self._pet_feedback=dict(id=next_feedback_id(),at=now,events=self.sound(e.pasture_selected))
     def pet_idle(self):
         e=self.engine;a=self.engine.pasture_animals[self.engine.pasture_selected]
         if e.current_page!='animal_detail' or not a or not a['owned'] or e.paused or e.day_ended or e.sleep_until is not None:
@@ -361,7 +366,8 @@ class Pasture(Feature):
                      label=label,tts=label+'. '+('Once each day.' if action in ('pet','feed') else 'Select the egg below the chicken.' if action=='gather' else 'Move over the wool to collect it.'),action='animal:'+action)
                 for i,(action,label,icon) in enumerate(buttons)]
         result.append(dict(id='animal_body',type='animal_hitbox',skip_grid=True,x=30,y=21+self.breathe(),width=36,height=20,hit_width=36,hit_height=20,
-                           label=k.title(),short=self.short(k),tts=self.short(k)+' Animals graze without feed. Feed can shorten production.',action='animal:shear' if k=='sheep' else 'animal:gather'))
+                           label=k.title(),short=self.short(k),tts=self.short(k)+' Animals graze without feed. Feed can shorten production.',action='animal:shear' if k=='sheep' else 'animal:gather',
+                           filled_by_design=k=='sheep' and a['ready']))  # grown wool is drawn filled on purpose
         if k=='chicken' and a['ready']:
             result.append(dict(id='animal_egg',type='egg_target',skip_grid=True,x=30,y=35,width=12,height=7,hit_width=12,hit_height=7,
                                label='Egg',tts='Eggs ready. Select to collect.',action='animal:collect'))
@@ -443,12 +449,17 @@ class Pasture(Feature):
         e=self.engine;p=e.dotpad
         p.draw_line(0,12,59,12);p.draw_line(0,13,59,13)
         for x in range(2,58):p.set_dot(x,38)
-        for y in range(15,39):p.set_dot(2,y);p.set_dot(57,y)
+        # The east fence opens around the exit arrow to the farm (one tactile exit, clear of the fence).
+        for y in range(15,39):
+            p.set_dot(2,y)
+            if not 22<=y<=30:p.set_dot(57,y)
+        e.draw_icon_pattern(58,26,('100','110','111','110','100'))
         for k,a in e.pasture_animals.items():
             # 씬 안의 동물은 SCENE_PATTERNS 사용
             if a['owned']:
                 rows=SCENE_PATTERNS['shorn' if k=='sheep' and not a['ready'] else k]
                 if a.get('facing_left',False):rows=tuple(row[::-1] for row in rows)
+                if k=='sheep' and not a['ready']:rows=fur_rows(rows)  # shorn: textured body; woolly stays filled
                 e.draw_icon_pattern(a['x'],a['y']+self.breathe(),rows)
 
     def draw_detail(self):
@@ -457,7 +468,12 @@ class Pasture(Feature):
         p = e.dotpad
 
         # 디테일 전용 배열(DETAIL_PATTERNS) 사용
-        rows = DETAIL_PATTERNS['shorn' if k=='sheep' and not e.pasture_animals[k]['ready'] else k]
+        # A sheep with grown wool stays a filled shape (the wool is what gets sheared); the chicken and the
+        # shorn sheep get solid legs, a hollow body and a texture to feel while stroking (README.md).
+        woolly = k == 'sheep' and e.pasture_animals[k]['ready']
+        rows = DETAIL_PATTERNS['sheep' if woolly else 'shorn' if k == 'sheep' else k]
+        if not woolly:
+            rows = fur_rows(close_gaps(rows) if k == 'chicken' else rows)
 
         start_x = 22 if k == 'chicken' else 14
         start_y = (12 if k == 'chicken' else 11)+self.breathe()

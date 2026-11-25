@@ -34,6 +34,128 @@ class IconGrid:
         return result
 
 
+class SymbolTable(dict):
+    """Canonical symbols; a retired name resolves to the symbol that replaced it.
+
+    Iterating lists only the canonical vocabulary (the icon lab catalogs it); indexing or .get()
+    with an old name ("rowan", "chest", "nav_up", ...) returns the replacing symbol's rows.
+    """
+    def __init__(self, symbols, aliases):
+        super().__init__(symbols)
+        self.aliases = dict(aliases)
+        unknown = set(self.aliases.values()) - set(symbols)
+        if unknown:
+            raise ValueError(f"Aliases point at unknown symbols: {sorted(unknown)}")
+
+    def canonical(self, name):
+        return name if dict.__contains__(self, name) else self.aliases.get(name, name)
+
+    def __missing__(self, name):
+        if name in self.aliases:
+            return dict.__getitem__(self, self.aliases[name])
+        raise KeyError(name)
+
+    def __contains__(self, name):
+        return dict.__contains__(self, name) or name in self.aliases
+
+    def get(self, name, default=None):
+        return self[name] if name in self else default
+
+
+SYMBOLS = {
+    # Items
+    'seed':    ('010',
+                '111',
+                '010'),
+    'crop':    ('10001',
+                '01010',
+                '00100',
+                '00100',
+                '01110'),
+    'fish':    ('0111001',
+                '1000110',
+                '1000100',
+                '1000110',
+                '0111001'),
+    'mineral': ('00100',
+                '01010',
+                '10001',
+                '01010',
+                '00100'),
+    'tool':    ('11111',
+                '00100',
+                '00100',
+                '00100'),
+    'water':   ('00100',
+                '01010',
+                '10001',
+                '10001',
+                '01110'),
+    'coin':    ('01110',
+                '10001',
+                '10101',
+                '10001',
+                '01110'),
+    # Open basket ("U"): the shop row shows gold, bag, tool and page together, and closed outlines
+    # of different form are the pairs readers confuse most (Gill & James 1973).
+    'bag':     ('1000001',
+                '1000001',
+                '1000001',
+                '0100010',
+                '0011100'),
+    # Places and people
+    # Head, neck and shoulders joined into one shape: with a gap under the head it was felt as two objects.
+    'person':  ('01110',
+                '01110',
+                '00100',
+                '11111',
+                '10001'),
+    'bed':     ('1000000',
+                '1110000',
+                '1111111',
+                '1000001'),
+    'pot':     ('0011100',
+                '1111111',
+                '0100010',
+                '0100010',
+                '0111110'),
+    'page':    ('11110',
+                '10011',
+                '10001',
+                '10001',
+                '11111'),
+    # Direction and state (small solid signs)
+    'arrow_up':    ('00100',
+                    '01110',
+                    '11111'),
+    'arrow_down':  ('11111',
+                    '01110',
+                    '00100'),
+    'arrow_right': ('100',
+                    '110',
+                    '111',
+                    '110',
+                    '100'),
+    'check':   ('000001',
+                '000011',
+                '100110',
+                '111100',
+                '011000'),
+    # No symbol: the frame alone (ordinary items, unknown kinds).
+    'material': (),
+}
+
+# Retired symbol names -> the symbol that replaced them (23 names became 14 symbols plus "material").
+SYMBOL_ALIASES = {
+    'rowan': 'person', 'npc': 'person', 'shop_npc': 'bag',
+    'chest': 'page', 'calendar': 'page', 'save': 'page', 'research': 'page',
+    'stove': 'pot', 'tools': 'tool',
+    'harvest': 'crop', 'plant': 'seed',
+    'sell': 'coin', 'buy': 'bag',
+    'nav_up': 'arrow_up', 'nav_down': 'arrow_down', 'start': 'arrow_right',
+}
+
+
 @dataclass(frozen=True)
 class IconSpec:
     frame: str = 'rectangle'
@@ -45,31 +167,14 @@ class IconRenderer:
     """One thin frame plus one filled semantic symbol; optional selection/progress overlays."""
     TYPES = frozenset(('save_slot',))
 
-    PATTERNS = {
-        'seed': ('01110','11111','01110'),
-        'crop': ('00100','01110','11111','11111','01110'),
-        'fish': ('0011000','0111101','1111111','0111101','0011000'),
-        'mineral': ('00100','01110','11111','01110','00100'),
-        'tool': ('11111','11111','00100','00100','00100'),
-        'material': ('11111','11111','11111'),
-        'food': ('0111110','1111111','0111110'),
-        'coin': ('01110','11111','11111','01110'),
-        'bed': ('1100000','1100000','1111111','1111111','1111111'),
-        'chest': ('0111110','1111111','1111111','1111111','1111111'),
-        'stove': ('0010100','0111110','1111111','1111111','0111110'),
-        'shop_npc': ('0011100','0111110','1111111','0111110','0111110'),
-        'rowan': ('0011100','0011100','0111110','1111111','1111111'),
-        'calendar': ('10101','11111','11111','11111','11111'),
-        'save': ('11110','11111','11111','11111','11111'),
-        'water': ('00100','01110','11111','11111','01110'),
-        'harvest': ('10101','11111','11111','01110','00100'),
-        'start': ('01000','01100','01110','01100','01000'),
-        'sell': ('0111110','1111000','0111110','0001111','0111110'),
-        'buy': ('1111100','1111110','1111100','1111110','1111100'),
-        'check': ('000001','000011','100110','111100','011000'),
-        'nav_up': ('0001000','0011100','0111110','1111111','0011100'),
-        'nav_down': ('0011100','1111111','0111110','0011100','0001000'),
-    }
+    # Shared symbol vocabulary (tactile design rules in README.md, sources there).
+    # Symbols shown together differ in structure class, not only in outline shape (Gill & James 1973):
+    #   solid: seed, arrows | open lines: crop, tool, bed, check, bag | closed: mineral, water, page, pot
+    #   closed + feature: fish (tail), coin (centre pin), person (solid head on open shoulders)
+    # 14 symbols, at most 7x5 pins so a lowered pin always separates them from the frame.
+    # Small signs (arrows, the person's head, the tool head) may be solid; anything wider is an
+    # outline with a lowered interior. Old names (bed's "chest", "rowan", "nav_up" ...) are aliases.
+    PATTERNS = SymbolTable(SYMBOLS, SYMBOL_ALIASES)
 
     ALIASES = dict.fromkeys(('stone','copper','iron','diamond'), 'mineral') | dict.fromkeys(('pickaxe','fertilizer','fishing_rod'), 'tool')
 
@@ -125,7 +230,7 @@ class IconRenderer:
         symbol = self.category(kind)
         self.frame(obj, 'double_rectangle' if symbol == 'food' else 'rectangle')
         if symbol != 'food':
-            self.pattern(obj['x'], obj['y'], self.PATTERNS.get(symbol, self.PATTERNS['material']))
+            self.pattern(obj['x'], obj['y'], self.PATTERNS.get(symbol, ()))
 
     def draw(self, obj):
         if obj.get('type') not in self.types: return False
@@ -136,7 +241,7 @@ class IconRenderer:
         self.frame(obj, spec.frame)
         if spec.frame == 'double_rectangle':
             return True
-        rows = spec.pattern or self.PATTERNS.get(spec.symbol, self.PATTERNS['material'])
+        rows = spec.pattern or self.PATTERNS.get(spec.symbol, ())
         self.pattern(obj['x'], obj['y'], rows)
         return True
 

@@ -32,5 +32,10 @@ class MapLayoutTests(unittest.TestCase):
             for node in nodes:
                 for dy in range(-3,4):
                     for dx in range(-3,4):
-                        expected=int(node['current'] or abs(dx)==3 or abs(dy)==3)
+                        expected=int((node['current'] and abs(dx)<=1 and abs(dy)<=1) or abs(dx)==3 or abs(dy)==3)
                         self.assertEqual(engine.dotpad.matrix[node['y']+dy][node['x']+dx],expected,(node['id'],dx,dy))
+                # One lowered pin all round the frame: paths stop short of the node (tactile design rules).
+                for d in range(-4,5):
+                    for x,y in ((node['x']+d,node['y']-4),(node['x']+d,node['y']+4),(node['x']-4,node['y']+d),(node['x']+4,node['y']+d)):
+                        if 0<=x<engine.dotpad.width and 0<=y<engine.dotpad.height:
+                            self.assertEqual(engine.dotpad.matrix[y][x],0,(node['id'],x,y))

@@ -23,7 +23,9 @@ class Farming(CareMinigame, FarmMarket, FarmDrawing, Feature):
     def register(self, reg):
         reg.owns("farm_plots", "seed_select_plot_id", "detail_plot_id", "care_mode", "care_targets",
                  "care_dragging", "care_collected_ids", "care_visible_until")
-        reg.page("farm", objects=self.farm_objects, detail=lambda: "Farm. Choose a plot to manage your crops.")
+        reg.page("farm", objects=self.farm_objects, scene=self.draw_farm_exits,
+                 detail=lambda: "Farm. Choose a plot to manage your crops. Exits: pasture at the bottom left, home at the bottom right.")
+        reg.object_tts("farm_hitbox", lambda obj: str(obj.get("label") or "Object").strip())
         reg.page("plot_detail", objects=self.plot_detail_objects, scene=self.draw_detail_scene,
                  icon_grid=True, icon_only=("care_button",), layout=self.detail_layout,
                  detail=lambda: "Plot details. Plant, water, or fertilize.")
@@ -119,7 +121,8 @@ class Farming(CareMinigame, FarmMarket, FarmDrawing, Feature):
     def detail_layout(self, objects):
         for obj in objects:
             if obj['type'] == 'growth_gauge':
-                obj.update(x=30, y=16, hit_width=42, hit_height=5)
+                # Rows 15-19: one lowered row below the double divider (rows 12-13) and above the field.
+                obj.update(x=30, y=17, hit_width=42, hit_height=5)
             elif obj['type'] == 'plot_detail_field':
                 obj.update(x=30, y=30, hit_width=44, hit_height=18)
 
@@ -253,9 +256,20 @@ class Farming(CareMinigame, FarmMarket, FarmDrawing, Feature):
             objects.append(obj)
 
         objects.append(dict(id="farm_pasture",type="arrow",direction="left",x=3,y=35,label="Pasture",action="travel:pasture"))
+        # Tactile exits at both bottom corners, so the player can travel from the graphic itself
+        # (Pasture <- Farm -> Home), clear of the plots by one lowered pin.
+        objects.append(dict(id="farm_road_pasture", type="farm_hitbox", skip_grid=True, x=1, y=37, width=3, height=5,
+                            hit_width=5, hit_height=7, label="Pasture", tts="Pasture. Go west.", action="travel:pasture"))
+        objects.append(dict(id="farm_road_home", type="farm_hitbox", skip_grid=True, x=58, y=37, width=3, height=5,
+                            hit_width=5, hit_height=7, label="Home", tts="Home. Go east.", action="travel:home"))
         for obj in farm.get("objects", []):
             objects.append(dict(obj))
         return objects
+
+    def draw_farm_exits(self):
+        e = self.engine
+        e.draw_icon_pattern(1, 37, ('001', '011', '111', '011', '001'))
+        e.draw_icon_pattern(58, 37, ('100', '110', '111', '110', '100'))
 
     def plot_detail_objects(self):
         e = self.engine

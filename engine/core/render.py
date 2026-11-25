@@ -28,6 +28,27 @@ class Rendering:
             scene()
         self.draw_time_bar()
 
+    def draw_room(self, doors=('left', 'right'), door_rows=(22, 30)):
+        """Room under the icon row (home and shop): divider, side walls with doorways, floor, doorway arrows.
+
+        Tactile design rules (README.md): the doorway arrows are small solid triangles, and the walls
+        stop two pins above and below them and one pin beside them, so the arrows never touch a wall.
+        """
+        pad = self.dotpad
+        pad.draw_line(0, 12, pad.width - 1, 12)
+        pad.draw_line(0, 13, pad.width - 1, 13)
+        pad.draw_line(4, 39, 55, 39)
+        low, high = door_rows
+        for y in range(13, 40):
+            for x, side in ((4, 'left'), (55, 'right')):
+                if side in doors and low <= y <= high:
+                    continue
+                pad.set_dot(x, y)
+        if 'left' in doors:
+            self.draw_icon_pattern(1, 26, ('001', '011', '111', '011', '001'))
+        if 'right' in doors:
+            self.draw_icon_pattern(58, 26, ('100', '110', '111', '110', '100'))
+
     def draw_solid_pattern(self, cx, cy, rows):
         """Centered pattern: '1' raises a dot, '0' clears it, any other character leaves it."""
         pad = self.dotpad

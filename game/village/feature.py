@@ -183,94 +183,58 @@ class Village(Feature):
                  label='Home', tts='Home. Go west.', action='travel:home'),
         ]
 
+    # Shop building: raised outline, lowered interior (the old engraved, fully raised block was hard to read).
+    SHOP = ('000000111111111000000',
+            '000001000000000100000',
+            '000010000000000010000',
+            '000100000000000001000',
+            '001000000000000000100',
+            '010000000000000000010',
+            '111111111111111111111',
+            '010000000000000000010',
+            '010000000000000000010',
+            '010111000000000111010',
+            '010101000000000101010',
+            '010111001111100111010',
+            '010000001000100000010',
+            '010000001000100000010',
+            '010000001000100000010',
+            '010000001001100000010',
+            '010000001000100000010',
+            '010000001000100000010',
+            '011111111000111111110')
+
     def draw_town_scene(self):
+        """Village map, drawn to the tactile design rules (README.md, "Tactile design rules").
+
+        Roads are two raised edge lines. Every symbol keeps at least one lowered pin from the road
+        edges: the edges stop short of the road-end arrows and of the shop instead of running into them.
+        """
         e = self.engine
         pad = e.dotpad
-        # 1. 상단 아이콘(하단 y=10)과 2칸 떨어진 y=12, 13에 2칸 두께 경계선 표시
+        # Divider under the icon row (two pins thick), as on the home and shop pages.
         pad.draw_line(0, 12, pad.width - 1, 12)
         pad.draw_line(0, 13, pad.width - 1, 13)
 
-        # 2. 마을 길 외곽선 (세로길 x: 16~24, 가로길 y: 24~30, 경계선 y=13과 맞닿음)
+        # North-south road: edges at x=16 and x=24, open where the east-west road crosses.
         for y in range(13, pad.height):
             if not (24 <= y <= 30):
                 pad.set_dot(16, y)
                 pad.set_dot(24, y)
-        for x in range(0, 34):
+        # East-west road: edges at y=24 and y=30, from x=5 (clear of the home arrow) to x=32 (clear of the shop).
+        for x in range(5, 33):
             if not (16 < x < 24):
                 pad.set_dot(x, 24)
                 pad.set_dot(x, 30)
 
-        # 3. 길 내부 중앙선만 넓은 간격(4칸 주기)의 점선으로 표시
-        for y in range(20, 34, 4):
-            pad.set_dot(20, y)
-        for x in range(8, 32, 4):
-            if x != 20:
-                pad.set_dot(x, 27)
-
-        # 4. 사거리 바깥 좌상단(x=10, y=19)에 배치된 NPC 로완
-        e.draw_icon_pattern(10, 19, (
-            '01110',
-            '01110',
-            '11111',
-            '01110',
-            '01010',
-        ))
-
-        # 5. 상행 길 끝 화살표 ▲ (광산 이동: x=20, y=16)
-        e.draw_icon_pattern(20, 16, (
-            '00100',
-            '01110',
-            '11111',
-        ))
-
-        # 6. 하행 길 끝 화살표 ▼ (낚시터 이동: x=20, y=37)
-        e.draw_icon_pattern(20, 37, (
-            '11111',
-            '01110',
-            '00100',
-        ))
-
-        # 7. 좌측 길 끝 화살표 ◀ (집 이동: x=2, y=27)
-        e.draw_icon_pattern(2, 27, (
-            '001',
-            '011',
-            '111',
-            '011',
-            '001',
-        ))
-
-        # 8. 우측 상점 건물: 전체를 꽉 채우고(양각) 처마선·창문·출입문만 음각(0)으로 표현
-        # (a) 꽉 채운 박공지붕 (y: 14~20, 경계선 아래에 밀착)
-        for dy in range(7):
-            half = 4 + dy
-            y = 14 + dy
-            for x in range(43 - half, 43 + half + 1):
-                pad.set_dot(x, y, 1)
-        # 지붕 중앙 작은 음각 창
-        for wx in (42, 43, 44):
-            pad.set_dot(wx, 17, 0)
-
-        # (b) 지붕과 벽면을 구분하는 음각 처마 라인 (y = 21)
-        for x in range(34, 53):
-            pad.set_dot(x, 21, 0)
-        pad.set_dot(34, 21, 1)
-        pad.set_dot(52, 21, 1)
-
-        # (c) 꽉 채운 건물 외벽 (x: 34~52, y: 22~34)
-        for y in range(22, 35):
-            for x in range(34, 53):
-                pad.set_dot(x, y, 1)
-
-        # (d) 좌/우 창문을 음각(0)으로 파내기 (3x3 창문)
-        for wy in range(24, 27):
-            for wx in (36, 37, 38, 48, 49, 50):
-                pad.set_dot(wx, wy, 0)
-
-        # (e) 중앙 출입문을 음각(0)으로 파내고 문손잡이만 양각(1)으로 표시
-        for y in range(26, 35):
-            for x in range(41, 46):
-                pad.set_dot(x, y, 0)
-        pad.set_dot(44, 30, 1)
+        # Rowan beside the crossroads (small person sign).
+        e.draw_icon_pattern(10, 19, ('01110', '01110', '00100', '11111', '10001'))  # one connected shape
+        # Road-end arrows: small solid triangles, one lowered pin from each edge.
+        e.draw_icon_pattern(20, 16, ('00100', '01110', '11111'))          # north: mine
+        e.draw_icon_pattern(20, 37, ('11111', '01110', '00100'))          # south: fishing lake
+        e.draw_icon_pattern(2, 27, ('001', '011', '111', '011', '001'))  # west: home
+        # Shop, east of the crossroads: x 33..53, y 16..34.
+        e.draw_icon_pattern(43, 25, self.SHOP)
 
     def show_rowan(self, text, page='rowan_dialogue', events=None, include_reaction=True):
         """Rowan speaks a quest line: the NPC feature adds a one-time reaction and Rowan's voice."""

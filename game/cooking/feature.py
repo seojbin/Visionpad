@@ -279,12 +279,21 @@ class Cooking(Feature):
                 round(start[0]), round(start[1]),
                 round(end[0]), round(end[1])
             )
+        # Markers (solid 4x4 squares) never sit on the path: the path pins under and around a marker are
+        # lowered first, so the line stops one pin short of it (tactile design rules, README.md).
+        markers = []
         if visible_progress == 0:
-            sx, sy = samples[0]
-            e.draw_filled_square(sx, sy)
+            markers.append(samples[0])
         resume = self.resume_point()
         if resume is not None:
-            e.draw_filled_square(*resume)
+            markers.append(resume)
+        for mx, my in markers:
+            left, top = round(mx) - 2, round(my) - 2
+            for y in range(top - 1, top + 5):
+                for x in range(left - 1, left + 5):
+                    e.dotpad.set_dot(x, y, 0)
+        for mx, my in markers:
+            e.draw_filled_square(mx, my)
 
     def open_recipes(self):
         e = self.engine

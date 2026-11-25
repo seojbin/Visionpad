@@ -8,10 +8,10 @@ Affection stages are getting to know you / recognizes you / trusts you. At the t
 
 | Area | Implementation |
 |---|---|
-| Code | `game/pets/feature.py`, `game/pets/patterns.py` |
-| Pages | care, pets, pet_detail, pet_release, pet_give, pet_names |
+| Code | `game/pets/feature.py`, `game/pets/patterns.py` (icons; the detail drawings now come from `shapes.py`), `game/pets/shapes.py` (cat and dog at 36 × 24 with the proportions of the original drawings, one silhouette per pose; `TEXTURE` marks the body; `drawing(species, pose, facing_left)` returns the drawing as shown) |
+| Pages | care (shows the home scene; Left/Right travel to the farm and the village like on the home page), pets, pet_detail, pet_release, pet_give, pet_names |
 | Actions | pet:care/list/home/open/give/feed/treat/medicine/gift/release/release_confirm/detail/name/empty |
-| Object types | pet_icon, pet_button, pet_body |
+| Object types | pet_icon, pet_button, pet_body; the large drawing is shown with `engine.display.tactile.fur_rows` (solid limbs, textured body) |
 | Owned engine attributes | pets, pet_next_id, pet_selected, pet_active, pet_contact, pet_pose_until, pet_adoption, pet_motion |
 | Shared attributes written/read | pasture_goods.animal_feed, roulette_goods; resources for collected gifts; day, pointer, pause and sleep |
 | Events | reset, end_of_day, before_navigation, leave_activity |
@@ -21,7 +21,7 @@ Affection stages are getting to know you / recognizes you / trusts you. At the t
 | Engine API provided/used | Provided: none. Used: response, render, set_page, clear_hover, back_arrow, draw_icon_pattern; paired roulette calls adopt/selected/sound |
 | Config | engine/config/game.json → pets: max_pets, names (12 per species), pitch_values, pet_seconds, contact_gap_seconds, pet_points, feed_points, treat_points, hungry_days, sick_after_days, neglect_points, gift_chances, trusted_harvest_bonus, audio |
 | Client (web) | engine/web/core/game-audio.js: same AudioContext, independent brush and calls, saved playback-rate pitches, one routine scheduler; engine/web/core/game.js live detail refresh |
-| Tests | game/pets/tests/test_pets.py, game/pets/tests/test_audio.cjs, game/pets/tests/test_speech.cjs |
+| Tests | game/pets/tests/test_pets.py, game/pets/tests/test_audio.cjs, game/pets/tests/test_speech.cjs The scene is audited by `engine/tests/python/display/test_tactile_rules.py` (gaps, outlines, symbols per page). `game/pets/tests/test_care_navigation.py` covers the Care page arrow keys. |
 
 Pitches 0.88–1.12 alter playback rate, so duration changes slightly too. No duplicate HTMLAudio output is used. Pause, mute, suspension and page departure stop scheduled routines. Sounds are the supplied original MP3 files. The companion uses new pet and supply sprite atlases and a dedicated room background; no generated spectator bundle is modified.
 

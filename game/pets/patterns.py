@@ -27,3 +27,14 @@ ICON_PATTERNS['dog'][1]='0011110'
 for _species, _rows in [('dog',(1,2)),('cat',(3,))]:
     for _row in _rows:
         SCENE_PATTERNS[_species][_row]=SCENE_PATTERNS[_species][_row][:18]+'00'
+
+# Recognition update (root README, "Tactile design rules"): the cat and dog drawings above shared one
+# body and differed only in small head details. They are replaced by shapes built in shapes.py, where
+# each species keeps its own distinguishing features in every pose (cat: tall pointed ears, upright
+# curling tail, slim legs; dog: long snout, floppy ear, thick legs, short raised tail).
+from .shapes import DETAIL as _DETAIL
+for _species, _poses in _DETAIL.items():
+    DETAIL_PATTERNS[_species] = dict(_poses)
+# 7x5 icons: cat = two ear points and a raised tail; dog = long snout and a floppy ear.
+ICON_PATTERNS['cat'] = ['1000101', '1000111', '0111111', '0111110', '0100010']
+ICON_PATTERNS['dog'] = ['0001100', '1001111', '1111100', '0111100', '0110110']

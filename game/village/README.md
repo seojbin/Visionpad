@@ -19,7 +19,7 @@ Rowan's sequential tutorials (soup → farming → cooking → mining → chicke
 | Config | `engine/config/game.json` → `rowan.*`, `weekly_market.*`, `town.objects`, `seeds`; page name `pages.town` |
 | Slots | none |
 | Client (web) | `game/village/client.js` (town task text) |
-| Tests | `game/village/tests/test_quests.py` (sequence, rewards, daily rollover, grades, soups, saves);  `game/village/tests/test_seed_help.py` (seed help, quest priority, speech channel, repeat prevention and save restore), `engine/tests/python/audio/test_team_audio.py`, `engine/tests/python/speech/test_speech.py` (5 of 8 known Rowan failures, follow-up F1) |
+| Tests | `game/village/tests/test_quests.py` (sequence, rewards, daily rollover, grades, soups, saves);  `game/village/tests/test_seed_help.py` (seed help, quest priority, speech channel, repeat prevention and save restore), `engine/tests/python/audio/test_team_audio.py`, `engine/tests/python/speech/test_speech.py` (5 of 8 known Rowan failures, follow-up F1) The scene is audited by `engine/tests/python/display/test_tactile_rules.py` (gaps, outlines, symbols per page). |
 | Note | The home/town icon sort in `engine/display/icons.py` still names the `town` page. |
 
 ## Gameplay

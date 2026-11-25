@@ -100,4 +100,4 @@ desktop.ini
 /engine/web/core/pad/vendor/DotPadSDK-*
 
 # Claude Code per-user settings (the shared .claude/CLAUDE.md is committed)
-.claude/settings.local.json
+.claude/

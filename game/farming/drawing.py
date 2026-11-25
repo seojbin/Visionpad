@@ -106,8 +106,12 @@ class FarmDrawing:
         ratio = 1.0 if state["mature"] else max(0.0, min(1.0, float(state["growth"]) / needed))
         left, top, width, height = self.plot_bounds(obj)
         rows = min(height-2, math.ceil((height-2)*ratio))
+        # Growth rises from the bottom as a texture of every other row, not a solid block
+        # (tactile design rules, README.md: large filled areas are hard to read).
+        bottom = top+height-2
         for y in range(top+height-1-rows, top+height-1):
-            for x in range(left+1, left+width-1): e.dotpad.set_dot(x, y)
+            if (bottom-y) % 2 == 0:
+                for x in range(left+1, left+width-1): e.dotpad.set_dot(x, y)
 
     def draw_watering_can(self, obj):
         e = self.engine
@@ -173,9 +177,11 @@ class FarmDrawing:
         e.dotpad.draw_line(x1, y2, x1, y1)
         inner_width = x2 - x1 - 1
         fill = int(round(inner_width * growth / needed))
+        # The grown part is a texture of vertical lines (every other column), not a solid bar.
         for x in range(x1 + 1, x1 + 1 + fill):
-            for y in range(y1 + 1, y2):
-                e.dotpad.set_dot(x, y)
+            if (x - x1) % 2 == 0:
+                for y in range(y1 + 1, y2):
+                    e.dotpad.set_dot(x, y)
 
     def draw_care_button(self, obj):
         e = self.engine

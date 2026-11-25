@@ -5,7 +5,7 @@ Recipes, ingredient selection, the traced cutting/stirring minigame (with fading
 | Item | Value |
 |---|---|
 | Code | `feature.py` (`Cooking`); food effects themselves live in `engine/core/effects.py` (shared) |
-| Pages | `recipe_select`, `ingredient_select` (icon grid, location texts), `cooking` (live page: re-rendered on every state read; path drawn as the page scene; raw pointer move/press/drag trace through `engine.minigame_input`) |
+| Pages | `recipe_select`, `ingredient_select` (icon grid, location texts), `cooking` (live page: re-rendered on every state read; path drawn as the page scene; raw pointer move/press/drag trace through `engine.minigame_input`) Path pins under and around the start and resume markers are lowered, so the path stops one pin short of a marker. |
 | Actions (after the night guard) | `open_recipes`, `select_recipe:<id>`, `toggle_ingredient:<seed>` (fish keys go to seafood), `start_cooking`, `use_food:<recipe>` |
 | Object types | `recipe` (food frame), `ingredient` (check mark when selected), `cooking_start` (icons, hover sounds) |
 | Owned engine attributes (save format) | `selected_recipe_id`, `selected_ingredients`, `cooking_dragging`, `cooking_path_samples`, `cooking_visible_until`, `cooking_progress_index`, `cooking_stage_index`, `cooking_last_progress_at`, `cooking_resume_marker` |

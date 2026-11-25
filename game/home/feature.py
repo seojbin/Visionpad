@@ -70,75 +70,41 @@ class Home(Feature):
                  label='Village', tts='Village. Go east.', action='travel:town'),
         ]
 
+    # Map scene drawn to the tactile design rules (README.md, "Tactile design rules"): furniture is a
+    # raised outline with a lowered interior, and the doorway arrows keep a lowered pin of clearance
+    # from the walls so their outline can be felt whole.
+    BED = ('111111111',
+           '100000001',
+           '101111101',
+           '100000001',
+           '111111111',
+           '100000001',
+           '100000001',
+           '100000001',
+           '111111111')
+    CHEST = ('01111111110',
+             '10000000001',
+             '11111111111',
+             '10000100001',
+             '10001110001',
+             '10000000001',
+             '10000000001',
+             '11111111111')
+    STOVE = ('11111111111',
+             '10000000001',
+             '10110001101',
+             '10110001101',
+             '10000000001',
+             '11111111111',
+             '10000000001',
+             '11111111111')
     def draw_scene(self):
         e = self.engine
-        pad = e.dotpad
-        pad.draw_line(0, 12, pad.width - 1, 12)
-        pad.draw_line(0, 13, pad.width - 1, 13)
-
-        pad.draw_line(4, 39, 55, 39)
-        for y in range(13, 40):
-            if not (24 <= y <= 28):
-                pad.set_dot(4, y)
-                pad.set_dot(55, y)
-        for dx in (3, 4, 5):
-            pad.set_dot(dx, 23)
-            pad.set_dot(dx, 29)
-        for dx in (54, 55, 56):
-            pad.set_dot(dx, 23)
-            pad.set_dot(dx, 29)
-
-        e.draw_icon_pattern(1, 26, (
-            '001',
-            '011',
-            '111',
-            '011',
-            '001',
-        ))
-        e.draw_icon_pattern(58, 26, (
-            '100',
-            '110',
-            '111',
-            '110',
-            '100',
-        ))
-
-        draw_solid_pattern = e.draw_solid_pattern
-
-        draw_solid_pattern(13, 19, (
-            '111111111',
-            '110000011',
-            '110111011',
-            '111111111',
-            '100000001',
-            '111111111',
-            '110111011',
-            '111111111',
-            '111111111',
-        ))
-
+        e.draw_room(doors=('left', 'right'))
+        e.draw_solid_pattern(13, 19, self.BED)
         if e.day_ended:
             return
-
-        draw_solid_pattern(30, 19, (
-            '..1111111..',
-            '11111011111',
-            '11001010011',
-            '11111111111',
-            '10000000001',
-            '11111111111',
-            '11001110011',
-            '11111111111',
-        ))
-
-        draw_solid_pattern(46, 19, (
-            '....11111..',
-            '...1110111.',
-            '11111111111',
-            '10001101011',
-            '11111111111',
-            '11011100011',
-            '11011100011',
-            '11111111111',
-        ))
+        e.draw_solid_pattern(30, 19, self.CHEST)
+        e.draw_solid_pattern(46, 19, self.STOVE)
         e.registry.draw_slot("home.scene")
+

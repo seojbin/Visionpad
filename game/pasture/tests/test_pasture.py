@@ -76,9 +76,9 @@ class PastureTests(unittest.TestCase):
     def test_feed_purchase_and_product_sale(self):
         e=self.e;e.resources['coin']=200
         e.buy_shop_item('animal_feed','animal_feed')
-        self.assertEqual(e.pasture_goods['animal_feed'],1);self.assertEqual(e.resources['coin'],170)
+        self.assertEqual(e.pasture_goods['animal_feed'],1);self.assertEqual(e.resources['coin'],120)  # feed_price 80
         e.pasture_goods['egg']=1;e.sell_shop_item('animal_product','egg')
-        self.assertEqual(e.pasture_goods['egg'],0);self.assertEqual(e.resources['coin'],240)
+        self.assertEqual(e.pasture_goods['egg'],0);self.assertEqual(e.resources['coin'],170)  # egg price 50
 
     def test_hidden_pet_requires_motion_inside_and_awards_once(self):
         self.act('open:chicken');e=self.e;a=e.pasture_animals['chicken']

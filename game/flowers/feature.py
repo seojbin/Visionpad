@@ -319,11 +319,11 @@ class Flowers(Feature):
             ]:
                 pad.set_dot(px, py, 1)
 
-            e.draw_solid_pattern(pot_cx, 27, (
-                '.11111.',
-                '1100011',
-                '.11111.',
-            ))
+            # The blossom sits on its stem: one plant, drawn pin by pin like the stem ('0' lowers a pin).
+            for row, line in enumerate(('.11111.', '1100011', '.11111.')):
+                for col, ch in enumerate(line):
+                    if ch in '01':
+                        pad.set_dot(pot_cx - 3 + col, 26 + row, 1 if ch == '1' else 0)
 
     # ---- detail page drawing ----
 
@@ -345,9 +345,12 @@ class Flowers(Feature):
         stage = self.engine.houseplant['stage']
         pad = self.engine.dotpad
 
-        # 화분 본체 (물주기 판정 영역과 동일하게 유지)
-        for x, y in self.pot_dots(detail):
-            pad.set_dot(x, y)
+        # 화분 본체: raised outline with a lowered interior (tactile design rules, README.md). The
+        # watering hit area is still the whole pot (pot_dots), so the finger may rest anywhere inside.
+        dots = self.pot_dots(detail)
+        for x, y in dots:
+            if not all((x + dx, y + dy) in dots for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                pad.set_dot(x, y)
 
         def stamp(x, y, rows, clear_zero=False):
             for dy, row in enumerate(rows):
